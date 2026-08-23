@@ -1,0 +1,168 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --bg: #071018;
+  --bg-elev: #0d1a24;
+  --bg-card: #10202c;
+  --line: #1e3646;
+  --text: #e8f1f4;
+  --muted: #8aa3b0;
+  --teal: #3ee0c5;
+  --amber: #f0b429;
+  --rose: #ff6b7d;
+  --sky: #6ec3ff;
+  --violet: #b794f4;
+  --lime: #b4e645;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-card: var(--bg-card);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-teal: var(--teal);
+  --color-amber: var(--amber);
+  --color-rose: var(--rose);
+  --color-sky: var(--sky);
+  --color-violet: var(--violet);
+  --color-lime: var(--lime);
+  --font-sans: var(--font-noto);
+  --font-mono: var(--font-mono);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-noto), "Noto Sans TC", sans-serif;
+  background-image:
+    radial-gradient(1200px 500px at 80% -10%, rgba(62, 224, 197, 0.08), transparent 50%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 28%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 47px,
+      rgba(62, 224, 197, 0.03) 48px
+    );
+}
+
+.leaflet-container {
+  background: #0a1820;
+  font-family: inherit;
+}
+
+.stop-map-pin {
+  background: none !important;
+  border: none !important;
+  cursor: pointer;
+  overflow: visible !important;
+}
+
+.stop-map-pin.is-on {
+  z-index: 700 !important;
+}
+
+.stop-map-pin.is-on .stop-map-pin-core {
+  animation: stop-pin-pulse 1.35s ease-in-out infinite;
+}
+
+@keyframes stop-pin-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 5px rgba(var(--pin-glow), 0.32),
+      0 0 18px 2px rgba(var(--pin-glow), 0.72);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9px rgba(var(--pin-glow), 0.12),
+      0 0 28px 6px rgba(var(--pin-glow), 0.95);
+  }
+}
+
+.mtr-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mtr-glow 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes mtr-glow {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.55);
+  }
+}
+
+.mtr-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mtr-pulse 0.85s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.mtr-pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mtr-pulse-ring 0.85s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes mtr-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.85);
+  }
+}
+
+@keyframes mtr-pulse-ring {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+.eta-arriving {
+  animation: eta-arriving 1.1s ease-in-out infinite;
+}
+
+@keyframes eta-arriving {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eta-arriving,
+  .mtr-glow,
+  .mtr-pulse,
+  .mtr-pulse-ring {
+    animation: none;
+  }
+}

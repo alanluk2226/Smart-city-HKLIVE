@@ -1,0 +1,155 @@
+import { cached, TTL } from "@/lib/cache";
+import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
+import { fetchJson } from "@/lib/http";
+import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
+
+const BASE = "https://rt.data.gov.hk/v2/transport/nlb";
+const OPERATOR_NAME = "嶼巴";
+
+type NlbRoute = {
+  routeId: string;
+  routeNo: string;
+  routeName_c: string;
+  specialRoute?: string;
+};
+
+type NlbStop = {
+  stopId: string;
+  stopName_c: string;
+  latitude: string;
+  longitude: string;
+};
+
+type NlbEta = {
+  estimatedArrivalTime?: string;
+  routeVariantName?: string;
+  departed?: number | string;
+  noGPS?: number | string;
+};
+
+function flag(value: number | string | undefined): boolean {
+  return value === 1 || value === "1";
+}
+
+function splitRouteName(name: string): { orig: string; dest: string } {
+  const parts = name.split(/\s*>\s*/).map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return { orig: parts[0], dest: parts[parts.length - 1] };
+  }
+  return { orig: name, dest: name };
+}
+
+function nlbEtaIso(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.includes("T")) return trimmed;
+  return `${trimmed.replace(" ", "T")}+08:00`;
+}
+
+export async function nlbRoutes(): Promise<NlbRoute[]> {
+  return cached("nlb:routes", TTL.route, async () => {
+    const json = await fetchJson<{ routes: NlbRoute[] }>(`${BASE}/route.php?action=list`);
+    return json.routes ?? [];
+  });
+}
+
+export async function searchNlbRoutes(q: string): Promise<RouteHit[]> {
+  const needle = q.trim().toUpperCase();
+  if (!needle) return [];
+  const routes = await nlbRoutes();
+  return routes
+    .filter(
+      (r) =>
+        r.routeNo.toUpperCase() === needle || r.routeNo.toUpperCase().startsWith(needle),
+    )
+    .sort((a, b) => {
+      const ae = a.routeNo.toUpperCase() === needle ? 0 : 1;
+      const be = b.routeNo.toUpperCase() === needle ? 0 : 1;
+      if (ae !== be) return ae - be;
+      return a.routeNo.localeCompare(b.routeNo, "en", { numeric: true });
+    })
+    .slice(0, 20)
+    .map((r) => {
+      const { orig, dest } = splitRouteName(r.routeName_c);
+      const extra = r.specialRoute ? ` · ${r.specialRoute}` : "";
+      return {
+        operator: "nlb" as const,
+        operatorName: OPERATOR_NAME,
+        route: r.routeNo,
+        orig,
+        dest,
+        routeId: String(r.routeId),
+        subtitle: `${orig} → ${dest}${extra}`,
+      };
+    });
+}
+
+export async function nlbRouteStops(routeId: string): Promise<StopHit[]> {
+  const json = await cached(`nlb:rs:${routeId}`, TTL.stop, () =>
+    fetchJson<{ stops: NlbStop[] }>(
+      `${BASE}/stop.php?action=list&routeId=${encodeURIComponent(routeId)}`,
+    ),
+  );
+  const route = (await nlbRoutes()).find((r) => String(r.routeId) === String(routeId));
+  return (json.stops ?? []).map((stop, i) => ({
+    operator: "nlb" as const,
+    operatorName: OPERATOR_NAME,
+    stopId: String(stop.stopId),
+    name: stop.stopName_c,
+    seq: i + 1,
+    lat: Number(stop.latitude),
+    lng: Number(stop.longitude),
+    route: route?.routeNo,
+    routeId: String(routeId),
+  }));
+}
+
+export async function nlbStopEta(
+  routeId: string,
+  stopId: string,
+  stopName = "",
+): Promise<EtaResult[]> {
+  const route = (await nlbRoutes()).find((r) => String(r.routeId) === String(routeId));
+  const dest = route ? splitRouteName(route.routeName_c).dest : "";
+  const json = await cached(`nlb:eta:${routeId}:${stopId}`, TTL.eta, () =>
+    fetchJson<{ estimatedArrivals?: NlbEta[]; message?: string }>(
+      `${BASE}/stop.php?action=estimatedArrivals&routeId=${encodeURIComponent(routeId)}&stopId=${encodeURIComponent(stopId)}&language=zh`,
+    ),
+  );
+  const rows = (json.estimatedArrivals ?? [])
+    .filter((row) => row.estimatedArrivalTime)
+    .map((row) => {
+      const iso = nlbEtaIso(row.estimatedArrivalTime!);
+      const remarks: string[] = [];
+      if (!flag(row.departed) || flag(row.noGPS)) remarks.push("預定班次");
+      if (row.routeVariantName?.trim()) remarks.push(row.routeVariantName.trim());
+      return {
+        operator: "nlb" as const,
+        operatorName: OPERATOR_NAME,
+        route: route?.routeNo ?? "",
+        dest,
+        stopId,
+        stopName,
+        etaMinutes: etaMinutesFromIso(iso),
+        etaTime: formatEtaClock(iso),
+        remark: remarks.join(" · ") || undefined,
+      };
+    });
+  if (rows.length) return rows;
+  if (json.message?.trim()) {
+    return [
+      {
+        operator: "nlb",
+        operatorName: OPERATOR_NAME,
+        route: route?.routeNo ?? "",
+        dest,
+        stopId,
+        stopName,
+        etaMinutes: null,
+        etaTime: null,
+        remark: json.message.trim(),
+      },
+    ];
+  }
+  return [];
+}

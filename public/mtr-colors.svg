@@ -1,0 +1,268 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.0" width="100%" height="auto" viewBox="-9 -12 20 17">
+      <!-- Editable schematic from gist carpiediem/MTR Station Colors Map.
+           Station groups: id="st-ADM" data-code="ADM" transform="translate(x,y)".
+           Grid unit = 1. After moving a station, update lib/static/mtr-colors-positions.ts to match. -->
+      <!-- width="20" height="17" -->
+      <style>
+        path {
+          stroke-width: 0.3;
+          fill: none;
+          z-index: -1;
+        }
+        path.shared {
+          stroke-width: 0.15;
+        }
+        path.construction {
+          stroke-dasharray: 0.1;
+        }
+        rect {
+          stroke: #555;
+          stroke-width: 0.04;
+        }
+        rect.future {
+          stroke-dasharray: 0.02;
+        }
+        text.en {
+          font: 0.15px "Lato", Verdana, Helvetica, Arial, sans-serif;
+        }
+        text.tc {
+          font: 0.25px "Noto Serif TC", serif;
+        }
+        text.tc.long {
+          font-size: 0.19px;
+        }
+
+        rect.bg {
+          fill: rgb(189, 227, 242);
+          stroke: none;
+        }
+        path.land {
+          fill: white;
+        }
+        path.future {
+          stroke-dasharray: 0.1;
+        }
+        path.ISL {
+          stroke: #007dc5;
+        }
+        path.SIL {
+          stroke: #c1cd23;
+        }
+        path.TKL {
+          stroke: #7d499d;
+        }
+        path.TWL {
+          stroke: #ed1d24;
+        }
+        path.KTL {
+          stroke: #00ab4e;
+        }
+        path.TCL {
+          stroke: #f7943e;
+        }
+        path.AEL {
+          stroke: #00888a;
+        }
+        path.DRL {
+          stroke: #f173ac;
+        }
+        path.ERL {
+          stroke: rgb(69, 150, 210);
+        }
+        path.TML {
+          stroke: rgb(142, 44, 19);
+        }
+
+        g.area {
+          fill: #aaa;
+        }
+        g.area text.tc {
+          font-size: 0.3px;
+        }
+        g.area text.en {
+          font-size: 0.2px;
+        }
+      </style>
+
+      <rect class="bg" x="-9" y="-12" width="20" height="17"></rect>
+
+      <!-- start curve tan before [4 0.25] at [3.7929 0.25] -->
+      <!-- tangent point on diagonal at sin-tan right and r-cos below @ [4.1464 .3965] -->
+
+      <!-- end curve tan after [5 1.25] at [5.2071 1.25] -->
+      <!-- tangent point on diagonal at sin-tan left and r-cos above @ [] -->
+
+      <path class="land" id="hong-kong-island" d="M-5.75 .75
+           A .5 .5 0 0 1 -5.25 .25
+           L3.7929 0.25
+           A .5 .5 0 0 1 4.1464 .3965
+           L5 1.25
+           L5 1.25
+           L10.25 1.25
+           A .5 .5 0 0 1 10.75 1.75
+           L10.75 4.25
+           A .5 .5 0 0 1 10.25 4.75
+           L-1.25 4.75
+           A .5 .5 0 0 1 -1.75 4.25
+           L-1.75 3.25
+           A .5 .5 0 0 0 -2.25 2.75
+           L-5.25 2.75
+           A .5 .5 0 0 1 -5.75 2.25"></path>
+      <path class="land" id="ap-lei-chau" d="M-4.75 3.75
+           A .5 .5 0 0 1 -4.25 3.25
+           L-2.75 3.25
+           A .5 .5 0 0 1 -2.25 3.75
+           L-2.25 4.25
+           A .5 .5 0 0 1 -2.75 4.75
+           L-4.25 4.75
+           A .5 .5 0 0 1 -4.75 4.25"></path>
+      <path class="land" id="tsing-yi" d="M-6.75 -5.25
+           A .5 .5, 0, 0, 1, -6.25 -5.75
+           L-5.75 -5.75
+           A .5 .5, 0, 0, 1, -5.25 -5.25
+           L-5.25 -4.75
+           A .5 .5 0 0 1 -5.75 -4.25
+           L-6.25 -4.25
+           A .5 .5, 0, 0, 1, -6.75 -4.75"></path>
+      <path class="land" id="lantau" d="M-8.75 -5.25
+           A .5 .5 0 0 1 -8.25 -5.75
+           L-7.75 -5.75
+           A .5 .5 0 0 1 -7.25 -5.25
+           L-7.25 -4.25
+           A .5 .5 0 0 0 -6.75 -3.75
+           L-5.75 -3.75
+           A .5 .5 0 0 1 -5.25 -3.25
+           L-5.25 -.75
+           A .5 .5 0 0 1 -5.75 -.25
+           L-8.25 -.25
+           A .5 .5 0 0 1 -8.75 -.75"></path>
+      <path class="land" id="peninsula" d="M-8.75 -11.25
+           A .5 .5 0 0 1 -8.25 -11.75
+           L-5.25 -11.75
+           L-4.25 -10.75
+           L-4 -10.75
+           L-4 -12
+           L3.5 -12
+           L3.5 -9.75
+           A .5 .5 0 0 0 4.5 -9.75
+           L4.5 -11.25
+           A .5 .5 0 0 1 5 -11.75
+           L10.25 -11.75
+           A .5 .5 0 0 1 10.75 -11.25
+           L10.75 -9.75
+           A .5 .5 0 0 1 10.25 -9.25
+           L9.25 -9.25
+           A .5 .5 0 0 0 8.75 -8.75
+           L8.75 -4.25
+           A .5 .5 0 0 0 9.25 -3.75
+           L10.25 -3.75
+           A .5 .5 0 0 1 10.75 -3.25
+           L10.75 .25
+           A .5 .5 0 0 1 10.25 .75
+           L9.75 .75
+           A .5 .5 0 0 1 9.25 .25
+           L9.25 .25
+           A .5 .5 0 0 0 8.75 -.25
+           L7 -.25
+           A .5 .5 0 0 1 6.5 -.75
+           L6.5 -4.75
+           A .5 .5 0 0 0 5.5 -4.75
+           L5.5 -1.25
+           L4.5 -.25
+           L-.25 -.25
+           A .5 .5 0 0 1 -.75 -.75
+           L-.75 -.75
+           A .5 .5 0 0 0 -1.25 -1.25
+           L-1.75 -1.25
+           A .5 .5 0 0 0 -2.25 -.75
+           L-2.25 -.75
+           A .5 .5 0 0 1 -2.75 -.25
+           L-3.75 -.25
+           A .5 .5 0 0 1 -4.25 -.75
+           L-4.25 -5.25
+           L-5.25 -6.25
+           L-6.25 -7.25
+           L-8.25 -7.25
+           A .5 .5 0 0 1 -8.75 -7.75"></path>
+
+      <!-- .5*tan(22.5) = .2071 -->
+      <!-- .5*sin(45) = .5*cos(45) = .3535 -->
+
+      <path class="ISL" d="M-5 2 L-1 2 -1 2.15 0 2.15 0 2 5 2 5 2.15 6 2.15 6 2 9.5 2 A .5 .5, 0, 0, 1, 10 2.5 L10 4"></path>
+      <path class="SIL" d="M0 2 L0 3.5 A .5 .5, 0, 0, 1, -.5 4 L -4 4"></path>
+      <path class="TKL" d="M5 1.85 L6 1.85 6 -.35 A .5 .5, 0, 0, 1, 6.5 -.85 L8 -.85 8 -1 9 -1 9 -.85 9.5 -.85 A .5 .5, 0, 0, 1, 10 -.35 L10 0"></path>
+      <path class="TKL" d="M9 -1.15 9.5 -1.15 A .5 .5, 0, 0, 0, 10 -1.65 L10 -3"></path>
+
+      <!-- radius=0.5 and width=0.3 -->
+      <!-- arc angles are acos((r+.75*w)/(r+w)) = acos(.90625) = 0.436469029 rad -->
+      <!-- height of arc intersection is .8*sin(0.436469029) = .3382 -->
+
+      <path class="TWL" d="M-1 1.85
+           L-.15 1.85
+           L-.15 1.5
+           L-.075 1.1618
+           A .5 .5 0 0 0 0 .8236
+           L0 -1 0 -4 -.15 -4 -.15 -6 0 -6 0 -7 -3 -7 -3 -7.15 -5 -7.15 -5 -8 -8 -8"></path>
+      <path class="KTL" d="M4 -1 L4 -3.5 A .5 .5, 0, 0, 0, 3.5 -4 L.15 -4 .15 -6 6.5 -6 A .5 .5, 0, 0, 1, 7, -5.5 L7 -1.15 8 -1.15"></path>
+      <path class="TCL" d="M-.9 .9 -2.9 -1.1 -3 -1 -3 -5 -5 -7 -5.5 -7  A .5 .5, 0, 0, 0, -6 -6.5 L-6 -3 -8 -3"></path>
+
+      <!-- tan above [-3.75 -1.55] is [-3.75 -1.7571]  -->
+      <!-- on diagonal is r-cos right and sin-tan below [-3.6035 -1.4036] -->
+      <path class="AEL" d="M-1.1 1.1
+           L-3.1 -.9
+           L-3.6035 -1.4036
+           A .5 .5 0 0 1 -3.75 -1.7571
+           L-3.75 -4.5
+           A .5 .5 0 0 0 -4.25 -5
+           L-8 -5
+           L-8 -4"></path>
+      <path class="DRL" d="M-6 -3 -6 -2"></path>
+      <path class="ERL future" d="M.15 2 L.15 1.5 A .5 .5 0 0 1 .65 1 L1.5 1 A .5 .5 0 0 0 2 .5 L2, -2"></path>
+      <path class="ERL" d="M2, -2 L2 -6.5 A .5 .5, 0, 0, 1, 2.5 -7 L3.35 -7 A .5 .5, 0, 0, 0, 3.85, -7.5 L3.85 -8.5 A .5 .5, 0, 0, 0, 3.35 -9 L2.5 -9 A .5 .5, 0, 0, 1, 2 -9.5 L2 -11 -3 -11"></path>
+      <path class="ERL" d="M3 -9 L3 -10.5 A .5 .5, 0, 0, 0, 2.5, -11 L 2, -11"></path>
+      <path class="ERL" d="M-2, -11 L-2 -10.5 A .5 .5, 0, 0, 1, -2.5 -10 L-3, -10"></path>
+
+      <!-- tan below [-2 -4] is [-2 -3.7929]  -->
+      <!-- on diagonal is r-cos left and sin-tan above [-2.1465 -4.1464] -->
+      <path class="TML" d="M-8 -10
+           L-8 -11
+           L-6 -11
+           L-3 -8
+           L-3 -5
+           L-2.1465 -4.1464
+           A .5 .5 0 0 1 -2 -3.7929
+           L-2 -2.5
+           A .5 .5, 0, 0, 0, -1.5 -2
+           L2 -2"></path>
+      <path class="TML future" d="M2 -2 L4.5 -2 A .5 .5, 0, 0, 0, 5 -2.5 L5 -4 5 -5"></path>
+      <path class="TML" d="M5 -5 L 5 -7 4.65 -7 A .5 .5, 0, 0, 1, 4.15 -7.5 L4.15 -8.5 A .5 .5, 0, 0, 1, 4.65 -9 L5 -9 5 -11 10 -11"></path>
+
+      <g class="area" transform="translate(5, 3.5)">
+        <text class="tc" text-anchor="middle">港島</text>
+        <text class="en" text-anchor="middle" y=".3px">Hong Kong Island</text>
+      </g>
+      <g class="area" transform="translate(3.5, -4.75)">
+        <text class="tc" text-anchor="middle">九龍</text>
+        <text class="en" text-anchor="middle" y=".3px">Kowloon</text>
+      </g>
+      <g class="area" transform="translate(0, -9)">
+        <text class="tc" text-anchor="middle">新界</text>
+        <text class="en" text-anchor="middle" y=".3px">New Territories</text>
+      </g>
+      <g class="area" transform="translate(-7, -1)">
+        <text class="tc" text-anchor="middle">大嶼山</text>
+        <text class="en" text-anchor="middle" y=".3px">Lantau Island</text>
+      </g>
+
+      <g transform="translate(6,-6)">
+        <rect x="-0.4" y="-0.4" width="0.8" height="0.13333333" style="fill: red; stroke: none;"></rect>
+        <rect x="-0.4" y="-0.266666666" width="0.8" height="0.13333333" style="fill: orange; stroke: none;"></rect>
+        <rect x="-0.4" y="-0.13333333333" width="0.8" height="0.13333333" style="fill: yellow; stroke: none;"></rect>
+        <rect x="-0.4" y="0" width="0.8" height="0.13333333" style="fill: green; stroke: none;"></rect>
+        <rect x="-0.4" y="0.13333333333" width="0.8" height="0.13333333" style="fill: blue; stroke: none;"></rect>
+        <rect x="-0.4" y="0.2666666666666" width="0.8" height="0.13333333" style="fill: violet; stroke: none;"></rect>
+        <text text-anchor="middle" class="tc" style="fill: white; stroke: black; stroke-width: 0.02px">
+          彩虹
+        </text>
+      </g>
+    <g id="st-ADM" data-code="ADM" transform="translate(0,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(76, 200, 236);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Admiralty</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">金鐘</text></g><g id="st-CEN" data-code="CEN" transform="translate(-1,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(197, 17, 46);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Central</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">中環</text></g><g id="st-SHW" data-code="SHW" transform="translate(-2,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(248, 211, 158);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sheung</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Wan</text><text text-anchor="middle" class="tc" style="fill: black;">上環</text></g><g id="st-SYP" data-code="SYP" transform="translate(-3,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(150, 152, 203);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sai Ying</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Pun</text><text text-anchor="middle" class="tc" style="fill: black;">西營盤</text></g><g id="st-HKU" data-code="HKU" transform="translate(-4,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(209, 229, 170);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">HKU</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc long" style="fill: black;">香港大學</text></g><g id="st-KET" data-code="KET" transform="translate(-5,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(138, 211, 228);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Kennedy</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Town</text><text text-anchor="middle" class="tc long" style="fill: black;">堅尼地城</text></g><g id="st-WAC" data-code="WAC" transform="translate(1,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(195, 208, 14); stroke: rgb(106, 125, 46);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Wan Chai</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">灣仔</text></g><g id="st-CAB" data-code="CAB" transform="translate(2,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(238, 184, 212);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Causeway</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Bay</text><text text-anchor="middle" class="tc" style="fill: black;">銅鑼灣</text></g><g id="st-TIH" data-code="TIH" transform="translate(3,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(244, 123, 32);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Tin Hau</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">天后</text></g><g id="st-FOH" data-code="FOH" transform="translate(4,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(25, 179, 117);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Fortress</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Hill</text><text text-anchor="middle" class="tc" style="fill: white;">炮台山</text></g><g id="st-NOP" data-code="NOP" transform="translate(5,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(246, 127, 37);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">North</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Point</text><text text-anchor="middle" class="tc" style="fill: black;">北角</text></g><g id="st-QUB" data-code="QUB" transform="translate(6,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 127, 123);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Quarry Bay</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">鰂魚涌</text></g><g id="st-TAK" data-code="TAK" transform="translate(7,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(179, 8, 60);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tai Koo</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">太古</text></g><g id="st-SWH" data-code="SWH" transform="translate(8,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(240, 203, 1);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sai Wan</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Ho</text><text text-anchor="middle" class="tc" style="fill: black;">西灣河</text></g><g id="st-SKW" data-code="SKW" transform="translate(9,2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(36, 62, 155);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Shau Kei</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Wan</text><text text-anchor="middle" class="tc" style="fill: white;">筲箕灣</text></g><g id="st-HFC" data-code="HFC" transform="translate(10,3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(182, 18, 27);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Heng Fa</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Chuen</text><text text-anchor="middle" class="tc" style="fill: white;">杏花邨</text></g><g id="st-CHW" data-code="CHW" transform="translate(10,4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 103, 79);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Chai Wan</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">柴灣</text></g><g id="st-OCP" data-code="OCP" transform="translate(0,3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(0, 125, 222);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Ocean Park</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc long" style="fill: black;">海洋公園</text></g><g id="st-WCH" data-code="WCH" transform="translate(-1,4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(197, 165, 21);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Wong Chuk</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Hang</text><text text-anchor="middle" class="tc" style="fill: black;">黃竹坑</text></g><g id="st-LET" data-code="LET" transform="translate(-3,4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(195, 115, 73);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Lei Tung</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">利東</text></g><g id="st-SOH" data-code="SOH" transform="translate(-4,4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(37, 146, 78);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">South</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Horizons</text><text text-anchor="middle" class="tc long" style="fill: black;">海怡半島</text></g><g id="st-EXC" data-code="EXC" transform="translate(1,1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" class="future" style="fill: white;"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Exhibition</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Centre</text><text text-anchor="middle" class="tc" style="fill: black;">會展</text></g><g id="st-MKK" data-code="MKK" transform="translate(2,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 178, 150);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Mong Kok</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">East</text><text text-anchor="middle" class="tc" style="fill: white;">旺角東</text></g><g id="st-HUH" data-code="HUH" transform="translate(2,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(244, 95, 125);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Hung Hom</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">紅磡</text></g><g id="st-ETS" data-code="ETS" transform="translate(1,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(255, 234, 0); stroke: black;"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">East Tsim</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Sha Tsui</text><text text-anchor="middle" class="tc" style="fill: black;">尖東</text></g><g id="st-AUS" data-code="AUS" transform="translate(-1,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(207, 113, 26);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Austin</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">柯士甸</text></g><g id="st-NAC" data-code="NAC" transform="translate(-3,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(239, 234, 68);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Nam</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Cheung</text><text text-anchor="middle" class="tc" style="fill: black;">南昌</text></g><g id="st-TST" data-code="TST" transform="translate(0,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: black; stroke: rgb(255, 234, 0);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tsim Sha</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Tsui</text><text text-anchor="middle" class="tc" style="fill: white;">尖沙咀</text></g><g id="st-JOR" data-code="JOR" transform="translate(0,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(20, 73, 63); stroke: rgb(191, 214, 72);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Jordan</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">佐敦</text></g><g id="st-YMT" data-code="YMT" transform="translate(0,-4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(230, 229, 234);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Yau Ma Tei</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">油麻地</text></g><g id="st-MOK" data-code="MOK" transform="translate(0,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(191, 46, 29);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Mong Kok</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">旺角</text></g><g id="st-PRE" data-code="PRE" transform="translate(0,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(185, 162, 170);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Prince</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Edward</text><text text-anchor="middle" class="tc" style="fill: white;">太子</text></g><g id="st-SSP" data-code="SSP" transform="translate(0,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 143, 131);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Sham Shui</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Po</text><text text-anchor="middle" class="tc" style="fill: white;">深水埗</text></g><g id="st-CSW" data-code="CSW" transform="translate(-1,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(182, 170, 128);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Cheung Sha</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Wan</text><text text-anchor="middle" class="tc" style="fill: black;">長沙灣</text></g><g id="st-LCK" data-code="LCK" transform="translate(-2,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(245, 114, 32);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lai Chi Kok</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">荔枝角</text></g><g id="st-MEF" data-code="MEF" transform="translate(-3,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(2, 143, 197);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Mei Foo</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">美孚</text></g><g id="st-LAK" data-code="LAK" transform="translate(-5,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(211, 16, 72);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lai King</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">荔景</text></g><g id="st-KWF" data-code="KWF" transform="translate(-5,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 108, 82);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Kwai Fong</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">葵芳</text></g><g id="st-KWH" data-code="KWH" transform="translate(-6,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(253, 226, 77);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Kwai Hing</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">葵興</text></g><g id="st-TWH" data-code="TWH" transform="translate(-7,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(179, 215, 141);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tai Wo Hau</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">大窩口</text></g><g id="st-TSW" data-code="TSW" transform="translate(-8,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(197, 17, 46);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tseun Wan</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">荃灣</text></g><g id="st-HOM" data-code="HOM" transform="translate(4,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(169, 195, 93);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Ho Man Tin</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">何文田</text></g><g id="st-WHA" data-code="WHA" transform="translate(4,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(132, 117, 110); stroke: rgb(71, 77, 103);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Whampoa</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">黃埔</text></g><g id="st-TKW" data-code="TKW" transform="translate(5,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" class="future" style="fill: white;"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">To Kwa</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Wan</text><text text-anchor="middle" class="tc" style="fill: black;">土瓜灣</text></g><g id="st-SUW" data-code="SUW" transform="translate(5,-4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" class="future" style="fill: white;"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sung Kong</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Toi</text><text text-anchor="middle" class="tc" style="fill: black;">宋皇臺</text></g><g id="st-KAT" data-code="KAT" transform="translate(5,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(193, 95, 56);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Kai Tak</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">啟德</text></g><g id="st-SKM" data-code="SKM" transform="translate(1,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(74, 171, 68);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Shek Kip</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Mei</text><text text-anchor="middle" class="tc" style="fill: white;">石硤尾</text></g><g id="st-KOT" data-code="KOT" transform="translate(2,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(122, 189, 232);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Kowloon</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Tong</text><text text-anchor="middle" class="tc" style="fill: white;">九龍塘</text></g><g id="st-LOF" data-code="LOF" transform="translate(3,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(75, 113, 26);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lok Fu</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">樂富</text></g><g id="st-WTS" data-code="WTS" transform="translate(4,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(255, 244, 84);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Wong Tai</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Sin</text><text text-anchor="middle" class="tc" style="fill: black;">黃大仙</text></g><g id="st-DIH" data-code="DIH" transform="translate(5,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(105, 104, 109);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Diamond</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Hill</text><text text-anchor="middle" class="tc" style="fill: white;">鑽石山</text></g><g id="st-CHT" data-code="CHT" transform="translate(6,-6)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: none;"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Choi Hung</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">彩虹</text></g><g id="st-LAT" data-code="LAT" transform="translate(7,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(197, 17, 46);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Kowloon</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Bay</text><text text-anchor="middle" class="tc" style="fill: white;">九龍灣</text></g><g id="st-KOB" data-code="KOB" transform="translate(7,-4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(168, 195, 154);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Ngau Tau</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Kok</text><text text-anchor="middle" class="tc" style="fill: white;">牛頭角</text></g><g id="st-NTW" data-code="NTW" transform="translate(7,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(242, 241, 246);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Kwun Tong</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">觀塘</text></g><g transform="translate(7,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(28, 183, 237);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lam Tin</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">藍田</text></g><g id="st-HOK" data-code="HOK" transform="translate(-1,1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(242, 241, 246);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Hong Kong</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">香港</text></g><g id="st-KOW" data-code="KOW" transform="translate(-3,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(198, 197, 202);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Kowloon</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">九龍</text></g><g id="st-OLY" data-code="OLY" transform="translate(-3,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(109, 175, 227);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Olympic</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">奧運</text></g><g id="st-TSY" data-code="TSY" transform="translate(-6,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(197, 225, 226);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Tsing Yi</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">青衣</text></g><g id="st-SUN" data-code="SUN" transform="translate(-6,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(210, 214, 217);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sunny Bay</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">欣澳</text></g><g id="st-DIS" data-code="DIS" transform="translate(-6,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 88, 72);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Disneyland</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Resort</text><text text-anchor="middle" class="tc" style="fill: white;">迪士尼</text></g><g id="st-TUC" data-code="TUC" transform="translate(-8,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(118, 115, 168);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tung Chung</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">東涌</text></g><g id="st-AIR" data-code="AIR" transform="translate(-8,-5)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(188, 192, 195);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Airport</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">機場</text></g><g id="st-AWE" data-code="AWE" transform="translate(-8,-4)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(242, 241, 246);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">AsiaWorld-</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Expo</text><text text-anchor="middle" class="tc" style="fill: black;">博覽館</text></g><g id="st-YAT" data-code="YAT" transform="translate(7,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(253, 224, 84);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Yau Tong</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">油塘</text></g><g id="st-TIK" data-code="TIK" transform="translate(8,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(216, 224, 61);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Tiu Keng</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Leng</text><text text-anchor="middle" class="tc" style="fill: black;">調景嶺</text></g><g id="st-TKO" data-code="TKO" transform="translate(9,-1)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(239, 49, 37);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tseung</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Kwan O</text><text text-anchor="middle" class="tc" style="fill: white;">將軍澳</text></g><g id="st-LHP" data-code="LHP" transform="translate(10,0)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(79, 66, 75); stroke: rgb(155, 145, 170);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">LOHAS</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Park</text><text text-anchor="middle" class="tc" style="fill: white;">康城</text></g><g id="st-HAH" data-code="HAH" transform="translate(10,-2)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(28, 183, 237);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Hang Hau</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">坑口</text></g><g id="st-POA" data-code="POA" transform="translate(10,-3)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(246, 144, 33);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Po Lam</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">寶琳</text></g><g id="st-HIK" data-code="HIK" transform="translate(5,-7)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(145, 179, 102);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Hin Keng</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">顯徑</text></g><g id="st-TAW" data-code="TAW" transform="translate(4,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(0, 119, 195);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tai Wai</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">大圍</text></g><g id="st-SHT" data-code="SHT" transform="translate(3,-9)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(193, 120, 176);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Sha Tin</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">沙田</text></g><g id="st-FOT" data-code="FOT" transform="translate(2,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(251, 177, 52);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Fo Tan</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">火炭</text></g><g id="st-RAC" data-code="RAC" transform="translate(3,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(95, 193, 168);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Racecourse</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">馬場</text></g><g id="st-UNI" data-code="UNI" transform="translate(2,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(141, 200, 216);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">University</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">大學</text></g><g id="st-TAP" data-code="TAP" transform="translate(1,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(179, 150, 198);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tai Po</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Market</text><text text-anchor="middle" class="tc" style="fill: white;">大埔墟</text></g><g id="st-TWO" data-code="TWO" transform="translate(0,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(255, 209, 5);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tai Wo</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">太和</text></g><g id="st-FAN" data-code="FAN" transform="translate(-1,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(123, 192, 67);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Fanling</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">粉嶺</text></g><g id="st-SHS" data-code="SHS" transform="translate(-2,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(234, 167, 18);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Sheung</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Shui</text><text text-anchor="middle" class="tc" style="fill: white;">上水</text></g><g id="st-LOW" data-code="LOW" transform="translate(-3,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(109, 144, 111);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lo Wu</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">羅湖</text></g><g id="st-LMC" data-code="LMC" transform="translate(-3,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(118, 200, 186);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Lok Ma</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Chau</text><text text-anchor="middle" class="tc" style="fill: white;">落馬洲</text></g><g id="st-CKT" data-code="CKT" transform="translate(5,-9)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(254, 216, 167);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Che Kung</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Temple</text><text text-anchor="middle" class="tc" style="fill: black;">車公廟</text></g><g id="st-STW" data-code="STW" transform="translate(5,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(247, 179, 192);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Sha Tin</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Wai</text><text text-anchor="middle" class="tc" style="fill: black;">沙田圍</text></g><g id="st-CIO" data-code="CIO" transform="translate(5,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(252, 187, 93);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">City One</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">第一城</text></g><g id="st-SHM" data-code="SHM" transform="translate(6,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(255, 227, 134);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Shek Mun</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">石門</text></g><g id="st-TSH" data-code="TSH" transform="translate(7,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(144, 210, 206);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Tai Shui</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Hang</text><text text-anchor="middle" class="tc" style="fill: black;">大水坑</text></g><g id="st-HEO" data-code="HEO" transform="translate(8,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(181, 215, 242);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Heng On</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">恒安</text></g><g id="st-MOS" data-code="MOS" transform="translate(9,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(200, 169, 211);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Ma On</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Shan</text><text text-anchor="middle" class="tc" style="fill: black;">馬鞍山</text></g><g id="st-WKS" data-code="WKS" transform="translate(10,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(169, 76, 17);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Wu Kai</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Sha</text><text text-anchor="middle" class="tc" style="fill: white;">烏溪沙</text></g><g id="st-TWW" data-code="TWW" transform="translate(-3,-8)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(238, 24, 78);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tseun Wan</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">West</text><text text-anchor="middle" class="tc" style="fill: white;">荃灣西</text></g><g id="st-KSR" data-code="KSR" transform="translate(-4,-9)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(210, 111, 26);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Kam Sheung</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;">Road</text><text text-anchor="middle" class="tc" style="fill: white;">錦上路</text></g><g id="st-YUL" data-code="YUL" transform="translate(-5,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(138, 212, 223);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Yuen Long</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">元朗</text></g><g id="st-LOP" data-code="LOP" transform="translate(-6,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(247, 158, 140);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Long Ping</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">朗屏</text></g><g id="st-TIS" data-code="TIS" transform="translate(-7,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(252, 176, 98);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Tin Shui</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;">Wai</text><text text-anchor="middle" class="tc" style="fill: black;">天水圍</text></g><g id="st-SIH" data-code="SIH" transform="translate(-8,-11)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(130, 206, 194);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: black;">Siu Hong</text><text text-anchor="middle" y="0.32" class="en" style="fill: black;"></text><text text-anchor="middle" class="tc" style="fill: black;">兆康</text></g><g id="st-TUM" data-code="TUM" transform="translate(-8,-10)"><rect x="-0.4" y="-0.4" width="0.8" height="0.8" rx="0.05" ry="0.05" style="fill: rgb(1, 153, 200);"></rect><text text-anchor="middle" y="0.16" class="en" style="fill: white;">Tuen Mun</text><text text-anchor="middle" y="0.32" class="en" style="fill: white;"></text><text text-anchor="middle" class="tc" style="fill: white;">屯門</text></g></svg>
