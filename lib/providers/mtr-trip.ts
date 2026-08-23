@@ -163,7 +163,7 @@ function carCount(line: string) {
 function crowdingFor(line: string, peak: boolean) {
   const n = carCount(line);
   const cars: MtrCarLoad[] = Array.from({ length: n }, (_, i) => {
-    const t = n === 1 ? 0.5 : i / (n - 1);
+    const t = n <= 1 ? 0.5 : i / (n - 1);
     const mid = Math.abs(t - 0.5);
     let level: MtrCarLoad["level"] = 1;
     if (peak) {
