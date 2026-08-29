@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { WeatherNavChip } from "@/components/WeatherNavChip";
 import { MODULES } from "@/lib/modules";
 
 export function AppShell({
@@ -21,12 +22,12 @@ export function AppShell({
   return (
     <div className="min-h-full flex flex-col">
       <header className="border-b border-line bg-elev/80 backdrop-blur sticky top-0 z-20">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-4">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
           <Link href="/" className="shrink-0">
             <div className="font-mono text-[11px] tracking-[0.28em] text-teal">HK LIVE</div>
             <div className="text-sm font-medium">香港城市實況</div>
           </Link>
-          <nav className="flex flex-1 items-center gap-1 overflow-x-auto">
+          <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             {MODULES.map((m) => {
                   const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
               return (
@@ -44,6 +45,7 @@ export function AppShell({
               );
             })}
           </nav>
+          <WeatherNavChip />
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

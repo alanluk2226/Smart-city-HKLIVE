@@ -1,6 +1,7 @@
 import { cached, TTL } from "@/lib/cache";
-import { etaMinutesFromIso, formatEtaClock, haversineMeters } from "@/lib/geo";
+import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
 import { fetchJson } from "@/lib/http";
+import { rankNearby } from "@/lib/nearby";
 import { MTR_LINE_NAMES, MTR_STATIONS, mtrName } from "@/lib/static/mtr-stations";
 import type { EtaResult, StopHit } from "@/lib/types";
 
@@ -48,16 +49,18 @@ export async function mtrEta(line: string, sta: string): Promise<EtaResult[]> {
 }
 
 export function nearbyMtrStations(lat: number, lng: number, limit = 6): StopHit[] {
-  return MTR_STATIONS.map((s) => ({
-    operator: "mtr" as const,
-    operatorName: "港鐵",
-    stopId: s.code,
-    name: s.name,
-    lat: s.lat,
-    lng: s.lng,
-    distanceMeters: haversineMeters(lat, lng, s.lat, s.lng),
-    route: s.lines.join(","),
-  }))
-    .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0))
-    .slice(0, limit);
+  return rankNearby(
+    MTR_STATIONS.map((s) => ({
+      operator: "mtr" as const,
+      operatorName: "港鐵",
+      stopId: s.code,
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      route: s.lines.join(","),
+    })),
+    lat,
+    lng,
+    limit,
+  );
 }

@@ -1,7 +1,10 @@
 "use client";
 
 import { GmbEtaExtras, GmbRoutePlate } from "@/components/transit/GmbBadges";
+import { etaArriveLabel } from "@/components/transit/RouteInfoBanner";
+import { formatBusDistance } from "@/lib/bus-distance";
 import type { EtaResult } from "@/lib/types";
+import type { ReactNode } from "react";
 
 export function EtaPanel({
   title,
@@ -9,12 +12,14 @@ export function EtaPanel({
   loading,
   emptyHint,
   framed = true,
+  headerExtra,
 }: {
   title: string;
   etas: EtaResult[];
   loading: boolean;
   emptyHint: string;
   framed?: boolean;
+  headerExtra?: ReactNode;
 }) {
   return (
     <section className={framed ? "rounded-2xl border border-line bg-card p-4 min-h-72" : ""}>
@@ -24,6 +29,7 @@ export function EtaPanel({
           {loading ? <span className="text-xs text-muted">更新中</span> : null}
         </div>
       ) : null}
+      {headerExtra ? <div className={title ? "mt-2" : ""}>{headerExtra}</div> : null}
       {etas.length === 0 && !loading ? (
         <p className={`text-muted ${framed ? "mt-6" : "mt-2"}`}>{emptyHint}</p>
       ) : etas.length === 0 ? (
@@ -33,6 +39,7 @@ export function EtaPanel({
           {etas.map((eta, i) => {
             const soonest = i === 0;
             const gmb = eta.operator === "gmb";
+            const arrive = etaArriveLabel(eta);
             return (
               <li
                 key={`${eta.operator}-${eta.route}-${eta.dest}-${eta.platform}-${eta.etaTime}-${i}`}
@@ -68,9 +75,16 @@ export function EtaPanel({
                   >
                     {eta.etaMinutes ?? "—"}
                   </div>
-                  <div className="text-xs text-muted">
-                    分鐘{eta.etaTime ? ` · ${eta.etaTime}` : ""}
+                  <div className="text-xs text-muted">分鐘</div>
+                  <div className={`mt-1 text-xs ${soonest ? (gmb ? "text-lime" : "text-teal") : "text-muted"}`}>
+                    預計到站 {arrive}
                   </div>
+                  {eta.distanceMeters != null ? (
+                    <div className="mt-0.5 text-[11px] text-muted">
+                      {formatBusDistance(eta.distanceMeters)}
+                      {eta.distanceEstimate ? "（估算）" : ""}
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );

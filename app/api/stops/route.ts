@@ -2,6 +2,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { ctbRouteStops } from "@/lib/providers/ctb";
 import { gmbRouteStops } from "@/lib/providers/gmb";
 import { kmbRouteStops } from "@/lib/providers/kmb";
+import { mtrBusRouteStops } from "@/lib/providers/mtr-bus";
 import { nlbRouteStops } from "@/lib/providers/nlb";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,13 @@ export async function GET(request: Request) {
       const routeId = searchParams.get("routeId");
       if (!routeId) return jsonError("嶼巴需要 routeId");
       return jsonOk(await nlbRouteStops(routeId));
+    }
+    if (operator === "mtrb") {
+      const route = searchParams.get("route");
+      const bound = searchParams.get("bound") ?? "O";
+      const routeId = searchParams.get("routeId") ?? undefined;
+      if (!route) return jsonError("缺少 route");
+      return jsonOk(await mtrBusRouteStops(route, bound, routeId));
     }
     if (operator === "gmb") {
       const routeId = searchParams.get("routeId");

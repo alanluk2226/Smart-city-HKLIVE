@@ -1,6 +1,8 @@
+import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
 import { fetchJson } from "@/lib/http";
+import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
 const BASE = "https://rt.data.gov.hk/v2/transport/citybus";
@@ -111,15 +113,45 @@ export async function ctbStopEta(
   const json = await cached(`ctb:eta:${stopId}:${route}`, TTL.eta, () =>
     fetchJson<CtbList<CtbEta>>(`${BASE}/eta/ctb/${stopId}/${encodeURIComponent(route)}`),
   );
-  return json.data.map((row) => ({
-    operator: "ctb",
-    operatorName: OPERATOR_NAME,
-    route: row.route,
-    dest: row.dest_tc,
-    stopId,
-    stopName,
-    etaMinutes: etaMinutesFromIso(row.eta),
-    etaTime: formatEtaClock(row.eta),
-    remark: row.rmk_tc || undefined,
-  }));
+  return json.data.map((row) => {
+    const etaMinutes = etaMinutesFromIso(row.eta);
+    const dist = inferDistanceToStop([], [], 1, etaMinutes);
+    return {
+      operator: "ctb" as const,
+      operatorName: OPERATOR_NAME,
+      route: row.route,
+      dest: row.dest_tc,
+      stopId,
+      stopName,
+      etaMinutes,
+      etaTime: formatEtaClock(row.eta),
+      remark: row.rmk_tc || undefined,
+      distanceMeters: dist ? Math.round(dist.meters) : null,
+      distanceEstimate: true,
+    };
+  });
+}
+
+export async function ctbStops(): Promise<CtbStop[]> {
+  return cached("ctb:stops", TTL.stop, async () => {
+    const json = await fetchJson<CtbList<CtbStop>>(`${BASE}/stop/ctb`, 20_000);
+    return json.data;
+  });
+}
+
+export async function nearbyCtbStops(lat: number, lng: number, limit = 8): Promise<StopHit[]> {
+  const stops = await ctbStops();
+  return rankNearby(
+    stops.map((s) => ({
+      operator: "ctb" as const,
+      operatorName: OPERATOR_NAME,
+      stopId: s.stop,
+      name: s.name_tc,
+      lat: Number(s.lat),
+      lng: Number(s.long),
+    })),
+    lat,
+    lng,
+    limit,
+  );
 }

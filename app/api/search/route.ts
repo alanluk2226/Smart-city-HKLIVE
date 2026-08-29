@@ -2,6 +2,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { searchCtbRoutes } from "@/lib/providers/ctb";
 import { searchGmbRoutes } from "@/lib/providers/gmb";
 import { searchKmbRoutes } from "@/lib/providers/kmb";
+import { searchMtrBusRoutes } from "@/lib/providers/mtr-bus";
 import { searchNlbRoutes } from "@/lib/providers/nlb";
 import { MTR_LINE_NAMES, searchMtrStations } from "@/lib/static/mtr-stations";
 
@@ -19,12 +20,14 @@ export async function GET(request: Request) {
       const wantKmb = !operator || operator === "all" || operator === "kmb";
       const wantCtb = !operator || operator === "all" || operator === "ctb";
       const wantNlb = !operator || operator === "all" || operator === "nlb";
-      const [kmb, ctb, nlb] = await Promise.all([
+      const wantMtrb = !operator || operator === "all" || operator === "mtrb";
+      const [kmb, ctb, nlb, mtrb] = await Promise.all([
         wantKmb ? searchKmbRoutes(q).catch(() => []) : Promise.resolve([]),
         wantCtb ? searchCtbRoutes(q).catch(() => []) : Promise.resolve([]),
         wantNlb ? searchNlbRoutes(q).catch(() => []) : Promise.resolve([]),
+        wantMtrb ? searchMtrBusRoutes(q).catch(() => []) : Promise.resolve([]),
       ]);
-      if (mode === "bus") return jsonOk({ routes: [...kmb, ...ctb, ...nlb], stations: [] });
+      if (mode === "bus") return jsonOk({ routes: [...kmb, ...ctb, ...nlb, ...mtrb], stations: [] });
       const gmb = await searchGmbRoutes(q, region).catch(() => []);
       const mtr = searchMtrStations(q).map((s) => ({
         operator: "mtr" as const,
@@ -35,7 +38,7 @@ export async function GET(request: Request) {
         subtitle: s.lines.map((l) => MTR_LINE_NAMES[l] ?? l).join("／"),
         stopId: s.code,
       }));
-      return jsonOk({ routes: [...kmb, ...ctb, ...nlb, ...gmb], stations: mtr });
+      return jsonOk({ routes: [...kmb, ...ctb, ...nlb, ...mtrb, ...gmb], stations: mtr });
     }
     if (mode === "minibus") {
       return jsonOk({

@@ -12,6 +12,24 @@ export const TRANSIT_MODES = [
     blurb: "專線小巴（綠van）港島、九龍、新界",
   },
   {
+    href: "/transit/tram",
+    key: "tram",
+    title: "電車",
+    blurb: "港島叮叮：東西行時間軸與班次估算",
+  },
+  {
+    href: "/transit/ferry",
+    key: "ferry",
+    title: "渡輪",
+    blurb: "碼頭樞紐、開船倒數與惡劣天氣提示",
+  },
+  {
+    href: "/transit/taxi",
+    key: "taxi",
+    title: "的士",
+    blurb: "全港的士站、上落客點與電召電話",
+  },
+  {
     href: "/transit/lrt",
     key: "lrt",
     title: "輕鐵",

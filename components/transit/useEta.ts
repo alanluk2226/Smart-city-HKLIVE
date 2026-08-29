@@ -33,6 +33,26 @@ export function useEta(selected: StopHit | null) {
           if (!cancelled) setEtas(batches.flat());
           return;
         }
+        if (stop.operator === "lrt") {
+          const rows = await apiGet<EtaResult[]>(
+            `/api/eta?operator=lrt&stopId=${stop.stopId}&stopName=${encodeURIComponent(stop.name)}`,
+          );
+          if (!cancelled) setEtas(rows);
+          return;
+        }
+        if (stop.operator === "nlb") {
+          const params = new URLSearchParams({
+            operator: "nlb",
+            stopId: stop.stopId,
+            stopName: stop.name,
+            allRoutes: "1",
+          });
+          if (stop.routeIds?.length) params.set("routeIds", stop.routeIds.join(","));
+          if (stop.routeId) params.set("routeId", stop.routeId);
+          const rows = await apiGet<EtaResult[]>(`/api/eta?${params}`);
+          if (!cancelled) setEtas(rows);
+          return;
+        }
         const params = new URLSearchParams({
           operator: stop.operator,
           stopId: stop.stopId,
@@ -40,8 +60,13 @@ export function useEta(selected: StopHit | null) {
         });
         if (stop.route) params.set("route", stop.route);
         if (stop.routeId) params.set("routeId", stop.routeId);
+        if (stop.bound) params.set("bound", stop.bound);
+        if (stop.serviceType) params.set("serviceType", stop.serviceType);
+        if (stop.seq != null) params.set("seq", String(stop.seq));
         const rows = await apiGet<EtaResult[]>(`/api/eta?${params}`);
-        if (!cancelled) setEtas(rows);
+        const route = stop.route?.trim().toUpperCase();
+        const filtered = route ? rows.filter((row) => row.route.toUpperCase() === route) : rows;
+        if (!cancelled) setEtas(filtered);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "無法載入到達時間");
       } finally {
@@ -55,7 +80,17 @@ export function useEta(selected: StopHit | null) {
       cancelled = true;
       clearInterval(id);
     };
-  }, [selected?.operator, selected?.stopId, selected?.route, selected?.routeId, selected?.name]);
+  }, [
+    selected?.operator,
+    selected?.stopId,
+    selected?.route,
+    selected?.routeId,
+    selected?.routeIds,
+    selected?.bound,
+    selected?.serviceType,
+    selected?.seq,
+    selected?.name,
+  ]);
 
   return { etas, loading, error };
 }

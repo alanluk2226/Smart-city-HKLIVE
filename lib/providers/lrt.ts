@@ -1,7 +1,8 @@
 import { cached, TTL } from "@/lib/cache";
 import { fetchJson } from "@/lib/http";
+import { rankNearby } from "@/lib/nearby";
 import { LRT_STATIONS } from "@/lib/static/lrt-stations";
-import type { EtaResult } from "@/lib/types";
+import type { EtaResult, StopHit } from "@/lib/types";
 
 type LrtSchedule = {
   platform_list?: Array<{
@@ -50,4 +51,20 @@ export async function lrtEta(stationId: string, stopName = ""): Promise<EtaResul
     }
   }
   return rows.sort((a, b) => (a.etaMinutes ?? 99) - (b.etaMinutes ?? 99));
+}
+
+export function nearbyLrtStations(lat: number, lng: number, limit = 6): StopHit[] {
+  return rankNearby(
+    LRT_STATIONS.map((s) => ({
+      operator: "lrt" as const,
+      operatorName: "輕鐵",
+      stopId: String(s.id),
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+    })),
+    lat,
+    lng,
+    limit,
+  );
 }

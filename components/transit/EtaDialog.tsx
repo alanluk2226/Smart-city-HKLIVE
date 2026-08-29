@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { FareHint } from "@/components/transit/FareHint";
 import { MtrPidsBoard } from "@/components/transit/MtrPidsBoard";
 import { LRT_ROUTE_ORDER, lrtRouteColor, lrtRouteInk } from "@/lib/static/lrt-routes";
 import { mtrLineColor, mtrLineInk } from "@/lib/static/mtr-schematic";
@@ -32,6 +33,7 @@ export function EtaDialog({
   loading,
   error,
   showAllRoutes,
+  fareHint,
   onClose,
 }: {
   title: string;
@@ -40,6 +42,8 @@ export function EtaDialog({
   loading: boolean;
   error?: string;
   showAllRoutes?: boolean;
+  /** Optional light fare line (e.g. LRT OD-dependent note) */
+  fareHint?: string;
   onClose: () => void;
 }) {
   const lines = useMemo(() => {
@@ -106,6 +110,7 @@ export function EtaDialog({
               {title}
             </h2>
             {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}
+            {fareHint ? <FareHint className="mt-1.5" label={fareHint} /> : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {loading ? <span className="text-xs text-muted">更新中</span> : null}

@@ -1,4 +1,5 @@
 import { cached, TTL } from "@/lib/cache";
+import { inferDistanceToStop } from "@/lib/bus-distance";
 import { etaMinutesFromIso, formatEtaClock, haversineMeters } from "@/lib/geo";
 import { fetchJson } from "@/lib/http";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
@@ -33,6 +34,10 @@ type KmbRouteStop = {
 type KmbEta = {
   co: string;
   route: string;
+  dir: string;
+  service_type: number | string;
+  seq: number | string;
+  eta_seq: number | string;
   dest_tc: string;
   eta: string | null;
   rmk_tc: string;
@@ -119,12 +124,29 @@ export async function kmbRouteStops(
   return rows;
 }
 
-export async function kmbStopEta(stopId: string, stopName = ""): Promise<EtaResult[]> {
+export async function kmbStopEta(
+  stopId: string,
+  stopName = "",
+  route?: string,
+  opts?: { bound?: string; serviceType?: string; seq?: number },
+): Promise<EtaResult[]> {
   const json = await cached(`kmb:eta:${stopId}`, TTL.eta, () =>
     fetchJson<KmbList<KmbEta>>(`${BASE}/stop-eta/${stopId}`),
   );
-  return json.data.map((row) => ({
-    operator: "kmb",
+  const needle = route?.trim().toUpperCase();
+  let rows = needle ? json.data.filter((row) => row.route.toUpperCase() === needle) : json.data;
+  if (opts?.bound) {
+    const dir = opts.bound.toUpperCase() === "I" ? "I" : "O";
+    const matched = rows.filter((row) => String(row.dir).toUpperCase() === dir);
+    if (matched.length) rows = matched;
+  }
+  if (opts?.serviceType) {
+    const matched = rows.filter((row) => String(row.service_type) === String(opts.serviceType));
+    if (matched.length) rows = matched;
+  }
+
+  const base = rows.map((row) => ({
+    operator: "kmb" as const,
     operatorName: OPERATOR_NAME,
     route: row.route,
     dest: row.dest_tc,
@@ -133,7 +155,63 @@ export async function kmbStopEta(stopId: string, stopName = ""): Promise<EtaResu
     etaMinutes: etaMinutesFromIso(row.eta),
     etaTime: formatEtaClock(row.eta),
     remark: row.rmk_tc || undefined,
+    _dir: String(row.dir),
+    _serviceType: String(row.service_type),
+    _etaSeq: Number(row.eta_seq),
+    _seq: Number(row.seq),
   }));
+
+  if (!needle || !opts?.bound || !opts?.serviceType) {
+    return base.map(({ _dir, _serviceType, _etaSeq, _seq, ...row }) => row);
+  }
+
+  try {
+    const [routeStops, routeEta] = await Promise.all([
+      kmbRouteStops(needle, opts.bound, opts.serviceType),
+      cached(`kmb:route-eta:${needle}:${opts.serviceType}`, TTL.eta, () =>
+        fetchJson<KmbList<KmbEta>>(`${BASE}/route-eta/${encodeURIComponent(needle)}/${opts.serviceType}`),
+      ),
+    ]);
+    const points = routeStops
+      .filter((s): s is StopHit & { seq: number; lat: number; lng: number } =>
+        typeof s.seq === "number" && typeof s.lat === "number" && typeof s.lng === "number",
+      )
+      .map((s) => ({ seq: s.seq, lat: s.lat, lng: s.lng }));
+    const targetSeq = opts.seq ?? base[0]?._seq;
+    const dir = opts.bound.toUpperCase() === "I" ? "I" : "O";
+
+    return base.map(({ _dir, _serviceType, _etaSeq, _seq, ...row }) => {
+      if (!targetSeq || !Number.isFinite(_etaSeq)) return row;
+      const vehicleEtas = routeEta.data
+        .filter(
+          (e) =>
+            String(e.dir).toUpperCase() === dir &&
+            Number(e.eta_seq) === _etaSeq &&
+            String(e.service_type) === String(opts.serviceType),
+        )
+        .map((e) => ({
+          seq: Number(e.seq),
+          etaMinutes: etaMinutesFromIso(e.eta),
+        }));
+      const dist = inferDistanceToStop(points, vehicleEtas, targetSeq, row.etaMinutes);
+      if (!dist) return row;
+      return {
+        ...row,
+        distanceMeters: Math.round(dist.meters),
+        distanceEstimate: dist.estimate,
+      };
+    });
+  } catch {
+    return base.map(({ _dir, _serviceType, _etaSeq, _seq, ...row }) => {
+      const dist = inferDistanceToStop([], [], opts.seq ?? 1, row.etaMinutes);
+      if (!dist) return row;
+      return {
+        ...row,
+        distanceMeters: Math.round(dist.meters),
+        distanceEstimate: true,
+      };
+    });
+  }
 }
 
 export async function nearbyKmbStops(lat: number, lng: number, limit = 12): Promise<StopHit[]> {

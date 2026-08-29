@@ -31,3 +31,12 @@ export function useGeo(onPos: (lat: number, lng: number) => void) {
     );
   };
 }
+
+export function openWalkingDirections(lat: number, lng: number, _name = "") {
+  const coords = `${lat},${lng}`;
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const url = /iPhone|iPad|iPod/i.test(ua)
+    ? `https://maps.apple.com/?daddr=${coords}&dirflg=w`
+    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=walking`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}

@@ -1,6 +1,8 @@
+import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { formatEtaClock } from "@/lib/geo";
 import { fetchJson } from "@/lib/http";
+import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, OccupancyLevel, RouteHit, StopHit } from "@/lib/types";
 
 const BASE = "https://data.etagmb.gov.hk";
@@ -219,6 +221,8 @@ export async function gmbStopEta(
   for (const group of json.data) {
     if (!group.enabled) continue;
     for (const eta of group.eta ?? []) {
+      const extras = extrasFromEta(eta);
+      const dist = inferDistanceToStop([], [], 1, eta.diff);
       rows.push({
         operator: "gmb",
         operatorName: OPERATOR_NAME,
@@ -229,9 +233,154 @@ export async function gmbStopEta(
         etaMinutes: eta.diff,
         etaTime: formatEtaClock(eta.timestamp),
         remark: eta.remarks_tc || undefined,
-        ...extrasFromEta(eta),
+        ...extras,
+        distanceMeters: dist ? Math.round(dist.meters) : null,
+        distanceEstimate: true,
       });
     }
   }
   return rows;
+}
+
+type GmbStopCatalogRow = {
+  stopId: string;
+  name: string;
+  lat: number;
+  lng: number;
+};
+
+type GmbLastUpdateStop = {
+  stop_id: number;
+};
+
+type GmbStopEtaRoute = {
+  enabled: boolean;
+  route_id: number;
+  route_seq: number;
+  stop_seq: number;
+  description_tc?: string;
+  eta?: GmbEtaItem[] | null;
+};
+
+type GmbStopEtaResponse = {
+  data: GmbStopEtaRoute[];
+};
+
+async function mapPool<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += size) {
+    const chunk = items.slice(i, i + size);
+    out.push(...(await Promise.all(chunk.map(fn))));
+  }
+  return out;
+}
+
+async function gmbRouteCodeMap(): Promise<Map<number, string>> {
+  return cached("gmb:route-code-map", TTL.route, async () => {
+    const index = await gmbRouteIndex();
+    const map = new Map<number, string>();
+    await mapPool(
+      Object.entries(index).flatMap(([region, codes]) => codes.map((code) => ({ region, code }))),
+      12,
+      async ({ region, code }) => {
+        try {
+          const detail = await cached(`gmb:route:${region}:${code}`, TTL.route, () =>
+            fetchJson<GmbRouteDetail>(`${BASE}/route/${region}/${encodeURIComponent(code)}`),
+          );
+          for (const item of detail.data) map.set(item.route_id, code);
+        } catch {
+          /* skip broken route */
+        }
+      },
+    );
+    return map;
+  });
+}
+
+async function gmbStopCatalog(): Promise<GmbStopCatalogRow[]> {
+  return cached("gmb:catalog", TTL.stop, async () => {
+    const stopIdsJson = await fetchJson<{ data: { data_timestamp: GmbLastUpdateStop[] } }>(
+      `${BASE}/last-update/stop`,
+      30_000,
+    );
+    const rows = await mapPool(stopIdsJson.data.data_timestamp, 40, async ({ stop_id }) => {
+      try {
+        const geo = await cached(`gmb:stop:${stop_id}`, TTL.stop, () =>
+          fetchJson<GmbStop>(`${BASE}/stop/${stop_id}`),
+        );
+        return {
+          stopId: String(stop_id),
+          name: `小巴站 ${stop_id}`,
+          lat: geo.data.coordinates.wgs84.latitude,
+          lng: geo.data.coordinates.wgs84.longitude,
+        };
+      } catch {
+        return null;
+      }
+    });
+    return rows.filter((row): row is GmbStopCatalogRow => row != null);
+  });
+}
+
+export async function nearbyGmbStops(lat: number, lng: number, limit = 8): Promise<StopHit[]> {
+  const catalog = await gmbStopCatalog();
+  return rankNearby(
+    catalog.map((row) => ({
+      operator: "gmb" as const,
+      operatorName: OPERATOR_NAME,
+      stopId: row.stopId,
+      name: row.name,
+      lat: row.lat,
+      lng: row.lng,
+    })),
+    lat,
+    lng,
+    limit,
+  );
+}
+
+export async function gmbStopEtaByStop(stopId: string, stopName = ""): Promise<EtaResult[]> {
+  const json = await cached(`gmb:eta-stop:${stopId}`, TTL.eta, () =>
+    fetchJson<GmbStopEtaResponse>(`${BASE}/eta/stop/${stopId}`),
+  );
+  const routeCodes = await gmbRouteCodeMap();
+  const rows: EtaResult[] = [];
+  for (const group of json.data) {
+    if (!group.enabled) {
+      if (group.description_tc) {
+        rows.push({
+          operator: "gmb",
+          operatorName: OPERATOR_NAME,
+          route: routeCodes.get(group.route_id) ?? String(group.route_id),
+          dest: `方向 ${group.route_seq}`,
+          stopId,
+          stopName,
+          etaMinutes: null,
+          etaTime: null,
+          remark: group.description_tc,
+        });
+      }
+      continue;
+    }
+    for (const eta of group.eta ?? []) {
+      rows.push({
+        operator: "gmb",
+        operatorName: OPERATOR_NAME,
+        route: routeCodes.get(group.route_id) ?? String(group.route_id),
+        dest: `方向 ${group.route_seq}`,
+        stopId,
+        stopName,
+        etaMinutes: eta.diff,
+        etaTime: formatEtaClock(eta.timestamp),
+        remark: eta.remarks_tc || undefined,
+        ...extrasFromEta(eta),
+        distanceMeters: (() => {
+          const dist = inferDistanceToStop([], [], 1, eta.diff);
+          return dist ? Math.round(dist.meters) : null;
+        })(),
+        distanceEstimate: true,
+      });
+    }
+  }
+  return rows.sort((a, b) => (a.etaMinutes ?? 99) - (b.etaMinutes ?? 99));
 }

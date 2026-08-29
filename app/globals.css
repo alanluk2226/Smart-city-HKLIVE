@@ -54,8 +54,19 @@ body {
 }
 
 .leaflet-container {
-  background: #0a1820;
+  background: #0b1520;
   font-family: inherit;
+}
+
+/* Keep map clear on small screens; tile credit is covered site-wide in the footer. */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .leaflet-control-zoom {
+    display: none !important;
+  }
 }
 
 .stop-map-pin {

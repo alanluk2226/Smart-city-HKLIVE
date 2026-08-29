@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
 import { MODULES } from "@/lib/modules";
 import { apiGet } from "@/lib/client";
 import type { HospitalWait } from "@/lib/providers/hospitals";
@@ -28,21 +29,27 @@ export function DashboardHome() {
   const busiest = [...hospitals].sort((a, b) => (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0))[0];
 
   return (
-    <div className="min-h-full flex flex-col">
-      <header className="border-b border-line bg-elev/80">
-        <div className="mx-auto max-w-6xl px-4 py-5">
-          <div className="font-mono text-[11px] tracking-[0.28em] text-teal">COMMAND CONSOLE</div>
-          <h1 className="text-3xl mt-1">香港城市實況</h1>
-          <p className="text-muted mt-2 max-w-2xl">
-            以公開資料組成的主控台。先看通勤到達時間，再進入天氣、醫療、路況、停車場與康文署場地。
-          </p>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 space-y-6">
+    <AppShell>
+      <div className="mb-5">
+        <div className="font-mono text-[11px] tracking-[0.28em] text-teal">COMMAND CONSOLE</div>
+        <h1 className="text-3xl mt-1">香港城市實況</h1>
+        <p className="text-muted mt-2 max-w-2xl">
+          以公開資料組成的主控台。先看通勤到達時間，再進入天氣、醫療、路況、停車場與康文署場地。頂欄可隨時睇天氣摘要。
+        </p>
+      </div>
+
+      <div className="space-y-6">
         <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-line bg-card p-4">
-            <div className="text-xs text-muted">天文台現況</div>
+          <Link
+            href="/weather"
+            className="rounded-2xl border border-line bg-card p-4 transition hover:border-sky/50"
+          >
+            <div className="text-xs text-muted">天文台現況 · 撳入詳細</div>
             <div className="mt-1 flex items-end gap-3">
+              {weather?.iconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={weather.iconUrl} alt="" className="mb-1 h-10 w-10" />
+              ) : null}
               <div className="font-mono text-4xl text-teal">
                 {weather?.temperature ?? "—"}
                 <span className="text-lg">°C</span>
@@ -52,7 +59,7 @@ export function DashboardHome() {
                 <div>{weather?.warnings[0]?.name || "現時沒有特別天氣警報"}</div>
               </div>
             </div>
-          </div>
+          </Link>
           <div className="rounded-2xl border border-line bg-card p-4">
             <div className="text-xs text-muted">急症室輪候（第四／五類中位數）</div>
             <div className="mt-1 text-xl">{busiest ? busiest.name : "載入中…"}</div>
@@ -76,12 +83,7 @@ export function DashboardHome() {
             </Link>
           ))}
         </section>
-      </main>
-      <footer className="border-t border-line text-muted text-xs px-4 py-4">
-        <div className="mx-auto max-w-6xl">
-          資料來自 DATA.GOV.HK、天文台、醫管局、運輸署、康文署及各公共交通營運商。
-        </div>
-      </footer>
-    </div>
+      </div>
+    </AppShell>
   );
 }

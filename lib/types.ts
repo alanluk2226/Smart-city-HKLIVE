@@ -1,4 +1,4 @@
-export type Operator = "kmb" | "ctb" | "nlb" | "gmb" | "mtr" | "lrt";
+export type Operator = "kmb" | "ctb" | "nlb" | "mtrb" | "gmb" | "mtr" | "lrt" | "tram" | "ferry" | "taxi";
 
 export type OccupancyLevel = "seats" | "standing" | "full";
 
@@ -17,6 +17,10 @@ export type EtaResult = {
   occupancy?: OccupancyLevel;
   seatsLeft?: number;
   region?: string;
+  /** 巴士距離此站剩餘路程（米） */
+  distanceMeters?: number | null;
+  /** true = 以車速估算，非 GPS／站序推算 */
+  distanceEstimate?: boolean;
 };
 
 export type RouteHit = {
@@ -30,6 +34,14 @@ export type RouteHit = {
   region?: string;
   routeId?: string;
   subtitle: string;
+};
+
+export type RouteInfo = {
+  fareAdult: number | null;
+  journeyMinutes: number | null;
+  remainingMinutes: number | null;
+  destName: string | null;
+  note?: string;
 };
 
 export type StopHit = {
@@ -47,6 +59,7 @@ export type StopHit = {
   region?: string;
   routeId?: string;
   routeSeq?: number;
+  routeIds?: string[];
 };
 
 export type MtrStation = {

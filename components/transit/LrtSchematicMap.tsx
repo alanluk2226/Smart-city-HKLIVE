@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { haversineMeters } from "@/lib/geo";
 import { LRT_MAP_EXTRA_HITS, LRT_MAP_HITS, LRT_MAP_HUBS, LRT_MAP_SIZE } from "@/lib/static/lrt-map-hits";
 import { LRT_ROUTE_COLORS, LRT_ROUTE_LABELS, LRT_ROUTE_ORDER } from "@/lib/static/lrt-routes";
@@ -110,17 +117,23 @@ export function LrtSchematicMap({
   originCode,
   destCode,
   pickHint,
+  pickHintAction,
+  cancelLabel,
   onSelect,
   onCancelPick,
   closedCodes,
+  topOverlay,
 }: {
   selectedCode?: string;
   originCode?: string;
   destCode?: string;
   pickHint?: string | null;
+  pickHintAction?: { label: string; onClick: () => void };
+  cancelLabel?: string;
   onSelect: (code: string) => void;
   onCancelPick?: () => void;
   closedCodes?: string[];
+  topOverlay?: ReactNode;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const viewRef = useRef<View>(FULL_VIEW);
@@ -176,6 +189,27 @@ export function LrtSchematicMap({
     return out;
   }, []);
 
+  const tripEnds = useMemo(() => {
+    if (!originCode || !destCode) return null;
+    const pt = (code: string) => {
+      const hub = LRT_MAP_HUBS[code];
+      const hit = LRT_MAP_HITS[code];
+      if (hub) return { x: hub.x, y: hub.y };
+      if (hit) return { x: hit.x, y: hit.y };
+      return null;
+    };
+    const a = pt(originCode);
+    const b = pt(destCode);
+    if (!a || !b) return null;
+    return [a, b];
+  }, [originCode, destCode]);
+
+  useEffect(() => {
+    if (!tripEnds) return;
+    flyToBounds(tripEnds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originCode, destCode]);
+
   function hitsAt(x: number, y: number): Hit[] {
     const hubHits: Hit[] = [];
     const other: Hit[] = [];
@@ -195,8 +229,11 @@ export function LrtSchematicMap({
   }
 
   function flyTo(cx: number, cy: number, zoom = LOCATE_ZOOM) {
+    flyToView(viewOn(cx, cy, zoom));
+  }
+
+  function flyToView(to: View) {
     const from = viewRef.current;
-    const to = viewOn(cx, cy, zoom);
     const start = performance.now();
     const dur = 820;
     const id = ++flyId.current;
@@ -213,6 +250,31 @@ export function LrtSchematicMap({
       if (t < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+  }
+
+  function flyToBounds(pts: { x: number; y: number }[]) {
+    if (!pts.length) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of pts) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    const pad = Math.max(48, (maxX - minX) * 0.22, (maxY - minY) * 0.22);
+    const bw = Math.max(40, maxX - minX) + pad * 2;
+    const bh = Math.max(40, maxY - minY) + pad * 2;
+    const aspect = VB_H / VB_W;
+    let w = bw;
+    let h = w * aspect;
+    if (h < bh) {
+      h = bh;
+      w = h / aspect;
+    }
+    flyToView(clampView({ x: (minX + maxX) / 2 - w / 2, y: (minY + maxY) / 2 - h / 2, w, h }));
   }
 
   function focusStation(code: string) {
@@ -399,40 +461,73 @@ export function LrtSchematicMap({
     ? LRT_STATIONS.find((s) => String(s.id) === locatedCode)?.name
     : null;
 
+  function renderLegend() {
+    return LRT_ROUTE_ORDER.filter((id) => LRT_ROUTE_COLORS[id]).map((id) => (
+      <span key={id} className="inline-flex items-center gap-1 shrink-0">
+        <span className="h-2 w-2 rounded-full" style={{ background: LRT_ROUTE_COLORS[id] }} />
+        {id}
+        <span className="text-muted/70">{LRT_ROUTE_LABELS[id]}</span>
+      </span>
+    ));
+  }
+
   return (
-    <div className="rounded-2xl border border-line overflow-hidden">
-      <div className="px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted border-b border-line bg-elev">
-        {LRT_ROUTE_ORDER.filter((id) => LRT_ROUTE_COLORS[id]).map((id) => (
-          <span key={id} className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full" style={{ background: LRT_ROUTE_COLORS[id] }} />
-            {id}
-            <span className="text-muted/70 hidden sm:inline">{LRT_ROUTE_LABELS[id]}</span>
-          </span>
-        ))}
-      </div>
-      <div className="relative overflow-auto max-h-[min(80vh,720px)] bg-[#f3f1ea]">
-        {pickHint ? (
-          <div className="absolute left-3 right-16 top-3 z-10 flex items-center gap-2 rounded-lg border border-teal/40 bg-elev/95 px-2.5 py-1.5 text-[12px] text-ink shadow-lg">
+    <div className="relative max-md:-mx-4 max-md:h-[calc(100dvh-10.5rem)] max-md:min-h-[22rem] md:space-y-3">
+      {topOverlay ? (
+        <div className="z-20 space-y-2 max-md:absolute max-md:inset-x-0 max-md:top-0 max-md:p-3 md:relative">
+          {topOverlay}
+        </div>
+      ) : null}
+      <div className="overflow-hidden max-md:absolute max-md:inset-0 md:relative md:rounded-2xl md:border md:border-line">
+        <div className="hidden md:flex px-3 py-2 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted border-b border-line bg-elev">
+          {renderLegend()}
+        </div>
+        <div className="relative h-full overflow-auto max-md:h-full md:max-h-[min(80vh,720px)] bg-[#f3f1ea]">
+          <div className="pointer-events-auto absolute inset-x-0 top-0 z-20 space-y-2 p-3 md:hidden">
+            {topOverlay ? <div className="h-[3.25rem]" aria-hidden /> : null}
+            <div className="flex gap-x-3 gap-y-1 overflow-x-auto rounded-xl border border-line/80 bg-elev/90 px-3 py-2 text-[11px] text-muted shadow-lg backdrop-blur-md">
+              {renderLegend()}
+            </div>
+          </div>
+          {pickHint ? (
+          <div
+            className={`absolute left-3 right-16 z-10 flex items-center gap-2 rounded-lg border border-teal/40 bg-elev/95 px-2.5 py-1.5 text-[12px] text-ink shadow-lg ${
+              topOverlay ? "top-[7.5rem] md:top-3" : "top-3"
+            }`}
+          >
             <span className="min-w-0 flex-1">{pickHint}</span>
+            {pickHintAction ? (
+              <button
+                type="button"
+                onClick={pickHintAction.onClick}
+                className="shrink-0 rounded-md bg-teal px-2 py-0.5 text-[11px] text-bg hover:opacity-90"
+              >
+                {pickHintAction.label}
+              </button>
+            ) : null}
             {onCancelPick ? (
               <button
                 type="button"
                 onClick={onCancelPick}
                 className="shrink-0 rounded-md border border-line px-2 py-0.5 text-[11px] text-muted hover:text-ink"
               >
-                取消
+                {cancelLabel ?? "取消"}
               </button>
             ) : null}
           </div>
         ) : locatedName ? (
-          <div className="absolute left-3 top-3 z-10 rounded-lg border border-line bg-elev/90 px-2.5 py-1 text-[11px] text-ink">
+          <div
+            className={`absolute left-3 z-10 rounded-lg border border-line bg-elev/90 px-2.5 py-1 text-[11px] text-ink ${
+              topOverlay ? "top-[7.5rem] md:top-3" : "top-3"
+            }`}
+          >
             附近：{locatedName}
           </div>
         ) : null}
         <svg
           ref={svgRef}
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-          className={`block min-w-[720px] w-full h-auto select-none touch-none ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[720px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
           role="img"
           aria-label="輕鐵互動路綫圖"
           onPointerDown={onPointerDown}
@@ -626,53 +721,54 @@ export function LrtSchematicMap({
           </div>
         ) : null}
 
-        <div className="absolute right-3 bottom-3 flex flex-col gap-1">
-          <button
-            type="button"
-            aria-label="放大"
-            onClick={() => zoomBy(ZOOM_STEP)}
-            disabled={zoom >= MAX_ZOOM - 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label="縮小"
-            onClick={() => zoomBy(1 / ZOOM_STEP)}
-            disabled={zoom <= MIN_ZOOM + 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label="附近車站"
-            onClick={openLocatePrompt}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal"
-          >
-            附近
-          </button>
-          <button
-            type="button"
-            aria-label="重設視圖"
-            onClick={() => {
-              cancelFly();
-              setView(FULL_VIEW);
-            }}
-            disabled={zoom <= MIN_ZOOM + 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal disabled:opacity-40"
-          >
-            重設
-          </button>
-          <div className="rounded-lg border border-line bg-elev/90 py-1 text-center text-[10px] text-muted">
-            {Math.round(zoom * 100)}%
+          <div className="absolute right-3 bottom-3 hidden md:flex flex-col gap-1">
+            <button
+              type="button"
+              aria-label="放大"
+              onClick={() => zoomBy(ZOOM_STEP)}
+              disabled={zoom >= MAX_ZOOM - 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              aria-label="縮小"
+              onClick={() => zoomBy(1 / ZOOM_STEP)}
+              disabled={zoom <= MIN_ZOOM + 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              aria-label="附近車站"
+              onClick={openLocatePrompt}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal"
+            >
+              附近
+            </button>
+            <button
+              type="button"
+              aria-label="重設視圖"
+              onClick={() => {
+                cancelFly();
+                setView(FULL_VIEW);
+              }}
+              disabled={zoom <= MIN_ZOOM + 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal disabled:opacity-40"
+            >
+              重設
+            </button>
+            <div className="rounded-lg border border-line bg-elev/90 py-1 text-center text-[10px] text-muted">
+              {Math.round(zoom * 100)}%
+            </div>
           </div>
         </div>
+        <p className="hidden md:block px-3 py-2 text-[11px] text-muted bg-elev border-t border-line">
+          點車站或路綫編號簇可睇到達時間，或設起點後再點終點規劃行程。喺屯門／天水圍／元朗範圍內可按「附近」跳到最近站。
+        </p>
       </div>
-      <p className="px-3 py-2 text-[11px] text-muted bg-elev border-t border-line">
-        點車站或路綫編號簇可睇到達時間，或設起點後再點終點規劃行程。喺屯門／天水圍／元朗範圍內可按「附近」跳到最近站。
-      </p>
     </div>
   );
 }

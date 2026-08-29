@@ -1,6 +1,8 @@
+import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
 import { fetchJson } from "@/lib/http";
+import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
 const BASE = "https://rt.data.gov.hk/v2/transport/nlb";
@@ -123,6 +125,8 @@ export async function nlbStopEta(
       const remarks: string[] = [];
       if (!flag(row.departed) || flag(row.noGPS)) remarks.push("預定班次");
       if (row.routeVariantName?.trim()) remarks.push(row.routeVariantName.trim());
+      const etaMinutes = etaMinutesFromIso(iso);
+      const dist = inferDistanceToStop([], [], 1, etaMinutes);
       return {
         operator: "nlb" as const,
         operatorName: OPERATOR_NAME,
@@ -130,9 +134,11 @@ export async function nlbStopEta(
         dest,
         stopId,
         stopName,
-        etaMinutes: etaMinutesFromIso(iso),
+        etaMinutes,
         etaTime: formatEtaClock(iso),
         remark: remarks.join(" · ") || undefined,
+        distanceMeters: dist ? Math.round(dist.meters) : null,
+        distanceEstimate: true,
       };
     });
   if (rows.length) return rows;
@@ -152,4 +158,48 @@ export async function nlbStopEta(
     ];
   }
   return [];
+}
+
+export async function nlbAllStops(): Promise<StopHit[]> {
+  return cached("nlb:all-stops", TTL.stop, async () => {
+    const routes = await nlbRoutes();
+    const groups = await Promise.all(
+      routes.map((route) => nlbRouteStops(String(route.routeId)).catch(() => [] as StopHit[])),
+    );
+    const byId = new Map<string, StopHit & { _routeIds: Set<string> }>();
+    for (const group of groups) {
+      for (const stop of group) {
+        const existing = byId.get(stop.stopId);
+        if (existing) {
+          if (stop.routeId) existing._routeIds.add(stop.routeId);
+        } else {
+          byId.set(stop.stopId, {
+            ...stop,
+            _routeIds: new Set(stop.routeId ? [stop.routeId] : []),
+          });
+        }
+      }
+    }
+    return [...byId.values()].map(({ _routeIds, ...stop }) => ({
+      ...stop,
+      routeId: stop.routeId ?? [..._routeIds][0],
+      routeIds: [..._routeIds],
+    }));
+  });
+}
+
+export async function nearbyNlbStops(lat: number, lng: number, limit = 6): Promise<StopHit[]> {
+  const stops = await nlbAllStops();
+  return rankNearby(stops, lat, lng, limit);
+}
+
+export async function nlbStopAllEta(stop: StopHit): Promise<EtaResult[]> {
+  const routeIds = stop.routeIds?.length ? stop.routeIds : stop.routeId ? [stop.routeId] : [];
+  if (!routeIds.length) return [];
+  const batches = await Promise.all(
+    routeIds.map((routeId) => nlbStopEta(routeId, stop.stopId, stop.name).catch(() => [] as EtaResult[])),
+  );
+  return batches
+    .flat()
+    .sort((a, b) => (a.etaMinutes ?? 99) - (b.etaMinutes ?? 99));
 }

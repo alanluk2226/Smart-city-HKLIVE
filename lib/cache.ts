@@ -39,4 +39,5 @@ export const TTL = {
   traffic: 2 * 60 * 1000,
   facility: 5 * 60 * 1000,
   hsr: 30 * 60 * 1000,
+  taxi: 6 * 60 * 60 * 1000,
 };

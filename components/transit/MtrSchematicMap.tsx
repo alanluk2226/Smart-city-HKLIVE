@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { haversineMeters } from "@/lib/geo";
 import { MTR_MAP_EXTRA_HITS, MTR_MAP_HITS, MTR_MAP_SIZE } from "@/lib/static/mtr-map-hits";
 import { MTR_LINE_COLORS } from "@/lib/static/mtr-schematic";
@@ -80,17 +87,24 @@ export function MtrSchematicMap({
   originCode,
   destCode,
   pickHint,
+  pickHintAction,
+  cancelLabel,
   onSelect,
   onCancelPick,
   closedCodes,
+  topOverlay,
 }: {
   selectedCode?: string;
   originCode?: string;
   destCode?: string;
   pickHint?: string | null;
+  pickHintAction?: { label: string; onClick: () => void };
+  cancelLabel?: string;
   onSelect: (code: string) => void;
   onCancelPick?: () => void;
   closedCodes?: string[];
+  /** Floated above the map (search etc.); primarily for mobile full-bleed layout */
+  topOverlay?: ReactNode;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const viewRef = useRef<View>(FULL_VIEW);
@@ -133,6 +147,20 @@ export function MtrSchematicMap({
     return out;
   }, []);
 
+  const tripEnds = useMemo(() => {
+    if (!originCode || !destCode) return null;
+    const a = MTR_MAP_HITS[originCode];
+    const b = MTR_MAP_HITS[destCode];
+    if (!a || !b) return null;
+    return [a, b];
+  }, [originCode, destCode]);
+
+  useEffect(() => {
+    if (!tripEnds) return;
+    flyToBounds(tripEnds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originCode, destCode]);
+
   function hitsAt(x: number, y: number): Hit[] {
     const best = new Map<string, Hit>();
     for (const t of targets) {
@@ -151,8 +179,11 @@ export function MtrSchematicMap({
   }
 
   function flyTo(cx: number, cy: number, zoom = LOCATE_ZOOM) {
+    flyToView(viewOn(cx, cy, zoom));
+  }
+
+  function flyToView(to: View) {
     const from = viewRef.current;
-    const to = viewOn(cx, cy, zoom);
     const start = performance.now();
     const dur = 820;
     const id = ++flyId.current;
@@ -169,6 +200,31 @@ export function MtrSchematicMap({
       if (t < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+  }
+
+  function flyToBounds(pts: { x: number; y: number }[]) {
+    if (!pts.length) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of pts) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    const pad = Math.max(160, (maxX - minX) * 0.22, (maxY - minY) * 0.22);
+    const bw = Math.max(120, maxX - minX) + pad * 2;
+    const bh = Math.max(120, maxY - minY) + pad * 2;
+    const aspect = VB_H / VB_W;
+    let w = bw;
+    let h = w * aspect;
+    if (h < bh) {
+      h = bh;
+      w = h / aspect;
+    }
+    flyToView(clampView({ x: (minX + maxX) / 2 - w / 2, y: (minY + maxY) / 2 - h / 2, w, h }));
   }
 
   function focusStation(code: string) {
@@ -351,39 +407,73 @@ export function MtrSchematicMap({
     ? MTR_STATIONS.find((s) => s.code === locatedCode)?.name
     : null;
 
+  function renderLegend() {
+    return MTR_LINE_ORDER.map((id) => (
+      <span key={id} className="inline-flex items-center gap-1 shrink-0">
+        <span className="h-2 w-2 rounded-full" style={{ background: MTR_LINE_COLORS[id] }} />
+        {MTR_LINE_NAMES[id]}
+      </span>
+    ));
+  }
+
   return (
-    <div className="rounded-2xl border border-line overflow-hidden">
-      <div className="px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted border-b border-line bg-elev">
-        {MTR_LINE_ORDER.map((id) => (
-          <span key={id} className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full" style={{ background: MTR_LINE_COLORS[id] }} />
-            {MTR_LINE_NAMES[id]}
-          </span>
-        ))}
-      </div>
-      <div className="relative overflow-auto max-h-[min(80vh,920px)] bg-[#7fc9ee]">
-        {pickHint ? (
-          <div className="absolute left-3 right-16 top-3 z-10 flex items-center gap-2 rounded-lg border border-teal/40 bg-elev/95 px-2.5 py-1.5 text-[12px] text-ink shadow-lg">
+    <div className="relative max-md:-mx-4 max-md:h-[calc(100dvh-10.5rem)] max-md:min-h-[22rem] md:space-y-3">
+      {topOverlay ? (
+        <div className="z-20 space-y-2 max-md:absolute max-md:inset-x-0 max-md:top-0 max-md:p-3 md:relative">
+          {topOverlay}
+        </div>
+      ) : null}
+      <div className="overflow-hidden max-md:absolute max-md:inset-0 md:relative md:rounded-2xl md:border md:border-line">
+        <div className="hidden md:flex px-3 py-2 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted border-b border-line bg-elev">
+          {renderLegend()}
+        </div>
+        <div className="relative h-full overflow-auto max-md:h-full md:max-h-[min(80vh,920px)] bg-[#7fc9ee]">
+          <div className="pointer-events-auto absolute inset-x-0 top-0 z-20 space-y-2 p-3 md:hidden">
+            {/* spacer matches floating search height so legend sits below it */}
+            {topOverlay ? <div className="h-[3.25rem]" aria-hidden /> : null}
+            <div className="flex gap-x-3 gap-y-1 overflow-x-auto rounded-xl border border-line/80 bg-elev/90 px-3 py-2 text-[11px] text-muted shadow-lg backdrop-blur-md">
+              {renderLegend()}
+            </div>
+          </div>
+          {pickHint ? (
+          <div
+            className={`absolute left-3 right-16 z-10 flex items-center gap-2 rounded-lg border border-teal/40 bg-elev/95 px-2.5 py-1.5 text-[12px] text-ink shadow-lg ${
+              topOverlay ? "top-[7.5rem] md:top-3" : "top-3"
+            }`}
+          >
             <span className="min-w-0 flex-1">{pickHint}</span>
+            {pickHintAction ? (
+              <button
+                type="button"
+                onClick={pickHintAction.onClick}
+                className="shrink-0 rounded-md bg-teal px-2 py-0.5 text-[11px] text-bg hover:opacity-90"
+              >
+                {pickHintAction.label}
+              </button>
+            ) : null}
             {onCancelPick ? (
               <button
                 type="button"
                 onClick={onCancelPick}
                 className="shrink-0 rounded-md border border-line px-2 py-0.5 text-[11px] text-muted hover:text-ink"
               >
-                取消
+                {cancelLabel ?? "取消"}
               </button>
             ) : null}
           </div>
         ) : locatedName ? (
-          <div className="absolute left-3 top-3 z-10 rounded-lg border border-line bg-elev/90 px-2.5 py-1 text-[11px] text-ink">
+          <div
+            className={`absolute left-3 z-10 rounded-lg border border-line bg-elev/90 px-2.5 py-1 text-[11px] text-ink ${
+              topOverlay ? "top-[7.5rem] md:top-3" : "top-3"
+            }`}
+          >
             附近：{locatedName}
           </div>
         ) : null}
         <svg
           ref={svgRef}
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-          className={`block min-w-[860px] w-full h-auto select-none touch-none ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[860px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
           role="img"
           aria-label="港鐵互動路綫圖"
           onPointerDown={onPointerDown}
@@ -560,53 +650,54 @@ export function MtrSchematicMap({
           </div>
         ) : null}
 
-        <div className="absolute right-3 bottom-3 flex flex-col gap-1">
-          <button
-            type="button"
-            aria-label="放大"
-            onClick={() => zoomBy(ZOOM_STEP)}
-            disabled={zoom >= MAX_ZOOM - 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label="縮小"
-            onClick={() => zoomBy(1 / ZOOM_STEP)}
-            disabled={zoom <= MIN_ZOOM + 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label="附近車站"
-            onClick={openLocatePrompt}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal"
-          >
-            附近
-          </button>
-          <button
-            type="button"
-            aria-label="重設視圖"
-            onClick={() => {
-              cancelFly();
-              setView(FULL_VIEW);
-            }}
-            disabled={zoom <= MIN_ZOOM + 0.05}
-            className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal disabled:opacity-40"
-          >
-            重設
-          </button>
-          <div className="rounded-lg border border-line bg-elev/90 py-1 text-center text-[10px] text-muted">
-            {Math.round(zoom * 100)}%
+          <div className="absolute right-3 bottom-3 hidden md:flex flex-col gap-1">
+            <button
+              type="button"
+              aria-label="放大"
+              onClick={() => zoomBy(ZOOM_STEP)}
+              disabled={zoom >= MAX_ZOOM - 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              aria-label="縮小"
+              onClick={() => zoomBy(1 / ZOOM_STEP)}
+              disabled={zoom <= MIN_ZOOM + 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-lg text-ink hover:border-teal disabled:opacity-40"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              aria-label="附近車站"
+              onClick={openLocatePrompt}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal"
+            >
+              附近
+            </button>
+            <button
+              type="button"
+              aria-label="重設視圖"
+              onClick={() => {
+                cancelFly();
+                setView(FULL_VIEW);
+              }}
+              disabled={zoom <= MIN_ZOOM + 0.05}
+              className="h-9 w-9 rounded-lg border border-line bg-elev/90 text-[10px] text-ink hover:border-teal disabled:opacity-40"
+            >
+              重設
+            </button>
+            <div className="rounded-lg border border-line bg-elev/90 py-1 text-center text-[10px] text-muted">
+              {Math.round(zoom * 100)}%
+            </div>
           </div>
         </div>
+        <p className="hidden md:block px-3 py-2 text-[11px] text-muted bg-elev border-t border-line">
+          點車站可睇到達時間，或設起點後再點終點規劃行程。進入頁面可允許定位跳到最近站。
+        </p>
       </div>
-      <p className="px-3 py-2 text-[11px] text-muted bg-elev border-t border-line">
-        點車站可睇到達時間，或設起點後再點終點規劃行程。進入頁面可允許定位跳到最近站。
-      </p>
     </div>
   );
 }

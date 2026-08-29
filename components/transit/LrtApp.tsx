@@ -27,6 +27,7 @@ export function LrtApp() {
   const [origin, setOrigin] = useState<string | null>(null);
   const [dest, setDest] = useState<string | null>(null);
   const [pickingDest, setPickingDest] = useState(false);
+  const [tripOpen, setTripOpen] = useState(false);
 
   const selected = etaCode ? stopFor(etaCode) : null;
   const { etas, loading, error } = useEta(selected);
@@ -50,65 +51,85 @@ export function LrtApp() {
       if (code === origin) return;
       setDest(code);
       setPickingDest(false);
+      setTripOpen(true);
       return;
     }
     setActionCode(code);
+  }
+
+  function clearTrip() {
+    setOrigin(null);
+    setDest(null);
+    setPickingDest(false);
+    setTripOpen(false);
   }
 
   function startTrip(code: string) {
     setOrigin(code);
     setDest(null);
     setPickingDest(true);
+    setTripOpen(false);
     setActionCode(null);
     setEtaCode(null);
   }
 
+  const searchPlaceholder = pickingDest
+    ? `已選起點：${lrtStation(origin ?? "")?.name ?? ""}，搜尋或點地圖選終點`
+    : "搜尋輕鐵站，或直接在路綫圖上點選";
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={
-            pickingDest
-              ? `已選起點：${lrtStation(origin ?? "")?.name ?? ""}，搜尋或點地圖選終點`
-              : "搜尋輕鐵站，或直接在路綫圖上點選"
-          }
-          className="flex-1 rounded-xl border border-line bg-card px-4 py-3 outline-none focus:border-teal"
-        />
-      </div>
-      {matches.length ? (
-        <div className="rounded-xl border border-line bg-card p-2">
-          {matches.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => pick(String(s.id))}
-              className="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5"
-            >
-              {s.name}
-              <span className="text-xs text-muted ml-2">
-                {s.zone} · {s.nameEn}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div>
       <LrtSchematicMap
         selectedCode={actionCode ?? etaCode ?? dest ?? origin ?? undefined}
         originCode={origin ?? undefined}
         destCode={dest ?? undefined}
         pickHint={
-          pickingDest && origin ? `已選起點：${lrtStation(origin)?.name}，請再點終點` : null
+          pickingDest && origin
+            ? `已選起點：${lrtStation(origin)?.name}，請再點終點`
+            : origin && dest && !tripOpen
+              ? `${lrtStation(origin)?.name} → ${lrtStation(dest)?.name}`
+              : null
         }
+        pickHintAction={
+          origin && dest && !tripOpen
+            ? { label: "車程", onClick: () => setTripOpen(true) }
+            : undefined
+        }
+        cancelLabel={origin && dest && !tripOpen ? "清除" : undefined}
         onSelect={pick}
         onCancelPick={
           pickingDest
-            ? () => {
-                setPickingDest(false);
-                setOrigin(null);
-                setDest(null);
-              }
-            : undefined
+            ? clearTrip
+            : origin && dest && !tripOpen
+              ? clearTrip
+              : undefined
+        }
+        topOverlay={
+          <div className="space-y-2">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full rounded-xl border border-line/80 bg-elev/90 px-4 py-3 text-ink shadow-lg outline-none backdrop-blur-md focus:border-teal md:border-line md:bg-card md:shadow-none"
+            />
+            {matches.length ? (
+              <div className="rounded-xl border border-line bg-elev/95 p-2 shadow-lg backdrop-blur-md max-h-48 overflow-y-auto md:bg-card md:shadow-none">
+                {matches.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => pick(String(s.id))}
+                    className="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5"
+                  >
+                    {s.name}
+                    <span className="text-xs text-muted ml-2">
+                      {s.zone} · {s.nameEn}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         }
       />
       {actionStation ? (
@@ -133,10 +154,11 @@ export function LrtApp() {
           loading={loading}
           error={error}
           showAllRoutes
+          fareHint="視起迄站而定 · 可用「起點／終點」查閱八達通車費"
           onClose={() => setEtaCode(null)}
         />
       ) : null}
-      {origin && dest ? (
+      {origin && dest && tripOpen ? (
         <LrtTripDialog
           from={origin}
           to={dest}
@@ -144,11 +166,7 @@ export function LrtApp() {
             setOrigin(dest);
             setDest(origin);
           }}
-          onClose={() => {
-            setOrigin(null);
-            setDest(null);
-            setPickingDest(false);
-          }}
+          onClose={() => setTripOpen(false)}
         />
       ) : null}
     </div>
