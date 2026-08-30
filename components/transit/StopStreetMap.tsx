@@ -37,27 +37,42 @@ function pinIcon(
   glow: string,
   compact: boolean,
 ) {
+  // Far zoom: tiny tip so the map stays readable
   if (compact && !selected) {
-    const size = 14;
-    const core = 8;
+    const size = 12;
     return L.divIcon({
       className: "stop-map-pin is-dot",
       iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-      html: `<div style="pointer-events:none;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center"><div style="width:${core}px;height:${core}px;border-radius:999px;background:${idle};border:1.5px solid rgba(255,255,255,.55);box-shadow:0 0 0 1px rgba(7,16,24,.35);opacity:.9"></div></div>`,
+      iconAnchor: [size / 2, size],
+      html: `<div style="pointer-events:none;width:${size}px;height:${size}px;filter:drop-shadow(0 1px 2px rgba(7,16,24,.45))">
+        <svg width="${size}" height="${size}" viewBox="0 0 24 36" aria-hidden="true">
+          <path d="M12 1.5C6.2 1.5 1.5 6.2 1.5 12c0 8.2 10.5 22 10.5 22S22.5 20.2 22.5 12C22.5 6.2 17.8 1.5 12 1.5z" fill="${idle}" stroke="rgba(255,255,255,.85)" stroke-width="2"/>
+          <circle cx="12" cy="12" r="3.2" fill="rgba(255,255,255,.9)"/>
+        </svg>
+      </div>`,
     });
   }
-  const core = selected ? 42 : 24;
-  const size = selected ? 64 : 24;
+
+  const w = selected ? 36 : 28;
+  const h = selected ? 48 : 38;
   const bg = selected ? active : idle;
   const fg = selected ? "#071018" : "#f8fffb";
   const font = selected ? 13 : 11;
-  const ring = selected ? "2px solid rgba(7,16,24,.75)" : "2px solid rgba(255,255,255,.95)";
+  const label = seq != null ? String(seq) : "";
+  const stroke = selected ? "rgba(7,16,24,.75)" : "rgba(255,255,255,.95)";
+  // Number sits in the circular head of the teardrop (viewBox y≈12)
+  const labelTop = selected ? 9 : 7;
+
   return L.divIcon({
     className: selected ? "stop-map-pin is-on" : "stop-map-pin",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    html: `<div style="pointer-events:none;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center"><div class="stop-map-pin-core" style="--pin-glow:${glow};width:${core}px;height:${core}px;border-radius:999px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font:700 ${font}px/1 ui-monospace,monospace;border:${ring};box-shadow:0 1px 4px rgba(7,16,24,.28)">${seq ?? ""}</div></div>`,
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h],
+    html: `<div class="stop-map-pin-core" style="--pin-glow:${glow};pointer-events:none;position:relative;width:${w}px;height:${h}px;filter:drop-shadow(0 2px 4px rgba(7,16,24,.4))">
+      <svg width="${w}" height="${h}" viewBox="0 0 24 36" aria-hidden="true">
+        <path d="M12 1.2C5.9 1.2 1 6.1 1 12.2c0 9.2 11 22.6 11 22.6s11-13.4 11-22.6C23 6.1 18.1 1.2 12 1.2z" fill="${bg}" stroke="${stroke}" stroke-width="1.8"/>
+      </svg>
+      <div style="position:absolute;left:0;right:0;top:${labelTop}px;display:flex;align-items:center;justify-content:center;color:${fg};font:700 ${font}px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-0.02em;text-shadow:${selected ? "none" : "0 1px 1px rgba(0,0,0,.25)"}">${label}</div>
+    </div>`,
   });
 }
 

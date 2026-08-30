@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeatherNavChip } from "@/components/WeatherNavChip";
 import { MODULES } from "@/lib/modules";
 
@@ -37,7 +38,7 @@ export function AppShell({
                   className={`rounded-full px-3 py-1.5 text-sm whitespace-nowrap ${
                     active
                       ? "bg-teal/15 text-teal"
-                      : "text-muted hover:text-ink hover:bg-white/5"
+                      : "text-muted hover:bg-ink/5 hover:text-ink"
                   }`}
                 >
                   {m.title}
@@ -45,7 +46,10 @@ export function AppShell({
               );
             })}
           </nav>
-          <WeatherNavChip />
+          <div className="flex shrink-0 items-center gap-2">
+            <ThemeToggle />
+            <WeatherNavChip />
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

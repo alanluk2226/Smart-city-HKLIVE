@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
-:root {
+:root,
+html[data-theme="dark"] {
   --bg: #071018;
   --bg-elev: #0d1a24;
   --bg-card: #10202c;
@@ -14,6 +15,31 @@
   --sky: #6ec3ff;
   --violet: #b794f4;
   --lime: #b4e645;
+  --map-bg: #0b1520;
+  --header-wash: rgba(62, 224, 197, 0.08);
+  --body-sheen: rgba(255, 255, 255, 0.02);
+  --grid-line: rgba(62, 224, 197, 0.03);
+  --nav-hover: rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="light"] {
+  --bg: #f4f7f9;
+  --bg-elev: #ffffff;
+  --bg-card: #ffffff;
+  --line: #d5e0e7;
+  --text: #10202c;
+  --muted: #5b7380;
+  --teal: #0f9f8a;
+  --amber: #c98a0a;
+  --rose: #e2556a;
+  --sky: #2b8fd6;
+  --violet: #7c5cbf;
+  --lime: #6f9f14;
+  --map-bg: #e8eef2;
+  --header-wash: rgba(15, 159, 138, 0.08);
+  --body-sheen: rgba(16, 32, 44, 0.03);
+  --grid-line: rgba(15, 159, 138, 0.05);
+  --nav-hover: rgba(16, 32, 44, 0.05);
 }
 
 @theme inline {
@@ -43,18 +69,18 @@ body {
 body {
   font-family: var(--font-noto), "Noto Sans TC", sans-serif;
   background-image:
-    radial-gradient(1200px 500px at 80% -10%, rgba(62, 224, 197, 0.08), transparent 50%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 28%),
+    radial-gradient(1200px 500px at 80% -10%, var(--header-wash), transparent 50%),
+    linear-gradient(180deg, var(--body-sheen), transparent 28%),
     repeating-linear-gradient(
       90deg,
       transparent 0,
       transparent 47px,
-      rgba(62, 224, 197, 0.03) 48px
+      var(--grid-line) 48px
     );
 }
 
 .leaflet-container {
-  background: #0b1520;
+  background: var(--map-bg);
   font-family: inherit;
 }
 
@@ -87,14 +113,16 @@ body {
 @keyframes stop-pin-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 0 5px rgba(var(--pin-glow), 0.32),
-      0 0 18px 2px rgba(var(--pin-glow), 0.72);
+    filter:
+      drop-shadow(0 0 3px rgba(var(--pin-glow), 0.45))
+      drop-shadow(0 2px 4px rgba(7, 16, 24, 0.4));
+    transform: translateY(0);
   }
   50% {
-    box-shadow:
-      0 0 0 9px rgba(var(--pin-glow), 0.12),
-      0 0 28px 6px rgba(var(--pin-glow), 0.95);
+    filter:
+      drop-shadow(0 0 10px rgba(var(--pin-glow), 0.95))
+      drop-shadow(0 3px 6px rgba(7, 16, 24, 0.45));
+    transform: translateY(-1px);
   }
 }
 

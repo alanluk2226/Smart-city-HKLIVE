@@ -24,7 +24,7 @@ export const MODULES = [
     href: "/traffic",
     key: "traffic",
     title: "CCTV / 路況",
-    blurb: "運輸署主要道路閉路電視快拍",
+    blurb: "全港運輸署道路 CCTV，按港島／九龍／新界同行政區瀏覽",
     accent: "amber",
   },
   {
