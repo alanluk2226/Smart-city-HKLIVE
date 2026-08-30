@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { apiGet, formatDistance, openWalkingDirections } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
+import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
 import type { WalkRoute } from "@/lib/routing";
+
+export type MapBadgeLevel = "good" | "warn" | "bad" | "unknown";
 
 type Point = {
   id: string;
@@ -13,6 +16,10 @@ type Point = {
   lat: number;
   lng: number;
   detail?: string;
+  /** Short badge on the pin (e.g. hospital wait "1.5h") */
+  badge?: string;
+  /** Heat color for badge — short wait = good, long = bad */
+  badgeLevel?: MapBadgeLevel;
 };
 
 const icon = L.icon({
@@ -32,15 +39,113 @@ const selectedIcon = L.icon({
   className: "nearby-map-pin-selected",
 });
 
-function Recenter({ lat, lng, walkPoints }: { lat: number; lng: number; walkPoints: [number, number][] | null }) {
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Capsule heat colors aligned with waitTone thresholds (≤1h / ≤3h / >3h). */
+function badgePalette(level: MapBadgeLevel, selected: boolean) {
+  const palettes: Record<
+    MapBadgeLevel,
+    { bg: string; border: string; color: string; selectedBg: string; selectedColor: string }
+  > = {
+    good: {
+      bg: "rgba(15, 118, 110, 0.92)",
+      border: "#3ee0c5",
+      color: "#ecfdf5",
+      selectedBg: "#2dd4bf",
+      selectedColor: "#042f2e",
+    },
+    warn: {
+      bg: "rgba(146, 64, 14, 0.94)",
+      border: "#f0b429",
+      color: "#fffbeb",
+      selectedBg: "#f0b429",
+      selectedColor: "#422006",
+    },
+    bad: {
+      bg: "rgba(159, 18, 57, 0.94)",
+      border: "#ff6b7d",
+      color: "#fff1f2",
+      selectedBg: "#ff6b7d",
+      selectedColor: "#4c0519",
+    },
+    unknown: {
+      bg: "rgba(15, 28, 36, 0.94)",
+      border: "#5b6b7c",
+      color: "#e8eef5",
+      selectedBg: "#94a3b8",
+      selectedColor: "#0f172a",
+    },
+  };
+  const p = palettes[level];
+  return selected
+    ? { bg: p.selectedBg, border: "#ffffff", color: p.selectedColor, ring: true }
+    : { bg: p.bg, border: p.border, color: p.color, ring: false };
+}
+
+function badgeIcon(badge: string, selected: boolean, level: MapBadgeLevel = "unknown") {
+  const { bg, border, color, ring } = badgePalette(level, selected);
+  return L.divIcon({
+    className: "nearby-badge-pin",
+    html: `<div style="transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center;">
+      <div style="
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.35rem;
+        white-space: nowrap;
+        border-radius: 0.45rem;
+        border: 1.5px solid ${border};
+        background: ${bg};
+        color: ${color};
+        font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.01em;
+        padding: 5px 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.4)${ring ? ", 0 0 0 2px rgba(255,255,255,.35)" : ""};
+      ">${escapeHtml(badge)}</div>
+      <div style="
+        width: 0; height: 0; margin-top: -1px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid ${border};
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+      "></div>
+    </div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 8],
+  });
+}
+
+function Recenter({
+  lat,
+  lng,
+  walkPoints,
+  fitPoints,
+}: {
+  lat: number;
+  lng: number;
+  walkPoints: [number, number][] | null;
+  fitPoints?: Array<{ lat: number; lng: number }>;
+}) {
   const map = useMap();
   useEffect(() => {
     if (walkPoints?.length) {
       map.fitBounds(L.latLngBounds(walkPoints), { padding: [40, 40], maxZoom: 16 });
       return;
     }
+    if (fitPoints && fitPoints.length >= 2) {
+      const bounds = L.latLngBounds(fitPoints.map((p) => [p.lat, p.lng] as [number, number]));
+      bounds.extend([lat, lng]);
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
+      return;
+    }
     map.setView([lat, lng], map.getZoom());
-  }, [lat, lng, map, walkPoints]);
+  }, [lat, lng, map, walkPoints, fitPoints]);
   return null;
 }
 
@@ -53,6 +158,7 @@ export function NearbyMap({
   heightClass = "h-64",
   className = "",
   zoom = 15,
+  fitAllPoints = false,
 }: {
   lat: number;
   lng: number;
@@ -62,6 +168,8 @@ export function NearbyMap({
   heightClass?: string;
   className?: string;
   zoom?: number;
+  /** When true, zoom to show all points (e.g. territory hospitals) */
+  fitAllPoints?: boolean;
 }) {
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetId, setWalkTargetId] = useState<string | null>(null);
@@ -71,6 +179,16 @@ export function NearbyMap({
   useEffect(() => {
     setMapReady(true);
   }, []);
+
+  const fitKey = useMemo(
+    () => (fitAllPoints ? points.map((p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join("|") : ""),
+    [fitAllPoints, points],
+  );
+  const fitPoints = useMemo(() => {
+    if (!fitAllPoints || !fitKey) return undefined;
+    return points.map((p) => ({ lat: p.lat, lng: p.lng }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable when coordinates unchanged
+  }, [fitAllPoints, fitKey]);
 
   async function showWalkRoute(point: Point) {
     if (walkTargetId === point.id && walkRoute) {
@@ -103,19 +221,21 @@ export function NearbyMap({
   return (
     <div className={`overflow-hidden border border-line ${heightClass} ${className || "rounded-xl"}`}>
       <MapContainer
-        key={`${lat.toFixed(4)}-${lng.toFixed(4)}`}
+        key={`${lat.toFixed(4)}-${lng.toFixed(4)}-${fitAllPoints ? "fit" : "view"}`}
         center={[lat, lng]}
         zoom={zoom}
+        maxZoom={mapMaxZoom()}
         className="h-full w-full"
         scrollWheelZoom={false}
         attributionControl={false}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          maxZoom={20}
-          maxNativeZoom={20}
+        <BasemapLayers />
+        <Recenter
+          lat={lat}
+          lng={lng}
+          walkPoints={walkRoute?.points ?? null}
+          fitPoints={fitPoints}
         />
-        <Recenter lat={lat} lng={lng} walkPoints={walkRoute?.points ?? null} />
         {walkRoute ? (
           <Polyline
             positions={walkRoute.points}
@@ -132,11 +252,16 @@ export function NearbyMap({
         </Marker>
         {points.map((p) => {
           const on = p.id === selectedId;
+          const pin = p.badge
+            ? badgeIcon(p.badge, on, p.badgeLevel ?? "unknown")
+            : on
+              ? selectedIcon
+              : icon;
           return (
             <Marker
               key={p.id}
               position={[p.lat, p.lng]}
-              icon={on ? selectedIcon : icon}
+              icon={pin}
               zIndexOffset={on ? 800 : 0}
               eventHandlers={{
                 click: () => onSelect?.(p),

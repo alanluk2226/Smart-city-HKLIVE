@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
 import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
 import type { WalkRoute } from "@/lib/routing";
@@ -161,6 +162,7 @@ export function StopStreetMap({
   routeLinkColor = "#3ee0c5",
   heightClass = "h-56 sm:h-72",
   className = "",
+  popupWalkButton = true,
 }: {
   stops: StopHit[];
   selectedId?: string;
@@ -181,6 +183,8 @@ export function StopStreetMap({
   /** Tailwind height classes for the map pane */
   heightClass?: string;
   className?: string;
+  /** When false, marker popup points users to the sheet instead of duplicating walk CTA */
+  popupWalkButton?: boolean;
 }) {
   const defaultPin = pinColors(null, accent, false);
   const idle = defaultPin.idle;
@@ -309,17 +313,13 @@ export function StopStreetMap({
           key={mapKey}
           center={[center.lat, center.lng]}
           zoom={15}
-          maxZoom={19}
+          maxZoom={mapMaxZoom()}
           minZoom={minZoom}
           className="h-full w-full"
           scrollWheelZoom
           attributionControl={false}
         >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            maxZoom={20}
-            maxNativeZoom={20}
-          />
+          <BasemapLayers />
           <MapZoom onZoom={setZoom} />
           <InvalidateOnResize />
           <FitStops
@@ -394,13 +394,17 @@ export function StopStreetMap({
                         直線約 {formatDistance(haversineMeters(here.lat, here.lng, stop.lat, stop.lng))}
                       </div>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => void toggleWalkRoute(stop)}
-                      className="rounded-md bg-teal px-2.5 py-1 text-xs font-medium text-white hover:opacity-90"
-                    >
-                      顯示導航路線
-                    </button>
+                    {popupWalkButton ? (
+                      <button
+                        type="button"
+                        onClick={() => void toggleWalkRoute(stop)}
+                        className="rounded-md bg-teal px-2.5 py-1 text-xs font-medium text-white hover:opacity-90"
+                      >
+                        顯示導航路線
+                      </button>
+                    ) : (
+                      <p className="text-xs text-zinc-600">班次見下方列表 · 導航用地圖底欄或「前往碼頭」</p>
+                    )}
                   </div>
                 </Popup>
               </Marker>

@@ -17,7 +17,7 @@ export const MODULES = [
     href: "/health",
     key: "health",
     title: "醫療",
-    blurb: "18 間急症室輪候時間與位置",
+    blurb: "急症室輪候、導航與專科門診新症預約時間",
     accent: "rose",
   },
   {

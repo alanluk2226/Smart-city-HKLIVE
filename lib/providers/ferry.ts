@@ -164,18 +164,21 @@ async function hkkfDepartures(leg: FerryLeg): Promise<FerryDeparture[]> {
   const now = new Date();
   const rows = (json.data ?? [])
     .map((row) => {
-      const departMinutes =
-        parseClockToMinutes(row.session_time?.slice(0, 5), now) ?? parseIsoMinutes(row.ETA, now);
-      const clock =
-        row.session_time?.slice(0, 5) ??
-        (row.ETA
-          ? new Date(row.ETA).toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-              timeZone: "Asia/Hong_Kong",
-            })
-          : null);
+      const sessionClock = row.session_time?.slice(0, 5) ?? null;
+      const sessionMins = parseClockToMinutes(sessionClock, now);
+      const etaClock = row.ETA
+        ? new Date(row.ETA).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Asia/Hong_Kong",
+          })
+        : null;
+      const etaMins = parseIsoMinutes(row.ETA, now);
+      // Keep clock + countdown from the same source (stale session_time used to disagree with ETA mins).
+      const useSession = sessionMins != null;
+      const departMinutes = useSession ? sessionMins : etaMins;
+      const clock = useSession ? sessionClock : etaClock;
       return {
         legId: leg.id,
         operator: "hkkf" as const,
@@ -187,14 +190,7 @@ async function hkkfDepartures(leg: FerryLeg): Promise<FerryDeparture[]> {
         vesselType: "ordinary" as const,
         vesselLabel: "普通渡輪",
         departTime: clock,
-        etaTime: row.ETA
-          ? new Date(row.ETA).toLocaleTimeString("en-GB", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: false,
-              timeZone: "Asia/Hong_Kong",
-            })
-          : null,
+        etaTime: etaClock,
         departMinutes,
         live: true,
       };

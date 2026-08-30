@@ -11,6 +11,8 @@ npm run dev
 
 瀏覽器開啟 http://localhost:3000
 
+可選：複製 `.env.example` 為 `.env.local`，填入 `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`（需啟用 Maps JavaScript API）。有 key 時街圖用 Google（含港鐵等交通標誌）；否則用 OpenStreetMap。
+
 ## 模組
 
 - `/` 主控台入口

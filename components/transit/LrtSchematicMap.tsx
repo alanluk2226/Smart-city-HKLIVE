@@ -474,8 +474,8 @@ export function LrtSchematicMap({
   return (
     <div className="relative max-md:-mx-4 max-md:h-[calc(100dvh-10.5rem)] max-md:min-h-[22rem] md:space-y-3">
       {topOverlay ? (
-        <div className="z-20 space-y-2 max-md:absolute max-md:inset-x-0 max-md:top-0 max-md:p-3 md:relative">
-          {topOverlay}
+        <div className="pointer-events-none z-30 space-y-2 max-md:absolute max-md:inset-x-0 max-md:top-0 max-md:p-3 md:relative md:pointer-events-auto">
+          <div className="pointer-events-auto">{topOverlay}</div>
         </div>
       ) : null}
       <div className="overflow-hidden max-md:absolute max-md:inset-0 md:relative md:rounded-2xl md:border md:border-line">
@@ -483,9 +483,9 @@ export function LrtSchematicMap({
           {renderLegend()}
         </div>
         <div className="relative h-full overflow-auto max-md:h-full md:max-h-[min(80vh,720px)] bg-[#f3f1ea]">
-          <div className="pointer-events-auto absolute inset-x-0 top-0 z-20 space-y-2 p-3 md:hidden">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 space-y-2 p-3 md:hidden">
             {topOverlay ? <div className="h-[3.25rem]" aria-hidden /> : null}
-            <div className="flex gap-x-3 gap-y-1 overflow-x-auto rounded-xl border border-line/80 bg-elev/90 px-3 py-2 text-[11px] text-muted shadow-lg backdrop-blur-md">
+            <div className="pointer-events-auto flex gap-x-3 gap-y-1 overflow-x-auto rounded-xl border border-line/80 bg-elev/90 px-3 py-2 text-[11px] text-muted shadow-lg backdrop-blur-md">
               {renderLegend()}
             </div>
           </div>
