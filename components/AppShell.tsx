@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AlertsBar } from "@/components/AlertsBar";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SettingsNavButton } from "@/components/SettingsNavButton";
 import { WeatherNavChip } from "@/components/WeatherNavChip";
 import { MODULES } from "@/lib/modules";
 
@@ -48,7 +48,7 @@ export function AppShell({
             })}
           </nav>
           <div className="flex shrink-0 items-center gap-2">
-            <ThemeToggle />
+            <SettingsNavButton />
             <WeatherNavChip />
           </div>
         </div>
@@ -64,8 +64,20 @@ export function AppShell({
         {children}
       </main>
       <footer className="border-t border-line text-muted text-xs px-4 py-4">
-        <div className="mx-auto max-w-6xl">
-          資料來自 DATA.GOV.HK、天文台、醫管局、運輸署、康文署及各公共交通營運商。僅供參考，以官方公布為準。
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
+          <span>香港城市實況</span>
+          <span className="opacity-40" aria-hidden>
+            ·
+          </span>
+          <Link href="/settings#sources" className="hover:text-ink hover:underline">
+            資料來源
+          </Link>
+          <span className="opacity-40" aria-hidden>
+            ·
+          </span>
+          <Link href="/settings#privacy" className="hover:text-ink hover:underline">
+            私隱說明
+          </Link>
         </div>
       </footer>
     </div>

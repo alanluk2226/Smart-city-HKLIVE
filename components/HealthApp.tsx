@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import { apiGet, formatDistance, openWalkingDirections, useGeo, waitTone } from "@/lib/client";
 import { DEFAULT_CENTER, parseWaitMinutes } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import type { HospitalWait } from "@/lib/providers/hospitals";
 import type { SopClusterSnapshot, SopSpecialtyWait } from "@/lib/providers/sop";
 
@@ -332,7 +333,7 @@ export function HealthApp() {
   const locate = useGeo(applyLocation);
 
   useEffect(() => {
-    if (locatedOnce.current || !navigator.geolocation) return;
+    if (locatedOnce.current || !navigator.geolocation || !getLocationEnabled()) return;
     locatedOnce.current = true;
     navigator.geolocation.getCurrentPosition(
       (pos) => applyLocation(pos.coords.latitude, pos.coords.longitude),

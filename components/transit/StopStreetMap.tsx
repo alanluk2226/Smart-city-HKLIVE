@@ -6,6 +6,7 @@ import L from "leaflet";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
 import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import type { WalkRoute } from "@/lib/routing";
 import type { Operator, StopHit } from "@/lib/types";
 
@@ -220,7 +221,7 @@ export function StopStreetMap({
   }, []);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !getLocationEnabled()) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setHere({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},

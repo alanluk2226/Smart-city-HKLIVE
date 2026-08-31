@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import type { TaxiCallStation, TaxiPoint, TaxiPointKind } from "@/lib/providers/taxi";
 import type { StopHit } from "@/lib/types";
 
@@ -33,7 +34,7 @@ export function TaxiApp() {
   const locate = useGeo((lat, lng) => setCenter({ lat, lng }));
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !getLocationEnabled()) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},

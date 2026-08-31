@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { haversineMeters } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import { LRT_MAP_EXTRA_HITS, LRT_MAP_HITS, LRT_MAP_HUBS, LRT_MAP_SIZE } from "@/lib/static/lrt-map-hits";
 import { LRT_ROUTE_COLORS, LRT_ROUTE_LABELS, LRT_ROUTE_ORDER } from "@/lib/static/lrt-routes";
 import { LRT_STATIONS } from "@/lib/static/lrt-stations";
@@ -312,6 +313,15 @@ export function LrtSchematicMap({
 
   function requestLocation(opts?: { silent?: boolean }) {
     const silent = opts?.silent ?? false;
+    if (!getLocationEnabled()) {
+      if (silent) {
+        setLocateUi(null);
+        return;
+      }
+      setLocateError("已在設定關閉定位。可按右上角齒輪重新開啟。");
+      setLocateUi("error");
+      return;
+    }
     if (!navigator.geolocation) {
       if (silent) {
         setLocateUi(null);
@@ -354,6 +364,7 @@ export function LrtSchematicMap({
 
   useEffect(() => {
     let cancelled = false;
+    if (!getLocationEnabled()) return;
     const perm = navigator.permissions;
     if (!perm?.query) return;
     perm

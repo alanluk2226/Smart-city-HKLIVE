@@ -1,3 +1,5 @@
+import { getLocationEnabled } from "@/lib/location-pref";
+
 export async function apiGet<T>(url: string): Promise<T> {
   const res = await fetch(url);
   const json = (await res.json()) as { ok: boolean; error?: string; data: T };
@@ -31,6 +33,10 @@ export function waitTone(minutes: number | null) {
 
 export function useGeo(onPos: (lat: number, lng: number) => void) {
   return () => {
+    if (!getLocationEnabled()) {
+      alert("已在設定關閉定位。可按右上角齒輪重新開啟。");
+      return;
+    }
     if (!navigator.geolocation) {
       alert("這個瀏覽器不支援定位");
       return;

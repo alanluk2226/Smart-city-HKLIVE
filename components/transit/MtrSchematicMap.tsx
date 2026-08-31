@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { haversineMeters } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import { MTR_MAP_EXTRA_HITS, MTR_MAP_HITS, MTR_MAP_SIZE } from "@/lib/static/mtr-map-hits";
 import { MTR_LINE_COLORS } from "@/lib/static/mtr-schematic";
 import { MTR_LINE_NAMES, MTR_LINE_ORDER, MTR_STATIONS } from "@/lib/static/mtr-stations";
@@ -263,6 +264,15 @@ export function MtrSchematicMap({
 
   function requestLocation(opts?: { silent?: boolean }) {
     const silent = opts?.silent ?? false;
+    if (!getLocationEnabled()) {
+      if (silent) {
+        setLocateUi(null);
+        return;
+      }
+      setLocateError("已在設定關閉定位。可按右上角齒輪重新開啟。");
+      setLocateUi("error");
+      return;
+    }
     if (!navigator.geolocation) {
       if (silent) {
         setLocateUi(null);
@@ -309,6 +319,7 @@ export function MtrSchematicMap({
 
   useEffect(() => {
     let cancelled = false;
+    if (!getLocationEnabled()) return;
     const perm = navigator.permissions;
     if (!perm?.query) return;
     perm

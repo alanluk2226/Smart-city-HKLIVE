@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import { EtaPanel } from "@/components/transit/EtaPanel";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { useEta } from "@/components/transit/useEta";
@@ -72,7 +73,7 @@ export function TransitNearbySection() {
   const { etas, loading, error: etaError } = useEta(selected);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || !getLocationEnabled()) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},

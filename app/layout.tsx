@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Noto_Sans_TC } from "next/font/google";
+import { LocationPrefProvider } from "@/components/LocationPrefProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className={`${noto.className} min-h-full flex flex-col`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <LocationPrefProvider>{children}</LocationPrefProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

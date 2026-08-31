@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
+import { getLocationEnabled } from "@/lib/location-pref";
 import {
   ferryFareHint,
   ferryFareShort,
@@ -187,7 +188,7 @@ export function FerryApp() {
   const showSoftRefresh = refreshing && dataHubId === hubId;
 
   useEffect(() => {
-    if (locatedOnce.current || !navigator.geolocation) return;
+    if (locatedOnce.current || !navigator.geolocation || !getLocationEnabled()) return;
     locatedOnce.current = true;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
