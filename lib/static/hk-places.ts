@@ -209,7 +209,11 @@ const RAW_PLACES: RawPlace[] = [
   { id: "estate-ap-lei-chau", kind: "estate", name: "鴨脷洲邨", nameEn: "Ap Lei Chau Estate", aliases: ["鴨脷洲邨"], lat: 22.243, lng: 114.152, district: "南區", anchorMtr: "OCP" },
 ];
 
-export type HkPlace = RawPlace & { anchor: MtrStation };
+export type HkPlace = Omit<RawPlace, "aliases" | "tags"> & {
+  aliases: string[];
+  tags: string[];
+  anchor: MtrStation;
+};
 
 function buildPlace(raw: RawPlace): HkPlace | null {
   const anchor = mtrStation(raw.anchorMtr);
@@ -364,8 +368,8 @@ export function matchTripPlaces(q: string, limit = 8): TripPlaceSuggestion[] {
 
   for (const { p } of places) {
     if (seen.has(p.id)) continue;
-    // Avoid duplicating「東涌」landmark when MTR 東涌 already listed for same query
-    if (p.kind !== "mtr" && p.anchorMtr && seen.has(`mtr:${p.anchorMtr}`) && p.name === p.anchor.name) {
+    // Avoid duplicating a place that shares the same display name as its MTR anchor
+    if (seen.has(`mtr:${p.anchorMtr}`) && p.name === p.anchor.name) {
       continue;
     }
     seen.add(p.id);
