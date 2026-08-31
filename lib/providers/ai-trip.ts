@@ -1,5 +1,4 @@
 import { cached, TTL } from "@/lib/cache";
-import { haversineMeters } from "@/lib/geo";
 import { geminiApiKey, geminiJson } from "@/lib/providers/gemini";
 import { mtrTrip } from "@/lib/providers/mtr-trip";
 import { lookupRouteInfo } from "@/lib/providers/route-fare";
@@ -297,63 +296,9 @@ ${catalog}
 4. weatherNote 一句話總結今日天氣點影響建議。`;
 }
 
-function surfaceFallbacks(
-  fromName: string,
-  toName: string,
-  walkOption: AiTripOption | null,
-  tone: ReturnType<typeof weatherTone>,
-  straight: number,
-  hasCorridor: boolean,
-): AiTripOption[] {
-  const out: AiTripOption[] = [];
-  if (walkOption) out.push(walkOption);
-  if (out.length < 2 && hasCorridor) {
-    out.push({
-      id: "bus-cheaper",
-      mode: "bus",
-      title: "巴士經青衣／荃灣（較平）",
-      minutes: 120,
-      fareHkd: 35,
-      steps: [
-        `於${fromName}乘巴士經青衣或荃灣往北區`,
-        "或轉乘多條巴士走廊；車程通常長過 E41 轉大埔墟",
-        "適合唔趕時間、想慳車費時",
-      ],
-      why: "比 E41＋東鐵平，但轉車多、受路面影響，唔係最快。",
-      weatherFit: tone === "severe" ? "poor" : "ok",
-      badges: [],
-      source: "computed",
-    });
-  }
-  if (out.length < 2 && straight > 8000) {
-    out.push({
-      id: "bus-hint",
-      mode: "bus",
-      title: "巴士走廊（參考）",
-      minutes: null,
-      fareHkd: null,
-      steps: ["長途可經青衣／荃灣等巴士走廊，通常比港鐵平", "實際路線請核對到達時間"],
-      why: "港鐵長途八達通較貴；巴士較平但受路面影響。",
-      weatherFit: tone === "severe" ? "poor" : "ok",
-      badges: [],
-      source: "computed",
-    });
-  }
-  if (out.length < 2) {
-    out.push({
-      id: "mix-hint",
-      mode: "mix",
-      title: `混合行程 ${fromName} → ${toName}`,
-      minutes: null,
-      fareHkd: null,
-      steps: ["可組合巴士／小巴／渡輪／輕鐵／電車", "請按實際站點查到達時間"],
-      why: "作為港鐵以外的備選；時間視接駁同路面。",
-      weatherFit: tone === "severe" ? "ok" : "good",
-      badges: [],
-      source: "computed",
-    });
-  }
-  return out.slice(0, 2);
+/** 只回傳真正計到嘅備選（而家得短途步行）；唔再塞「視路面」假方案。 */
+function realSurfaceExtras(walkOption: AiTripOption | null): AiTripOption[] {
+  return walkOption ? [walkOption] : [];
 }
 
 function applyAiAnnotations(options: AiTripOption[], ai: AiRankOut): AiTripOption[] {
@@ -439,7 +384,6 @@ export async function adviseTrip(
     e41SegmentMin,
   });
 
-  const straight = haversineMeters(from.lat, from.lng, to.lat, to.lng);
   const walkOk = walk && walk.durationMinutes <= 40 && walk.distanceMeters <= 3200;
   const walkOption: AiTripOption | null = walkOk
     ? {
@@ -504,22 +448,13 @@ export async function adviseTrip(
       }
     : null;
 
-  // —— 全部候選路線先由本站算好（Determined Routing）——
+  // —— 只展示本站真正計到嘅方案（唔再塞「視路面」假巴士／混合行程）——
   let options: AiTripOption[] = [];
   if (mtrOption) options.push(mtrOption);
   if (knownCorridor) options.push(knownCorridor);
-  const fillers = surfaceFallbacks(
-    from.name,
-    to.name,
-    walkOption,
-    tone,
-    straight,
-    Boolean(knownCorridor),
-  ).filter((f) => !options.some((o) => o.id === f.id || (o.mode === "walk" && f.mode === "walk")));
-  for (const f of fillers) {
-    if (options.length >= 3) break;
-    if (knownCorridor && f.id === "bus-hint") continue;
-    options.push(f);
+  for (const extra of realSurfaceExtras(walkOption)) {
+    if (options.some((o) => o.id === extra.id || o.mode === "walk")) continue;
+    options.push(extra);
   }
   options = options.slice(0, 3);
   if (!options.length) throw new Error("未能規劃此行程");
@@ -552,7 +487,7 @@ export async function adviseTrip(
           steps: o.steps,
         })),
       });
-      const cacheKey = `ai-trip:rank:v1:${from.id}:${to.id}:${tone}:${options.map((o) => o.id).join(",")}`;
+      const cacheKey = `ai-trip:rank:v2:${from.id}:${to.id}:${tone}:${options.map((o) => o.id).join(",")}`;
       const ai = await cached(cacheKey, TTL.aiTrip, () =>
         geminiJson<AiRankOut>(prompt, 14_000, AI_RANK_SCHEMA as unknown as Record<string, unknown>),
       );
@@ -594,10 +529,10 @@ export async function adviseTrip(
     recommendedId,
     options: badged,
     disclaimer: usedAi
-      ? "路線、時間與車費由本站用港鐵／巴士公開資料計算；AI 只根據天氣撰寫評語並揀建議，請以營運商到達時間為準。"
+      ? `只顯示本站計到嘅真實方案（而家有 ${options.length} 個）。路線／車費來自港鐵／巴士公開資料；AI 只跟天氣寫評語同揀建議，請以營運商到達時間為準。`
       : aiError
-        ? `路線由本站計算。${aiError}`
-        : "路線由本站用港鐵／巴士公開資料計算。",
+        ? `只顯示本站計到嘅真實方案（${options.length} 個）。${aiError}`
+        : `只顯示本站計到嘅真實方案（${options.length} 個）。未有可靠巴士轉車資料時唔會亂估。`,
     usedAi,
     aiError,
   };

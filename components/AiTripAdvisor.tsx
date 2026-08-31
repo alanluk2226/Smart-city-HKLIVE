@@ -229,7 +229,7 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            混和架構：路線／車費由本站公開資料計算，AI 只跟天氣寫評語同揀建議。支援港鐵站、屋邨同行政區（例如逸東邨⇄羅湖：38→纜車站→E41→東鐵）。
+            混和架構：只顯示本站計到嘅真實路線；AI 跟天氣寫評語同揀建議。支援港鐵站、屋邨同行政區（例如逸東邨⇄羅湖：38→纜車站→E41→東鐵）。未有可靠巴士資料時唔會亂估。
           </p>
         </div>
       </div>
