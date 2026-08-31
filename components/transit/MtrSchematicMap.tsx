@@ -19,7 +19,11 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 6;
 const ZOOM_STEP = 1.25;
 const LOCATE_ZOOM = 3.2;
+/** Invisible station-dot radius in SVG units (hover ring only). */
 const TAP_R = 56;
+/** Touch / click target in CSS pixels; converted to SVG space from the current zoom. */
+const TAP_PX = 34;
+const DRAG_PX = 12;
 const MAX_LOCATE_M = 25_000;
 
 type View = { x: number; y: number; w: number; h: number };
@@ -71,6 +75,12 @@ function viewOn(cx: number, cy: number, zoom: number): View {
   return clampView({ x: cx - w / 2, y: cy - h / 2, w, h });
 }
 
+function tapRadiusSvg(svg: SVGSVGElement, viewW: number) {
+  const w = svg.getBoundingClientRect().width;
+  if (w < 8) return TAP_PX;
+  return TAP_PX * (viewW / w);
+}
+
 function nearestStationCode(lat: number, lng: number): string | null {
   let best: { code: string; dist: number } | null = null;
   for (const s of MTR_STATIONS) {
@@ -112,6 +122,7 @@ export function MtrSchematicMap({
   const pan = useRef<{ x: number; y: number; view: View } | null>(null);
   const pinch = useRef<{ dist: number; view: View } | null>(null);
   const dragged = useRef(false);
+  const tapDown = useRef<{ x: number; y: number } | null>(null);
   const flyId = useRef(0);
   const [view, setViewState] = useState<View>(FULL_VIEW);
   const [panning, setPanning] = useState(false);
@@ -161,11 +172,11 @@ export function MtrSchematicMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originCode, destCode]);
 
-  function hitsAt(x: number, y: number): Hit[] {
+  function hitsAt(x: number, y: number, radius: number): Hit[] {
     const best = new Map<string, Hit>();
     for (const t of targets) {
       const dist = Math.hypot(t.x - x, t.y - y);
-      if (dist > TAP_R) continue;
+      if (dist > radius) continue;
       const prev = best.get(t.code);
       if (!prev || dist < prev.dist) {
         best.set(t.code, { code: t.code, name: t.name, nameEn: t.nameEn, dist });
@@ -250,18 +261,27 @@ export function MtrSchematicMap({
     return "未能取得位置。";
   }
 
-  function requestLocation() {
+  function requestLocation(opts?: { silent?: boolean }) {
+    const silent = opts?.silent ?? false;
     if (!navigator.geolocation) {
+      if (silent) {
+        setLocateUi(null);
+        return;
+      }
       setLocateError(locateErrorMessage());
       setLocateUi("error");
       return;
     }
     setLocateError("");
-    setLocateUi("locating");
+    if (!silent) setLocateUi("locating");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const code = nearestStationCode(pos.coords.latitude, pos.coords.longitude);
         if (!code) {
+          if (silent) {
+            setLocateUi(null);
+            return;
+          }
           setLocateError("目前位置離港鐵車站太遠。");
           setLocateUi("error");
           return;
@@ -270,6 +290,10 @@ export function MtrSchematicMap({
         focusStation(code);
       },
       (err) => {
+        if (silent) {
+          setLocateUi(null);
+          return;
+        }
         setLocateError(locateErrorMessage(err));
         setLocateUi("error");
       },
@@ -286,20 +310,14 @@ export function MtrSchematicMap({
   useEffect(() => {
     let cancelled = false;
     const perm = navigator.permissions;
-    if (!perm?.query) {
-      setLocateUi("ask");
-      return;
-    }
+    if (!perm?.query) return;
     perm
       .query({ name: "geolocation" })
       .then((status) => {
         if (cancelled) return;
-        if (status.state === "granted") requestLocation();
-        else setLocateUi("ask");
+        if (status.state === "granted") requestLocation({ silent: true });
       })
-      .catch(() => {
-        if (!cancelled) setLocateUi("ask");
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -323,13 +341,35 @@ export function MtrSchematicMap({
     return [...pointers.current.values()];
   }
 
+  function applyStationHits(clientX: number, clientY: number) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const src =
+      clientX === 0 && clientY === 0 && tapDown.current
+        ? tapDown.current
+        : { x: clientX, y: clientY };
+    const pt = clientToSvg(svg, src.x, src.y);
+    const hits = hitsAt(pt.x, pt.y, tapRadiusSvg(svg, viewRef.current.w));
+    if (!hits.length) return;
+    if (hits.length === 1 || hits[0].dist <= hits[1].dist * 0.7) {
+      setPicker(null);
+      onSelect(hits[0].code);
+    } else {
+      setPicker(hits.slice(0, 8));
+    }
+  }
+
   function onPointerDown(e: ReactPointerEvent<SVGSVGElement>) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const svg = svgRef.current;
     if (!svg) return;
     cancelFly();
-    svg.setPointerCapture(e.pointerId);
+    // iOS Safari often fires pointercancel immediately after setPointerCapture.
+    if (e.pointerType === "mouse") {
+      svg.setPointerCapture(e.pointerId);
+    }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tapDown.current = { x: e.clientX, y: e.clientY };
     dragged.current = false;
     const pts = pointerList();
     if (pts.length === 1) {
@@ -363,7 +403,8 @@ export function MtrSchematicMap({
     if (pts.length === 1 && pan.current) {
       const dx = e.clientX - pan.current.x;
       const dy = e.clientY - pan.current.y;
-      if (Math.hypot(dx, dy) > 6) dragged.current = true;
+      if (Math.hypot(dx, dy) <= DRAG_PX) return;
+      dragged.current = true;
       const rect = svg.getBoundingClientRect();
       setView({
         ...pan.current.view,
@@ -385,16 +426,7 @@ export function MtrSchematicMap({
     pinch.current = null;
     setPanning(false);
     if (dragged.current) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const pt = clientToSvg(svg, e.clientX, e.clientY);
-    const hits = hitsAt(pt.x, pt.y);
-    if (hits.length === 1) {
-      setPicker(null);
-      onSelect(hits[0].code);
-    } else if (hits.length > 1) {
-      setPicker(hits);
-    }
+    applyStationHits(e.clientX, e.clientY);
   }
 
   function zoomBy(factor: number) {
@@ -473,7 +505,7 @@ export function MtrSchematicMap({
         <svg
           ref={svgRef}
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-          className={`block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[860px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`relative z-0 block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[860px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
           role="img"
           aria-label="港鐵互動路綫圖"
           onPointerDown={onPointerDown}
@@ -554,7 +586,7 @@ export function MtrSchematicMap({
         </svg>
 
         {picker ? (
-          <div className="absolute inset-x-3 bottom-14 rounded-xl border border-line bg-elev/95 p-2 shadow-lg">
+          <div className="absolute inset-x-3 bottom-14 z-30 rounded-xl border border-line bg-elev/95 p-2 shadow-lg">
             <p className="px-2 py-1 text-[11px] text-muted">附近有多個車站，請選一個：</p>
             {picker.map((h) => (
               <button
@@ -650,7 +682,7 @@ export function MtrSchematicMap({
           </div>
         ) : null}
 
-          <div className="absolute right-3 bottom-3 hidden md:flex flex-col gap-1">
+          <div className="pointer-events-auto absolute right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex flex-col gap-1">
             <button
               type="button"
               aria-label="放大"

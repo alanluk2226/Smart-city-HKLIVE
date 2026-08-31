@@ -5,8 +5,8 @@ export const MTR_MAP_SIZE = { w: 4110.24, h: 2769.45 } as const;
 export const MTR_MAP_HITS: Record<string, { x: number; y: number }> = {
   // East Rail (north → south)
   LMC: { x: 1319.0, y: 586.5 },
-  LOW: { x: 1619.1, y: 542.8 },
-  SHS: { x: 1439.7, y: 518.7 },
+  LOW: { x: 1439.7, y: 518.7 },
+  SHS: { x: 1619.1, y: 542.8 },
   FAN: { x: 1798.6, y: 518.7 },
   TWO: { x: 1978.0, y: 518.7 },
   TAP: { x: 2157.5, y: 518.7 },

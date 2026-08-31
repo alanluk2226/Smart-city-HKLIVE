@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AiTripAdvisor } from "@/components/AiTripAdvisor";
 import { AppShell } from "@/components/AppShell";
 import { MODULES } from "@/lib/modules";
 import { apiGet } from "@/lib/client";
@@ -34,11 +35,13 @@ export function DashboardHome() {
         <div className="font-mono text-[11px] tracking-[0.28em] text-teal">COMMAND CONSOLE</div>
         <h1 className="text-3xl mt-1">香港城市實況</h1>
         <p className="text-muted mt-2 max-w-2xl">
-          以公開資料組成的主控台。先看通勤到達時間，再進入天氣、醫療、路況、停車場與康文署場地。頂欄可隨時睇天氣摘要。
+          以公開資料組成的主控台。出行助手會跟天氣比較步行、港鐵同巴士；再進入到達時間、天氣、醫療、路況、停車場與康文署場地。
         </p>
       </div>
 
       <div className="space-y-6">
+        <AiTripAdvisor />
+
         <section className="grid gap-3 sm:grid-cols-2">
           <Link
             href="/weather"

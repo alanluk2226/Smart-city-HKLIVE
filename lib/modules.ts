@@ -31,14 +31,14 @@ export const MODULES = [
     href: "/parking",
     key: "parking",
     title: "停車場空位",
-    blurb: "全港停車場即時私家車空位",
+    blurb: "全港停車場即時私家車空位，按港島／九龍／新界同行政區瀏覽",
     accent: "violet",
   },
   {
     href: "/facilities",
     key: "facilities",
     title: "康文署場地",
-    blurb: "附近羽毛球場、籃球場開放資料",
+    blurb: "全港體育館、球場、泳池、泳灘等，按行政區同類型瀏覽",
     accent: "lime",
   },
 ] as const;

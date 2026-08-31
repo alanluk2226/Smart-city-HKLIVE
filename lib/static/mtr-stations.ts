@@ -266,6 +266,41 @@ export function searchMtrStations(q: string): MtrStation[] {
   ).slice(0, 12);
 }
 
+/** Station name / English / code only — not line names (荃灣 must not list the whole 荃灣線). */
+export function matchMtrStationsByName(q: string): MtrStation[] {
+  const raw = q.trim();
+  const n = raw.toLowerCase();
+  if (!n) return [];
+  return MTR_STATIONS.filter(
+    (s) => s.name.includes(raw) || s.nameEn.toLowerCase().includes(n) || s.code.toLowerCase() === n,
+  )
+    .sort((a, b) => a.name.length - b.name.length)
+    .slice(0, 8);
+}
+
+/** Prefer exact 荃灣 over 荃灣西 when the query is 荃灣. */
+export function resolveMtrPlace(q: string): MtrStation | undefined {
+  const raw = q.trim();
+  if (!raw) return undefined;
+  const n = raw.toLowerCase();
+  const exact = MTR_STATIONS.find(
+    (s) => s.name === raw || s.nameEn.toLowerCase() === n || s.code.toLowerCase() === n,
+  );
+  if (exact) return exact;
+  const starts = MTR_STATIONS.filter(
+    (s) => s.name.startsWith(raw) || s.nameEn.toLowerCase().startsWith(n),
+  );
+  if (starts.length) {
+    return [...starts].sort((a, b) => a.name.length - b.name.length)[0];
+  }
+  return searchMtrStations(raw).find(
+    (s) =>
+      s.name.includes(raw) ||
+      s.nameEn.toLowerCase().includes(n) ||
+      s.code.toLowerCase() === n,
+  );
+}
+
 export function mtrStationsOnLine(line?: string, q = ""): MtrStation[] {
   const n = q.trim();
   return MTR_STATIONS.filter((s) => {

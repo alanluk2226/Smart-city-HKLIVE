@@ -98,14 +98,24 @@ export async function lrtTrip(from: string, to: string): Promise<MtrTripPlan> {
   const table = await fares();
   const fare = table.get(`${from}-${to}`) ?? table.get(`${to}-${from}`) ?? null;
 
+  const crowd = crowding();
+  const legs = route.legs.map((leg) => ({
+    ...leg,
+    minutes: Math.max(1, Math.round(leg.minutes)),
+    crowding: leg.line === "WALK" ? undefined : crowd,
+  }));
+
   return {
     from,
     to,
     fromName: lrtName(from),
     toName: lrtName(to),
     minutes: route.minutes,
+    rideMinutes: Math.max(0, route.minutes - 2),
+    transferMinutes: 0,
+    waitMinutes: 2,
     interchangeCount: route.interchangeCount,
-    legs: route.legs,
+    legs,
     fares: {
       adult: fare?.adult ?? null,
       student: fare?.student ?? null,
@@ -114,6 +124,6 @@ export async function lrtTrip(from: string, to: string): Promise<MtrTripPlan> {
       elderlyLabel: "長者",
       note: "輕鐵八達通車費；同一輕鐵車程內轉路線通常不另收費。",
     },
-    crowding: crowding(),
+    crowding: crowd,
   };
 }

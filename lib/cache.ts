@@ -37,6 +37,7 @@ export const TTL = {
   parkingInfo: 6 * 60 * 60 * 1000,
   parkingVacancy: 60_000,
   traffic: 2 * 60 * 1000,
+  alerts: 60_000,
   facility: 5 * 60 * 1000,
   hsr: 30 * 60 * 1000,
   taxi: 6 * 60 * 60 * 1000,

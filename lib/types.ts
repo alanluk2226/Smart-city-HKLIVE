@@ -76,6 +76,20 @@ export type MtrTripStop = {
   name: string;
 };
 
+export type MtrCarLoad = {
+  car: number;
+  level: 1 | 2 | 3 | 4;
+};
+
+export type MtrCarCrowding = {
+  line: string;
+  lineName: string;
+  peak: boolean;
+  cars: MtrCarLoad[];
+  emptier: number[];
+  note: string;
+};
+
 export type MtrTripLeg = {
   line: string;
   lineName: string;
@@ -84,12 +98,12 @@ export type MtrTripLeg = {
   to: string;
   toName: string;
   stops: MtrTripStop[];
+  /** Ride / walk time for this leg only (minutes). */
   minutes: number;
-};
-
-export type MtrCarLoad = {
-  car: number;
-  level: 1 | 2 | 3 | 4;
+  /** Same-station interchange before boarding this leg. */
+  interchangeBeforeMin?: number;
+  /** Heuristic car occupancy for this boarding line. */
+  crowding?: MtrCarCrowding;
 };
 
 export type MtrTripPlan = {
@@ -98,6 +112,9 @@ export type MtrTripPlan = {
   fromName: string;
   toName: string;
   minutes: number;
+  rideMinutes: number;
+  transferMinutes: number;
+  waitMinutes: number;
   interchangeCount: number;
   legs: MtrTripLeg[];
   fares: {
@@ -108,14 +125,8 @@ export type MtrTripPlan = {
     elderlyLabel: string;
     note?: string;
   };
-  crowding: {
-    line: string;
-    lineName: string;
-    peak: boolean;
-    cars: MtrCarLoad[];
-    emptier: number[];
-    note: string;
-  };
+  /** @deprecated Prefer per-leg crowding; kept for first rail leg summary. */
+  crowding: MtrCarCrowding;
 };
 
 export type HsrTrain = {
@@ -165,4 +176,43 @@ export type Place = {
   lng: number;
   distanceMeters?: number;
   meta?: Record<string, string | number | null>;
+};
+
+export type AiTripGoal = "fastest" | "cheapest" | "both";
+
+export type AiTripMode = "walk" | "mtr" | "bus" | "mix";
+
+export type AiTripOption = {
+  id: string;
+  mode: AiTripMode;
+  title: string;
+  minutes: number | null;
+  fareHkd: number | null;
+  steps: string[];
+  why: string;
+  weatherFit: "good" | "ok" | "poor";
+  badges: string[];
+  source: "computed" | "ai";
+  mtrFrom?: string;
+  mtrTo?: string;
+};
+
+export type AiTripAdvice = {
+  fromName: string;
+  toName: string;
+  fromCode: string | null;
+  toCode: string | null;
+  goal: AiTripGoal;
+  weather: {
+    temperature: number | null;
+    humidity: number | null;
+    summary: string;
+    warnings: string[];
+    iconUrl: string | null;
+  };
+  weatherNote: string;
+  recommendedId: string;
+  options: AiTripOption[];
+  disclaimer: string;
+  usedAi: boolean;
 };

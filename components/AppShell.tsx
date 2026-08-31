@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AlertsBar } from "@/components/AlertsBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeatherNavChip } from "@/components/WeatherNavChip";
 import { MODULES } from "@/lib/modules";
@@ -51,6 +52,7 @@ export function AppShell({
             <WeatherNavChip />
           </div>
         </div>
+        <AlertsBar />
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
         {(title || current) && (

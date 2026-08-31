@@ -5,6 +5,17 @@ export async function apiGet<T>(url: string): Promise<T> {
   return json.data;
 }
 
+export async function apiPost<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as { ok: boolean; error?: string; data: T };
+  if (!json.ok) throw new Error(json.error || "載入失敗");
+  return json.data;
+}
+
 export function formatDistance(meters?: number) {
   if (meters == null) return "";
   if (meters < 1000) return `${Math.round(meters)} m`;

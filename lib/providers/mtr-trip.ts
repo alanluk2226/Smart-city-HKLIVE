@@ -249,7 +249,21 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
     fareNote = fareNote ? `${fareNote} ${racNote}` : racNote;
   }
 
-  const board = route.legs.find((l) => l.line !== "WALK") ?? route.legs[0];
+  const peak = isPeakHour();
+  const legs = route.legs.map((leg) =>
+    leg.line === "WALK"
+      ? leg
+      : {
+          ...leg,
+          minutes: Math.max(1, Math.round(leg.minutes)),
+          interchangeBeforeMin:
+            leg.interchangeBeforeMin != null
+              ? Math.max(1, Math.round(leg.interchangeBeforeMin))
+              : undefined,
+          crowding: crowdingFor(leg.line, peak),
+        },
+  );
+  const board = legs.find((l) => l.line !== "WALK") ?? legs[0];
 
   return {
     from,
@@ -257,8 +271,11 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
     fromName: mtrName(from),
     toName: mtrName(to),
     minutes: route.minutes,
+    rideMinutes: route.rideMinutes,
+    transferMinutes: route.transferMinutes,
+    waitMinutes: Math.round(route.waitMinutes),
     interchangeCount: route.interchangeCount,
-    legs: route.legs,
+    legs,
     fares: {
       adult: fares?.adult ?? null,
       student: fares?.student ?? null,
@@ -267,6 +284,6 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
       elderlyLabel,
       note: fareNote,
     },
-    crowding: crowdingFor(board.line === "WALK" ? "TML" : board.line, isPeakHour()),
+    crowding: board.crowding ?? crowdingFor(board.line === "WALK" ? "TML" : board.line, peak),
   };
 }

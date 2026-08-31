@@ -20,6 +20,8 @@ const MAX_ZOOM = 8;
 const ZOOM_STEP = 1.25;
 const LOCATE_ZOOM = 3.6;
 const TAP_R = 18;
+const TAP_PX = 34;
+const DRAG_PX = 12;
 /** Walking / short-bus catchment around the Tuen Mun–Tin Shui Wai–Yuen Long network. */
 const MAX_LOCATE_M = 6_000;
 const LRT_AREA_PAD_M = 3_000;
@@ -100,6 +102,12 @@ function viewOn(cx: number, cy: number, zoom: number): View {
   return clampView({ x: cx - w / 2, y: cy - h / 2, w, h });
 }
 
+function tapRadiusSvg(svg: SVGSVGElement, viewW: number) {
+  const w = svg.getBoundingClientRect().width;
+  if (w < 8) return TAP_PX;
+  return TAP_PX * (viewW / w);
+}
+
 function nearestStationCode(lat: number, lng: number): string | null {
   if (!inLrtServiceArea(lat, lng)) return null;
   let best: { code: string; dist: number } | null = null;
@@ -141,6 +149,7 @@ export function LrtSchematicMap({
   const pan = useRef<{ x: number; y: number; view: View } | null>(null);
   const pinch = useRef<{ dist: number; view: View } | null>(null);
   const dragged = useRef(false);
+  const tapDown = useRef<{ x: number; y: number } | null>(null);
   const flyId = useRef(0);
   const [view, setViewState] = useState<View>(FULL_VIEW);
   const [panning, setPanning] = useState(false);
@@ -210,12 +219,12 @@ export function LrtSchematicMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originCode, destCode]);
 
-  function hitsAt(x: number, y: number): Hit[] {
+  function hitsAt(x: number, y: number, extraR: number): Hit[] {
     const hubHits: Hit[] = [];
     const other: Hit[] = [];
     for (const t of targets) {
       const dist = Math.hypot(t.x - x, t.y - y);
-      if (dist > t.r) continue;
+      if (dist > Math.max(t.r, extraR)) continue;
       const hit = { code: t.code, name: t.name, nameEn: t.nameEn, dist };
       if (t.hub) hubHits.push(hit);
       else other.push(hit);
@@ -377,13 +386,34 @@ export function LrtSchematicMap({
     return [...pointers.current.values()];
   }
 
+  function applyStationHits(clientX: number, clientY: number) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const src =
+      clientX === 0 && clientY === 0 && tapDown.current
+        ? tapDown.current
+        : { x: clientX, y: clientY };
+    const pt = clientToSvg(svg, src.x, src.y);
+    const hits = hitsAt(pt.x, pt.y, tapRadiusSvg(svg, viewRef.current.w));
+    if (!hits.length) return;
+    if (hits.length === 1 || hits[0].dist <= hits[1].dist * 0.7) {
+      setPicker(null);
+      onSelect(hits[0].code);
+    } else {
+      setPicker(hits.slice(0, 8));
+    }
+  }
+
   function onPointerDown(e: ReactPointerEvent<SVGSVGElement>) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const svg = svgRef.current;
     if (!svg) return;
     cancelFly();
-    svg.setPointerCapture(e.pointerId);
+    if (e.pointerType === "mouse") {
+      svg.setPointerCapture(e.pointerId);
+    }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tapDown.current = { x: e.clientX, y: e.clientY };
     dragged.current = false;
     const pts = pointerList();
     if (pts.length === 1) {
@@ -417,7 +447,8 @@ export function LrtSchematicMap({
     if (pts.length === 1 && pan.current) {
       const dx = e.clientX - pan.current.x;
       const dy = e.clientY - pan.current.y;
-      if (Math.hypot(dx, dy) > 6) dragged.current = true;
+      if (Math.hypot(dx, dy) <= DRAG_PX) return;
+      dragged.current = true;
       const rect = svg.getBoundingClientRect();
       setView({
         ...pan.current.view,
@@ -439,16 +470,7 @@ export function LrtSchematicMap({
     pinch.current = null;
     setPanning(false);
     if (dragged.current) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const pt = clientToSvg(svg, e.clientX, e.clientY);
-    const hits = hitsAt(pt.x, pt.y);
-    if (hits.length === 1) {
-      setPicker(null);
-      onSelect(hits[0].code);
-    } else if (hits.length > 1) {
-      setPicker(hits);
-    }
+    applyStationHits(e.clientX, e.clientY);
   }
 
   function zoomBy(factor: number) {
@@ -527,7 +549,7 @@ export function LrtSchematicMap({
         <svg
           ref={svgRef}
           viewBox={`${view.x} ${view.y} ${view.w} ${view.h}`}
-          className={`block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[720px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
+          className={`relative z-0 block w-full select-none touch-none max-md:h-full max-md:min-h-full md:min-w-[720px] md:h-auto ${panning ? "cursor-grabbing" : "cursor-grab"}`}
           role="img"
           aria-label="輕鐵互動路綫圖"
           onPointerDown={onPointerDown}
@@ -721,7 +743,7 @@ export function LrtSchematicMap({
           </div>
         ) : null}
 
-          <div className="absolute right-3 bottom-3 hidden md:flex flex-col gap-1">
+          <div className="pointer-events-auto absolute right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex flex-col gap-1">
             <button
               type="button"
               aria-label="放大"
