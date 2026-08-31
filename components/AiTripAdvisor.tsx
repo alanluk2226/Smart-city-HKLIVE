@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import {
   isTripStarred,
@@ -14,151 +14,66 @@ import {
   type SavedTrip,
 } from "@/lib/ai-trip-store";
 import { apiPost } from "@/lib/client";
-import { matchTripPlaces } from "@/lib/static/hk-places";
-import type { AiTripAdvice, AiTripOption } from "@/lib/types";
+import type { AiTripAdvice } from "@/lib/types";
 
-const FIT_LABEL: Record<AiTripOption["weatherFit"], string> = {
-  good: "天氣合適",
-  ok: "尚可",
-  poor: "天氣不宜",
+type ChatRole = "user" | "assistant" | "system";
+
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  text: string;
+  advice?: AiTripAdvice;
 };
 
-function PlaceField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const matches = useMemo(() => matchTripPlaces(value, 8), [value]);
-  const show =
-    open &&
-    value.trim().length >= 1 &&
-    matches.some((s) => s.name !== value && s.nameEn !== value);
+const WELCOME =
+  "你好，我係 HK LIVE 出行助手。用日常說話問我即可，例如：\n\n「東涌去何文田」\n「逸東邨到羅湖」\n「荃灣去中環」\n\n我會用本站港鐵／巴士資料計真實路線，再跟天氣畀建議——唔會亂估「視路面」假方案。";
 
+function newId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function ReplyBody({ text }: { text: string }) {
+  const blocks = text.split("\n");
   return (
-    <div className="relative min-w-0 flex-1">
-      <label htmlFor={id} className="text-[11px] text-muted">
-        {label}
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 150)}
-        placeholder={placeholder}
-        autoComplete="off"
-        className="mt-1 w-full rounded-xl border border-line bg-elev px-3 py-2.5 text-ink outline-none focus:border-teal"
-      />
-      {show ? (
-        <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-line bg-elev py-1 shadow-lg">
-          {matches.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                className="w-full px-3 py-2 text-left text-sm hover:bg-ink/5"
-                onClick={() => onChange(s.name)}
-              >
-                {s.name}
-                <span className="ml-2 text-[11px] text-muted">{s.subtitle}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <div className="space-y-1.5 text-sm leading-relaxed text-ink">
+      {blocks.map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-1.5" />;
+        const numbered = line.match(/^(\d+)\.\s+(.+)$/);
+        if (numbered) {
+          return (
+            <p key={i} className="font-medium text-ink">
+              <span className="mr-1.5 font-mono text-teal">{numbered[1]}.</span>
+              {numbered[2]}
+            </p>
+          );
+        }
+        if (line.startsWith("路線：") || line.startsWith("車程：") || line.startsWith("說明：") || line.startsWith("天氣：")) {
+          return (
+            <p key={i} className="pl-5 text-[13px] text-muted">
+              {line}
+            </p>
+          );
+        }
+        return (
+          <p key={i} className="text-[13px]">
+            {line}
+          </p>
+        );
+      })}
     </div>
   );
 }
 
-function OptionCard({
-  opt,
-  recommended,
-  index,
-}: {
-  opt: AiTripOption;
-  recommended: boolean;
-  index: number;
-}) {
-  return (
-    <article
-      className={`rounded-xl border px-3 py-3 ${
-        recommended ? "border-teal/50 bg-teal/10" : "border-line bg-elev/40"
-      }`}
-    >
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="font-mono text-[10px] text-muted">方案 {index + 1}</span>
-        <h4 className="text-sm font-medium">{opt.title}</h4>
-        <span className="ml-auto font-mono text-sm text-teal">
-          {opt.minutes != null ? `${opt.minutes} 分` : "視路面"}
-          {opt.fareHkd != null ? ` · $${opt.fareHkd}` : ""}
-        </span>
-      </div>
-      <div className="mt-1.5 flex flex-wrap gap-1">
-        {opt.badges.map((b) => (
-          <span
-            key={b}
-            className={`rounded-full px-2 py-0.5 text-[10px] ${
-              b === "建議"
-                ? "bg-teal/20 text-teal"
-                : b === "最快"
-                  ? "bg-sky/15 text-sky"
-                  : b === "最平"
-                    ? "bg-violet/15 text-violet"
-                    : b === "天氣不宜"
-                      ? "bg-amber/15 text-amber"
-                      : "bg-ink/5 text-muted"
-            }`}
-          >
-            {b}
-          </span>
-        ))}
-        <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[10px] text-muted">
-          {FIT_LABEL[opt.weatherFit]}
-        </span>
-        {opt.source === "ai" ? (
-          <span className="rounded-full bg-violet/15 px-2 py-0.5 text-[10px] text-violet">AI 估計</span>
-        ) : null}
-      </div>
-      {opt.steps.length ? (
-        <ol className="mt-2 space-y-1 text-[12px] text-muted">
-          {opt.steps.map((s, i) => (
-            <li key={`${i}-${s}`}>
-              <span className="mr-1 font-mono text-[10px] text-teal/80">{i + 1}</span>
-              {s}
-            </li>
-          ))}
-        </ol>
-      ) : null}
-      <p className="mt-2 text-[12px] leading-relaxed text-ink/90">{opt.why}</p>
-      {opt.mtrFrom && opt.mtrTo ? (
-        <Link
-          href={`/transit/mtr?from=${encodeURIComponent(opt.mtrFrom)}&to=${encodeURIComponent(opt.mtrTo)}`}
-          className="mt-2 inline-block text-[11px] text-teal hover:underline"
-        >
-          去港鐵路綫圖睇呢程 →
-        </Link>
-      ) : null}
-    </article>
-  );
-}
-
 export function AiTripAdvisor() {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [advice, setAdvice] = useState<AiTripAdvice | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: "welcome", role: "assistant", text: WELCOME },
+  ]);
   const [stars, setStars] = useState<SavedTrip[]>([]);
   const [history, setHistory] = useState<SavedTrip[]>([]);
   const [ready, setReady] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setStars(loadTripStars());
@@ -166,28 +81,26 @@ export function AiTripAdvisor() {
     setReady(true);
   }, []);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, loading]);
+
   const chips = useMemo(() => tripChips(stars, history), [stars, history]);
-  const currentStarred = advice
-    ? isTripStarred(advice.fromName, advice.toName, stars)
-    : isTripStarred(from, to, stars);
 
-  function swap() {
-    setFrom(to);
-    setTo(from);
-  }
+  async function ask(raw: string) {
+    const text = raw.trim();
+    if (!text || loading) return;
 
-  async function run(nextFrom = from, nextTo = to) {
-    const a = nextFrom.trim();
-    const b = nextTo.trim();
-    if (!a || !b) {
-      setError("請輸入起點同終點");
-      return;
-    }
+    setInput("");
+    setMessages((prev) => [...prev, { id: newId(), role: "user", text }]);
     setLoading(true);
-    setError("");
+
     try {
-      const data = await apiPost<AiTripAdvice>("/api/ai/trip", { from: a, to: b });
-      setAdvice(data);
+      const data = await apiPost<AiTripAdvice>("/api/ai/trip", { message: text });
+      setMessages((prev) => [
+        ...prev,
+        { id: newId(), role: "assistant", text: data.reply, advice: data },
+      ]);
       setHistory(
         pushTripHistory({
           from: data.fromName,
@@ -197,20 +110,28 @@ export function AiTripAdvisor() {
         }),
       );
     } catch (err) {
-      setAdvice(null);
-      setError(err instanceof Error ? err.message : "無法建議行程");
+      const msg = err instanceof Error ? err.message : "無法建議行程";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: newId(),
+          role: "assistant",
+          text: `${msg}\n\n可以再試：「東涌去何文田」或「逸東邨到羅湖」。`,
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   }
 
-  function starCurrent() {
-    const trip: SavedTrip = advice
-      ? { from: advice.fromName, to: advice.toName, goal: "both", savedAt: Date.now() }
-      : { from: from.trim(), to: to.trim(), goal: "both", savedAt: Date.now() };
-    if (!trip.from || !trip.to) return;
-    const next = toggleTripStar(trip);
-    setStars(next.stars);
+  function starAdvice(advice: AiTripAdvice) {
+    const trip: SavedTrip = {
+      from: advice.fromName,
+      to: advice.toName,
+      goal: "both",
+      savedAt: Date.now(),
+    };
+    setStars(toggleTripStar(trip).stars);
   }
 
   function dismissChip(trip: SavedTrip, e: MouseEvent) {
@@ -229,44 +150,14 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            混和架構：只顯示本站計到嘅真實路線；AI 跟天氣寫評語同揀建議。支援港鐵站、屋邨同行政區（例如逸東邨⇄羅湖：38→纜車站→E41→東鐵）。未有可靠巴士資料時唔會亂估。
+            像對話咁問：路線由本站公開資料計算，AI 只跟天氣寫評語。例如「東涌去何文田」「逸東邨到羅湖」。
           </p>
         </div>
       </div>
 
-      <form
-        className="mt-3 space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run();
-        }}
-      >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <PlaceField id="ai-from" label="起點" value={from} onChange={setFrom} placeholder="逸東邨、東涌、荃灣…" />
-          <button
-            type="button"
-            onClick={swap}
-            className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-teal hover:text-ink sm:mb-0.5"
-          >
-            對調
-          </button>
-          <PlaceField id="ai-to" label="終點" value={to} onChange={setTo} placeholder="羅湖、天水圍、北區…" />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-full bg-teal/20 px-4 py-1.5 text-sm text-teal hover:bg-teal/30 disabled:opacity-50"
-          >
-            {loading ? "諗緊…" : "建議行程"}
-          </button>
-        </div>
-      </form>
-
       <div className="mt-3">
         {ready && chips.length === 0 ? (
-          <p className="text-[11px] text-muted">搜過嘅行程會出現喺呢度。畫面最多 5 個，收藏優先。</p>
+          <p className="text-[11px] text-muted">問過嘅行程會出現喺呢度，撳一下即可再問。</p>
         ) : null}
         {chips.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -282,11 +173,7 @@ export function AiTripAdvisor() {
                   <button
                     type="button"
                     className="px-2.5 py-1 text-[11px] text-muted hover:text-ink"
-                    onClick={() => {
-                      setFrom(trip.from);
-                      setTo(trip.to);
-                      void run(trip.from, trip.to);
-                    }}
+                    onClick={() => void ask(`${trip.from}去${trip.to}`)}
                   >
                     {starred ? <span className="mr-1 text-amber">★</span> : null}
                     {trip.from} → {trip.to}
@@ -306,52 +193,96 @@ export function AiTripAdvisor() {
         ) : null}
       </div>
 
-      {error ? <p className="mt-3 text-sm text-rose">{error}</p> : null}
-
-      {advice ? (
-        <div className="mt-4 space-y-3">
-          <div className="flex items-start gap-3 rounded-xl border border-line bg-elev px-3 py-2.5">
-            {advice.weather.iconUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={advice.weather.iconUrl} alt="" className="mt-0.5 h-8 w-8" />
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <div className="text-xs text-muted">{advice.weather.summary}</div>
-              <p className="mt-0.5 text-sm leading-relaxed">{advice.weatherNote}</p>
-            </div>
-            <button
-              type="button"
-              onClick={starCurrent}
-              aria-pressed={currentStarred}
-              aria-label={currentStarred ? "取消收藏此行程" : "收藏此行程"}
-              className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-sm ${
-                currentStarred
-                  ? "border-amber/50 bg-amber/15 text-amber"
-                  : "border-line text-muted hover:border-amber hover:text-amber"
-              }`}
+      <div className="mt-3 flex max-h-[28rem] flex-col gap-3 overflow-y-auto rounded-xl border border-line bg-elev/40 p-3">
+        {messages.map((m) => {
+          const starred = m.advice
+            ? isTripStarred(m.advice.fromName, m.advice.toName, stars)
+            : false;
+          return (
+            <div
+              key={m.id}
+              className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {currentStarred ? "★ 已收藏" : "☆ 收藏"}
-            </button>
+              <div
+                className={`max-w-[95%] rounded-2xl px-3.5 py-2.5 sm:max-w-[85%] ${
+                  m.role === "user"
+                    ? "rounded-br-md bg-teal/20 text-ink"
+                    : "rounded-bl-md border border-line bg-card"
+                }`}
+              >
+                {m.role === "user" ? (
+                  <p className="text-sm whitespace-pre-wrap">{m.text}</p>
+                ) : (
+                  <ReplyBody text={m.text} />
+                )}
+                {m.advice ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line/70 pt-2">
+                    {m.advice.weather.iconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.advice.weather.iconUrl} alt="" className="h-6 w-6" />
+                    ) : null}
+                    <span className="text-[11px] text-muted">{m.advice.weather.summary}</span>
+                    <button
+                      type="button"
+                      onClick={() => starAdvice(m.advice!)}
+                      className={`ml-auto rounded-lg border px-2 py-1 text-[11px] ${
+                        starred
+                          ? "border-amber/50 bg-amber/15 text-amber"
+                          : "border-line text-muted hover:border-amber hover:text-amber"
+                      }`}
+                    >
+                      {starred ? "★ 已收藏" : "☆ 收藏"}
+                    </button>
+                    {m.advice.options.some((o) => o.mtrFrom && o.mtrTo) ? (
+                      <Link
+                        href={`/transit/mtr?from=${encodeURIComponent(
+                          m.advice.options.find((o) => o.mtrFrom)?.mtrFrom ?? "",
+                        )}&to=${encodeURIComponent(
+                          m.advice.options.find((o) => o.mtrTo)?.mtrTo ?? "",
+                        )}`}
+                        className="text-[11px] text-teal hover:underline"
+                      >
+                        港鐵路綫圖 →
+                      </Link>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+        {loading ? (
+          <div className="flex justify-start">
+            <div className="rounded-2xl rounded-bl-md border border-line bg-card px-3.5 py-2.5 text-sm text-muted">
+              諗緊路線…
+            </div>
           </div>
-          <div className="grid gap-2">
-            {advice.options.map((opt, index) => (
-              <OptionCard
-                key={opt.id}
-                opt={opt}
-                index={index}
-                recommended={opt.id === advice.recommendedId}
-              />
-            ))}
-          </div>
-          <p
-            className={`text-[11px] leading-relaxed ${
-              advice.usedAi ? "text-muted" : "text-amber"
-            }`}
-          >
-            {advice.disclaimer}
-          </p>
-        </div>
-      ) : null}
+        ) : null}
+        <div ref={bottomRef} />
+      </div>
+
+      <form
+        className="mt-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void ask(input);
+        }}
+      >
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="問我：東涌去何文田…"
+          disabled={loading}
+          className="min-w-0 flex-1 rounded-xl border border-line bg-elev px-3 py-2.5 text-ink outline-none focus:border-teal disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={loading || !input.trim()}
+          className="shrink-0 rounded-xl bg-teal/20 px-4 py-2.5 text-sm text-teal hover:bg-teal/30 disabled:opacity-50"
+        >
+          傳送
+        </button>
+      </form>
     </section>
   );
 }

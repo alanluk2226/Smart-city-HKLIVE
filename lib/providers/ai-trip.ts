@@ -301,6 +301,100 @@ function realSurfaceExtras(walkOption: AiTripOption | null): AiTripOption[] {
   return walkOption ? [walkOption] : [];
 }
 
+/** 東涌 ⇄ 何文田／黃埔／愛民：城巴 E21A（一程直達市區） */
+const E21A_DEST = new Set(["HOM", "WHA"]);
+
+function isE21aArea(place: ResolvedTripPlace) {
+  return E21A_DEST.has(place.anchor.code) || place.id === "estate-oi-man";
+}
+
+function e21aBusOption(input: {
+  from: ResolvedTripPlace;
+  to: ResolvedTripPlace;
+  tone: ReturnType<typeof weatherTone>;
+  fareHkd: number | null;
+  journeyMinutes: number | null;
+}): AiTripOption | null {
+  const { from, to, tone, fareHkd, journeyMinutes } = input;
+  const tucToCity = isTungChungArea(from) && isE21aArea(to);
+  const cityToTuc = isTungChungArea(to) && isE21aArea(from);
+  if (!tucToCity && !cityToTuc) return null;
+
+  const tuc = tucToCity ? from : to;
+  const city = tucToCity ? to : from;
+  const feeder = tuc.feeder;
+  const busMin = journeyMinutes != null && journeyMinutes > 40 ? Math.min(75, Math.max(55, Math.round(journeyMinutes * 0.7))) : 65;
+  const minutes = (feeder?.minutes ?? 0) + busMin;
+  const fare = Math.round(((feeder?.fareHkd ?? 0) + (fareHkd ?? 14)) * 10) / 10;
+
+  const steps = tucToCity
+    ? [
+        ...(feeder
+          ? [`於${tuc.name}乘 ${feeder.route} 號巴士前往${feeder.alight}／東涌市中心`]
+          : [`於${tuc.name}前往東涌巴士站`]),
+        "乘城巴 E21A（往愛民邨方向）",
+        "途經青嶼幹線、葵涌，直達旺角／窩打老道／忠孝街一帶",
+        `於${city.name}附近下車（何文田／愛民邨一帶）`,
+      ]
+    : [
+        `於${city.name}一帶乘城巴 E21A（往機場／東涌方向）`,
+        "途經窩打老道、旺角、葵涌、青嶼幹線往東涌",
+        ...(feeder
+          ? [`於東涌下車後轉 ${feeder.route} 號巴士前往${tuc.name}`]
+          : [`下車後前往${tuc.name}`]),
+      ];
+
+  return {
+    id: "bus-e21a",
+    mode: "bus",
+    title: tucToCity ? `城巴 E21A 往${city.name}一帶` : `城巴 E21A 往${tuc.name}`,
+    minutes,
+    fareHkd: fare,
+    steps,
+    why: "一程巴士直達市區，無需轉港鐵；車程受路面影響，惡劣天氣時港鐵較穩。",
+    weatherFit: tone === "severe" || tone === "wet" ? "ok" : "good",
+    badges: [],
+    source: "computed",
+  };
+}
+
+function buildChatReply(input: {
+  fromName: string;
+  toName: string;
+  weatherNote: string;
+  weatherSummary: string;
+  recommendedId: string;
+  options: AiTripOption[];
+  disclaimer: string;
+}): string {
+  const lines: string[] = [];
+  lines.push(`由${input.fromName}到${input.toName}，主要有以下公共交通方式：`);
+  lines.push("");
+  lines.push(`天氣：${input.weatherSummary}`);
+  lines.push(input.weatherNote);
+  lines.push("");
+
+  for (const [i, opt] of input.options.entries()) {
+    const tags: string[] = [];
+    if (opt.id === input.recommendedId) tags.push("建議");
+    if (opt.badges.includes("最快")) tags.push("最快");
+    if (opt.badges.includes("最平")) tags.push("最平");
+    const tagText = tags.length ? `（${tags.join("／")}）` : "";
+    const time =
+      opt.minutes != null ? `約 ${opt.minutes} 分鐘` : "時間視實際班次";
+    const fare = opt.fareHkd != null ? `，成人車費約 $${opt.fareHkd}` : "";
+
+    lines.push(`${i + 1}. ${opt.title}${tagText}`);
+    lines.push(`路線：${opt.steps.join("；")}`);
+    lines.push(`車程：${time}${fare}。`);
+    if (opt.why) lines.push(`說明：${opt.why}`);
+    lines.push("");
+  }
+
+  lines.push(input.disclaimer);
+  return lines.join("\n").trim();
+}
+
 function applyAiAnnotations(options: AiTripOption[], ai: AiRankOut): AiTripOption[] {
   const map = new Map(
     (ai.annotations ?? [])
@@ -350,8 +444,10 @@ export async function adviseTrip(
   const needAccessWalk = from.kind !== "mtr";
   const needEgressWalk = to.kind !== "mtr";
   const needE41Meta = eastForE41 != null;
+  const needE21a =
+    (isTungChungArea(from) && isE21aArea(to)) || (isTungChungArea(to) && isE21aArea(from));
 
-  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta] = await Promise.all([
+  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta, e21aMeta] = await Promise.all([
     mtrTrip(from.anchor.code, to.anchor.code).catch(() => null),
     walkRoute(from.lat, from.lng, to.lat, to.lng).catch(() => null),
     needTapRail ? mtrTrip("TAP", eastForE41).catch(() => null) : Promise.resolve(null),
@@ -363,6 +459,9 @@ export async function adviseTrip(
       : Promise.resolve(null),
     needE41Meta
       ? lookupRouteInfo({ operator: "kmb", route: "E41", dest: "大埔頭" }).catch(() => null)
+      : Promise.resolve(null),
+    needE21a
+      ? lookupRouteInfo({ operator: "ctb", route: "E21A", dest: "愛民" }).catch(() => null)
       : Promise.resolve(null),
   ]);
 
@@ -382,6 +481,14 @@ export async function adviseTrip(
     railFare: tapRail?.fares.adult ?? null,
     e41Fare,
     e41SegmentMin,
+  });
+
+  const e21aOption = e21aBusOption({
+    from,
+    to,
+    tone,
+    fareHkd: e21aMeta?.fareAdult ?? null,
+    journeyMinutes: e21aMeta?.journeyMinutes ?? null,
   });
 
   const walkOk = walk && walk.durationMinutes <= 40 && walk.distanceMeters <= 3200;
@@ -452,6 +559,7 @@ export async function adviseTrip(
   let options: AiTripOption[] = [];
   if (mtrOption) options.push(mtrOption);
   if (knownCorridor) options.push(knownCorridor);
+  if (e21aOption) options.push(e21aOption);
   for (const extra of realSurfaceExtras(walkOption)) {
     if (options.some((o) => o.id === extra.id || o.mode === "walk")) continue;
     options.push(extra);
@@ -511,6 +619,21 @@ export async function adviseTrip(
 
   const recommendedId = pickRecommended(options, tone, aiRecommendedId);
   const badged = withBadges(options, recommendedId);
+  const disclaimer = usedAi
+    ? `以上路線／車費由本站用港鐵／巴士公開資料計算（${badged.length} 個方案）；AI 只跟天氣寫評語同揀建議，請以營運商到達時間為準。`
+    : aiError
+      ? `以上路線由本站計算（${badged.length} 個方案）。${aiError}`
+      : `以上路線由本站用港鐵／巴士公開資料計算（${badged.length} 個方案）。未有可靠巴士資料時唔會亂估。`;
+
+  const reply = buildChatReply({
+    fromName: from.name,
+    toName: to.name,
+    weatherNote,
+    weatherSummary: summary,
+    recommendedId,
+    options: badged,
+    disclaimer,
+  });
 
   return {
     fromName: from.name,
@@ -528,11 +651,8 @@ export async function adviseTrip(
     weatherNote,
     recommendedId,
     options: badged,
-    disclaimer: usedAi
-      ? `只顯示本站計到嘅真實方案（而家有 ${options.length} 個）。路線／車費來自港鐵／巴士公開資料；AI 只跟天氣寫評語同揀建議，請以營運商到達時間為準。`
-      : aiError
-        ? `只顯示本站計到嘅真實方案（${options.length} 個）。${aiError}`
-        : `只顯示本站計到嘅真實方案（${options.length} 個）。未有可靠巴士轉車資料時唔會亂估。`,
+    reply,
+    disclaimer,
     usedAi,
     aiError,
   };

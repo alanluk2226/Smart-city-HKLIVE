@@ -222,6 +222,8 @@ export type AiTripAdvice = {
   weatherNote: string;
   recommendedId: string;
   options: AiTripOption[];
+  /** Gemini-style conversational answer grounded on computed options. */
+  reply: string;
   disclaimer: string;
   usedAi: boolean;
   /** Set when Gemini was attempted but failed (e.g. regional block). */
