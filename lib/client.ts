@@ -31,19 +31,26 @@ export function waitTone(minutes: number | null) {
   return "text-rose";
 }
 
-export function useGeo(onPos: (lat: number, lng: number) => void) {
+export function useGeo(
+  onPos: (lat: number, lng: number) => void,
+  onFail?: (message: string) => void,
+) {
   return () => {
+    const fail = (message: string) => {
+      if (onFail) onFail(message);
+      else alert(message);
+    };
     if (!getLocationEnabled()) {
-      alert("已在設定關閉定位。可按右上角齒輪重新開啟。");
+      fail("已在設定關閉定位。可到設定重新開啟。");
       return;
     }
     if (!navigator.geolocation) {
-      alert("這個瀏覽器不支援定位");
+      fail("這個瀏覽器不支援定位");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => onPos(pos.coords.latitude, pos.coords.longitude),
-      () => alert("未能取得位置，請檢查定位權限"),
+      () => fail("未能取得位置，請檢查定位權限"),
       { enableHighAccuracy: true, timeout: 8000 },
     );
   };

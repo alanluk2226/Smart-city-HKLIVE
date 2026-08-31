@@ -2,13 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { LocationOffBanner } from "@/components/LocationOffBanner";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
-import { apiGet, formatDistance, useGeo } from "@/lib/client";
+import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
 import type { ParkingPlace, ParkingSnapshot } from "@/lib/providers/parking";
 import type { RegionFacet } from "@/lib/static/hk-districts";
 
 type BrowseMode = "nearby" | "district";
+
+function vacancyTone(label: string) {
+  if (label === "已滿") return "text-rose";
+  if (label === "已關閉" || label === "暫無數據") return "text-muted";
+  if (label === "尚有空位") return "text-teal";
+  const n = Number(label);
+  if (Number.isFinite(n)) {
+    if (n <= 0) return "text-rose";
+    if (n <= 5) return "text-amber";
+    return "text-teal";
+  }
+  return "text-violet";
+}
 
 export function ParkingApp() {
   const [center, setCenter] = useState(DEFAULT_CENTER);
@@ -24,13 +38,17 @@ export function ParkingApp() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const locate = useGeo((lat, lng) => {
-    setCenter({ lat, lng });
-    setHasLocated(true);
-    setMode("nearby");
-    setRegion(null);
-    setDistrict(null);
-  });
+  const locate = useGeo(
+    (lat, lng) => {
+      setCenter({ lat, lng });
+      setHasLocated(true);
+      setMode("nearby");
+      setRegion(null);
+      setDistrict(null);
+      setError("");
+    },
+    (message) => setError(message),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -109,6 +127,7 @@ export function ParkingApp() {
   return (
     <AppShell>
       <div className="mb-4 space-y-3">
+        {mode === "nearby" ? <LocationOffBanner label="附近停車場" /> : null}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -208,9 +227,22 @@ export function ParkingApp() {
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-mono text-2xl text-violet">{active.vacancyLabel}</div>
+                  <div className={`font-mono text-2xl ${vacancyTone(active.vacancyLabel)}`}>
+                    {active.vacancyLabel}
+                  </div>
                   <div className="text-xs text-muted">私家車空位</div>
                 </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openWalkingDirections(active.lat, active.lng, active.name)
+                  }
+                  className="inline-flex items-center rounded-full bg-teal px-3.5 py-2 text-xs font-medium text-bg hover:opacity-90"
+                >
+                  前往停車場
+                </button>
               </div>
             </article>
           ) : (
@@ -258,7 +290,9 @@ export function ParkingApp() {
                     {p.distanceMeters != null ? ` · ${formatDistance(p.distanceMeters)}` : ""}
                   </div>
                 </div>
-                <div className="shrink-0 font-mono text-sm text-violet">{p.vacancyLabel}</div>
+                <div className={`shrink-0 font-mono text-sm ${vacancyTone(p.vacancyLabel)}`}>
+                  {p.vacancyLabel}
+                </div>
               </div>
             </button>
           ))}

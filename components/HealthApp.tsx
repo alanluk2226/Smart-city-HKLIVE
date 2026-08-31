@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
+import { LocationOffBanner } from "@/components/LocationOffBanner";
 import { apiGet, formatDistance, openWalkingDirections, useGeo, waitTone } from "@/lib/client";
 import { DEFAULT_CENTER, parseWaitMinutes } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
@@ -330,7 +331,7 @@ export function HealthApp() {
     setSort("nearest");
   };
 
-  const locate = useGeo(applyLocation);
+  const locate = useGeo(applyLocation, (message) => setError(message));
 
   useEffect(() => {
     if (locatedOnce.current || !navigator.geolocation || !getLocationEnabled()) return;
@@ -408,6 +409,9 @@ export function HealthApp() {
 
   return (
     <AppShell>
+      <div className="mb-3">
+        <LocationOffBanner label="最近醫院" />
+      </div>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-snug text-muted sm:text-sm">
           地圖標籤＝半緊急／非緊急輪候。點選醫院睇詳情同導航。危急請打 999。

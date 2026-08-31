@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { WeatherSpatialMaps } from "@/components/WeatherSpatialMaps";
 import { apiGet } from "@/lib/client";
 import type {
   AqhiSummary,
@@ -336,9 +337,14 @@ export function WeatherApp() {
             todayWind={data.todayWind}
           />
 
+          <WeatherSpatialMaps />
+
           {data.rainfall.length ? (
             <section className="rounded-2xl border border-line bg-card p-5">
               <h2 className="mb-2 text-sm text-muted">過去一小時雨量</h2>
+              <p className="mb-2 text-[11px] text-muted">
+                測站落地雨量；可對照上方雷達雨區。
+              </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {data.rainfall.map((r) => (
                   <div key={r.place} className="flex justify-between gap-3">

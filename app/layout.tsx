@@ -16,8 +16,12 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "香港城市實況",
-  description: "整合交通到達、天氣、急症室、路況 CCTV、停車場與康文署場地的公開資料主控台",
+  title: "HK LIVE",
+  description: "整合交通工具、天氣、急症室、路況 CCTV、停車場與康文署場地的公開資料主控台",
+  icons: {
+    icon: "/logo.jpeg",
+    apple: "/logo.jpeg",
+  },
 };
 
 const themeBootScript = `(function(){try{var t=localStorage.getItem("hk-live-theme");document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:"dark";}catch(e){document.documentElement.dataset.theme="dark";}})();`;

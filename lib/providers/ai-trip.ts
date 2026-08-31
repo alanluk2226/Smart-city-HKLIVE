@@ -4,7 +4,7 @@ import { mtrTrip } from "@/lib/providers/mtr-trip";
 import { getWeather, type WeatherSnapshot } from "@/lib/providers/weather";
 import { walkRoute } from "@/lib/routing";
 import { MTR_LINE_NAMES, resolveMtrPlace } from "@/lib/static/mtr-stations";
-import type { AiTripAdvice, AiTripGoal, AiTripOption, MtrTripPlan } from "@/lib/types";
+import type { AiTripAdvice, AiTripGoal, AiTripMode, AiTripOption, MtrTripPlan } from "@/lib/types";
 
 type GeminiOut = {
   weatherNote?: string;
@@ -19,6 +19,16 @@ type GeminiOut = {
     weatherFit?: string;
   }>;
 };
+
+const SURFACE_MODES = new Set<AiTripMode>([
+  "walk",
+  "bus",
+  "minibus",
+  "ferry",
+  "lrt",
+  "tram",
+  "mix",
+]);
 
 function weatherTone(w: WeatherSnapshot): "severe" | "wet" | "hot" | "fair" {
   const blob = [
@@ -62,8 +72,19 @@ function mtrSteps(plan: MtrTripPlan) {
   });
 }
 
-function asMode(value: string | undefined): AiTripOption["mode"] | null {
-  if (value === "walk" || value === "mtr" || value === "bus" || value === "mix") return value;
+function asMode(value: string | undefined): AiTripMode | null {
+  if (
+    value === "walk" ||
+    value === "mtr" ||
+    value === "bus" ||
+    value === "minibus" ||
+    value === "ferry" ||
+    value === "lrt" ||
+    value === "tram" ||
+    value === "mix"
+  ) {
+    return value;
+  }
   return null;
 }
 
@@ -72,17 +93,36 @@ function asFit(value: string | undefined): AiTripOption["weatherFit"] {
   return "ok";
 }
 
-function fallbackNote(tone: ReturnType<typeof weatherTone>, goal: AiTripGoal) {
+function modeTitle(mode: AiTripMode) {
+  switch (mode) {
+    case "walk":
+      return "步行";
+    case "mtr":
+      return "港鐵";
+    case "bus":
+      return "巴士";
+    case "minibus":
+      return "小巴";
+    case "ferry":
+      return "渡輪";
+    case "lrt":
+      return "輕鐵";
+    case "tram":
+      return "電車";
+    case "mix":
+      return "混合行程";
+  }
+}
+
+function fallbackNote(tone: ReturnType<typeof weatherTone>) {
   if (tone === "severe") return "現有惡劣天氣或強烈警報，優先有蓋、少露天轉車的港鐵。";
-  if (tone === "wet") return "有雨或雷暴，短途步行要衡量有蓋行人通道；長途巴士可能塞車。";
-  if (tone === "hot") return "天氣炎熱，短途仍可步行，長途優先有空調的港鐵或巴士。";
-  if (goal === "cheapest") return "天氣尚可，短途步行最平；長途可試巴士走廊，通常比港鐵平。";
-  return "天氣尚可。短途（例如荃灣⇄荃灣西）行路往往快過轉綫；長途先比較港鐵同巴士。";
+  if (tone === "wet") return "有雨或雷暴，短途步行要衡量有蓋行人通道；巴士／小巴可能塞車。";
+  if (tone === "hot") return "天氣炎熱，短途仍可步行，長途優先有空調的港鐵、巴士或輕鐵。";
+  return "天氣尚可。下面固定比較港鐵，以及另外兩個地面／其他交通方案。";
 }
 
 function pickRecommended(
   options: AiTripOption[],
-  goal: AiTripGoal,
   tone: ReturnType<typeof weatherTone>,
   aiMode?: string,
 ): string {
@@ -93,31 +133,24 @@ function pickRecommended(
     if (hit && !(tone === "severe" && hit.mode === "walk")) return hit.id;
   }
   const timed = options.filter((o) => o.minutes != null);
-  if (goal === "cheapest") {
-    const walkCheap = options.find((o) => o.mode === "walk" && o.fareHkd === 0);
-    if (walkCheap && tone !== "severe") return walkCheap.id;
-    const bus = options.find((o) => o.mode === "bus" || o.mode === "mix");
-    if (bus && tone !== "severe") return bus.id;
-    const priced = [...options].sort((a, b) => (a.fareHkd ?? 99) - (b.fareHkd ?? 99));
-    return priced[0].id;
-  }
   const fastest = [...timed].sort((a, b) => (a.minutes ?? 99) - (b.minutes ?? 99))[0];
   if (tone === "severe") return options.find((o) => o.mode === "mtr")?.id ?? fastest?.id ?? options[0].id;
   if (tone === "wet" && fastest?.mode === "walk" && (fastest.minutes ?? 0) > 12) {
     return options.find((o) => o.mode === "mtr")?.id ?? fastest.id;
   }
-  return fastest?.id ?? options[0].id;
+  return fastest?.id ?? options.find((o) => o.mode === "mtr")?.id ?? options[0].id;
 }
 
-function withBadges(options: AiTripOption[], recommendedId: string, goal: AiTripGoal) {
+function withBadges(options: AiTripOption[], recommendedId: string) {
   const timed = options.filter((o) => o.minutes != null);
   const fastestId = [...timed].sort((a, b) => (a.minutes ?? 99) - (b.minutes ?? 99))[0]?.id;
-  const cheapestId = [...options].sort((a, b) => (a.fareHkd ?? 99) - (b.fareHkd ?? 99))[0]?.id;
+  const priced = options.filter((o) => o.fareHkd != null);
+  const cheapestId = [...priced].sort((a, b) => (a.fareHkd ?? 99) - (b.fareHkd ?? 99))[0]?.id;
   return options.map((o) => {
     const badges: string[] = [];
     if (o.id === recommendedId) badges.push("建議");
-    if (o.id === fastestId && (goal === "fastest" || goal === "both")) badges.push("最快");
-    if (o.id === cheapestId && (goal === "cheapest" || goal === "both")) badges.push("最平");
+    if (o.id === fastestId) badges.push("最快");
+    if (o.id === cheapestId) badges.push("最平");
     if (o.mode === "walk" && o.fareHkd === 0) badges.push("免費");
     if (o.weatherFit === "poor") badges.push("天氣不宜");
     return { ...o, badges };
@@ -127,7 +160,6 @@ function withBadges(options: AiTripOption[], recommendedId: string, goal: AiTrip
 function buildPrompt(input: {
   fromName: string;
   toName: string;
-  goal: AiTripGoal;
   weather: string;
   tone: string;
   forecast: string;
@@ -136,52 +168,98 @@ function buildPrompt(input: {
   walk: { meters: number; minutes: number } | null;
 }) {
   const mtrText = input.mtr
-    ? `港鐵（以本站實時路網計算，不可改時間／車費）：全程約 ${input.mtr.minutes} 分，成人八達通 $${input.mtr.fares.adult ?? "—"}，轉車 ${input.mtr.interchangeCount} 次。路段：${mtrSteps(input.mtr).join("；")}`
+    ? `港鐵（本站已計算，你唔使再寫港鐵方案）：全程約 ${input.mtr.minutes} 分，成人八達通 $${input.mtr.fares.adult ?? "—"}，轉車 ${input.mtr.interchangeCount} 次。`
     : "未能計算港鐵行程。";
   const walkText = input.walk
-    ? `步行（OSRM 行人路）：約 ${input.walk.meters} 米、${input.walk.minutes} 分、車費 $0。`
-    : "兩站距離較遠，步行不是合理主方案。";
+    ? `步行可選（OSRM）：約 ${input.walk.meters} 米、${input.walk.minutes} 分、$0。短途可作為其中一個地面方案。`
+    : "兩站距離較遠，唔好硬推長途步行做主方案。";
 
-  return `你是香港出行顧問。用香港粵語書面語（繁體）回答。只根據事實＋你對香港巴士走廊的知識。
+  return `你是香港出行顧問。用香港粵語書面語（繁體）回答。
 
-任務：由「${input.fromName}」去「${input.toName}」，用戶想要：${input.goal === "fastest" ? "最快" : input.goal === "cheapest" ? "最便宜" : "同時比較最快同最便宜"}。
+任務：由「${input.fromName}」去「${input.toName}」。
+本站會固定把「港鐵」列為第 1 個方案。你只需另外提供剛好 2 個非港鐵方案。
 
 天氣：${input.weather}
 預報：${input.forecast || "—"}
 警報：${input.warnings.join("、") || "無"}
-天氣等級：${input.tone}（severe=惡劣優先有蓋交通；wet=有雨少露天步行；hot=炎熱少長途步行；fair=可步行）
+天氣等級：${input.tone}（severe=惡劣優先有蓋；wet=少露天步行；hot=少長途步行；fair=可步行）
 
-已知方案：
+已知：
 - ${mtrText}
 - ${walkText}
 
 原則：
-1. 港鐵時間同車費必須用上面數字，不可改。
-2. 荃灣站⇄荃灣西站、尖沙咀⇄尖東、旺角⇄旺角東、中環⇄香港站 這類短途，好天時步行通常快過轉綫。
-3. 東涌去上水／粉嶺／大埔等新界北，巴士經青衣、荃灣（例如 E 線轉 278X／273 系列）通常比港鐵平，時間視路面；唔好假裝有即時到站。
-4. 巴士路線號碼必須係真實香港路線；不確定就寫走廊（經青衣、荃灣）而唔好亂作編號。
-5. 惡劣天氣不要主推長途步行。
-6. 只輸出 2–4 個方案。步行／港鐵必須各自最多一項；巴士可 1 項。
+1. 必須輸出剛好 2 個 options，mode 只能係：walk | bus | minibus | ferry | lrt | tram | mix（禁止 mtr）。
+2. 兩個方案要盡量唔同模式或走廊（例如一個巴士、一個小巴／渡輪／輕鐵／電車／混合）。
+3. 巴士／小巴路線號碼必須真實；不確定就寫走廊（經青衣、荃灣）而唔好亂作編號。
+4. 東涌去上水／粉嶺等長途，可寫 E 線轉 278X 等真實走廊；時間可為 null 表示視路面。
+5. 荃灣⇄荃灣西、尖沙咀⇄尖東等短途，好天可把 walk 作為其中一個方案。
+6. 有渡輪／輕鐵／電車更合理時優先用對應 mode，唔好一律寫 bus。
+7. 惡劣天氣不要主推長途步行。
 
 請輸出 JSON：
 {
   "weatherNote": "一句話講天氣點影響今次選擇",
-  "recommendedMode": "walk | mtr | bus | mix",
+  "recommendedMode": "mtr | walk | bus | minibus | ferry | lrt | tram | mix",
   "options": [
     {
-      "mode": "walk | mtr | bus | mix",
+      "mode": "bus",
       "title": "短標題",
-      "minutes": 14,
-      "fareHkd": 0,
+      "minutes": 40,
+      "fareHkd": 12.5,
       "steps": ["步驟1", "步驟2"],
-      "why": "點解合今次天氣／目標",
+      "why": "點解合今次天氣",
       "weatherFit": "good | ok | poor"
     }
   ]
 }`;
 }
 
-export async function adviseTrip(fromRaw: string, toRaw: string, goal: AiTripGoal): Promise<AiTripAdvice> {
+function surfaceFallbacks(
+  fromName: string,
+  toName: string,
+  walkOption: AiTripOption | null,
+  tone: ReturnType<typeof weatherTone>,
+  straight: number,
+): AiTripOption[] {
+  const out: AiTripOption[] = [];
+  if (walkOption) out.push(walkOption);
+  if (out.length < 2 && straight > 8000) {
+    out.push({
+      id: "bus-hint",
+      mode: "bus",
+      title: "巴士走廊（參考）",
+      minutes: null,
+      fareHkd: null,
+      steps: ["長途可經青衣／荃灣等巴士走廊，通常比港鐵平", "實際路線請核對到達時間"],
+      why: "港鐵長途八達通較貴；巴士較平但受路面影響。",
+      weatherFit: tone === "severe" ? "poor" : "ok",
+      badges: [],
+      source: "computed",
+    });
+  }
+  if (out.length < 2) {
+    out.push({
+      id: "mix-hint",
+      mode: "mix",
+      title: `混合行程 ${fromName} → ${toName}`,
+      minutes: null,
+      fareHkd: null,
+      steps: ["可組合巴士／小巴／渡輪／輕鐵／電車", "請按實際站點查到達時間"],
+      why: "作為港鐵以外的備選；時間視接駁同路面。",
+      weatherFit: tone === "severe" ? "ok" : "good",
+      badges: [],
+      source: "computed",
+    });
+  }
+  return out.slice(0, 2);
+}
+
+export async function adviseTrip(
+  fromRaw: string,
+  toRaw: string,
+  _goal: AiTripGoal = "both",
+): Promise<AiTripAdvice> {
   const from = resolveMtrPlace(fromRaw);
   const to = resolveMtrPlace(toRaw);
   if (!from || !to) {
@@ -237,22 +315,22 @@ export async function adviseTrip(fromRaw: string, toRaw: string, goal: AiTripGoa
       }
     : null;
 
-  const computed = [walkOption, mtrOption].filter(Boolean) as AiTripOption[];
   const warnings = weather?.warnings.map((w) => w.name).filter(Boolean) ?? [];
   const summary = weather ? weatherSummary(weather) : "未能載入天氣";
 
   let usedAi = false;
-  let weatherNote = fallbackNote(tone, goal);
+  let aiError: string | null = null;
+  let weatherNote = fallbackNote(tone);
   let aiMode: string | undefined;
-  const extras: AiTripOption[] = [];
+  let surface: AiTripOption[] = [];
+  const hasGeminiKey = Boolean(geminiApiKey());
 
-  if (geminiApiKey() && weather) {
+  if (hasGeminiKey && weather) {
     try {
       const ai = await geminiJson<GeminiOut>(
         buildPrompt({
           fromName: from.name,
           toName: to.name,
-          goal,
           weather: summary,
           tone,
           forecast: weather.forecast,
@@ -266,65 +344,70 @@ export async function adviseTrip(fromRaw: string, toRaw: string, goal: AiTripGoa
       aiMode = ai.recommendedMode;
       for (const [i, opt] of (ai.options ?? []).entries()) {
         const mode = asMode(opt.mode);
-        if (!mode) continue;
+        if (!mode || !SURFACE_MODES.has(mode)) continue;
         if (mode === "walk" && walkOption) {
-          walkOption.why = opt.why?.trim() || walkOption.why;
-          walkOption.weatherFit = asFit(opt.weatherFit);
-          if (opt.steps?.length) walkOption.steps = opt.steps.slice(0, 6);
-          continue;
-        }
-        if (mode === "mtr" && mtrOption) {
-          mtrOption.why = opt.why?.trim() || mtrOption.why;
-          mtrOption.weatherFit = asFit(opt.weatherFit);
-          continue;
-        }
-        if (mode === "bus" || mode === "mix") {
-          extras.push({
-            id: `${mode}-${i}`,
-            mode,
-            title: opt.title?.trim() || (mode === "bus" ? "巴士走廊" : "混合行程"),
-            minutes: typeof opt.minutes === "number" ? Math.round(opt.minutes) : null,
-            fareHkd: typeof opt.fareHkd === "number" ? Math.round(opt.fareHkd * 10) / 10 : null,
-            steps: (opt.steps ?? []).slice(0, 6),
-            why: opt.why?.trim() || "巴士通常比港鐵平，時間視路面。",
+          surface.push({
+            ...walkOption,
+            why: opt.why?.trim() || walkOption.why,
             weatherFit: asFit(opt.weatherFit),
-            badges: [],
+            steps: opt.steps?.length ? opt.steps.slice(0, 6) : walkOption.steps,
             source: "ai",
           });
+          continue;
         }
+        if (mode === "walk" && !walkOption) continue;
+        surface.push({
+          id: `${mode}-${i}`,
+          mode,
+          title: opt.title?.trim() || `${modeTitle(mode)} ${from.name} → ${to.name}`,
+          minutes: typeof opt.minutes === "number" ? Math.round(opt.minutes) : null,
+          fareHkd: typeof opt.fareHkd === "number" ? Math.round(opt.fareHkd * 10) / 10 : null,
+          steps: (opt.steps ?? []).slice(0, 6),
+          why: opt.why?.trim() || `${modeTitle(mode)}可作港鐵以外選擇；時間視路面。`,
+          weatherFit: asFit(opt.weatherFit),
+          badges: [],
+          source: "ai",
+        });
+        if (surface.length >= 2) break;
       }
-    } catch {
+    } catch (err) {
       usedAi = false;
+      const raw = err instanceof Error ? err.message : "Gemini 失敗";
+      if (/location is not supported/i.test(raw)) {
+        aiError =
+          "Gemini API 不支援目前所在地區（本機香港網絡常見）。方案 2／3 暫用參考提示；部署到 Vercel（美國等支援地區）通常可正常呼叫。";
+      } else {
+        aiError = `AI 建議暫未能使用：${raw}`;
+      }
+    }
+  } else if (!hasGeminiKey) {
+    aiError = "未設定 GEMINI_API_KEY（本機用 .env.local；線上用 Vercel Environment Variables）。";
+  }
+
+  if (surface.length < 2) {
+    const fillers = surfaceFallbacks(from.name, to.name, walkOption, tone, straight).filter(
+      (f) => !surface.some((s) => s.mode === f.mode && s.id === f.id),
+    );
+    for (const f of fillers) {
+      if (surface.length >= 2) break;
+      if (surface.some((s) => s.mode === f.mode && f.mode === "walk")) continue;
+      surface.push(f);
     }
   }
+  surface = surface.slice(0, 2);
 
-  if (!extras.length && straight > 15000 && goal !== "fastest") {
-    extras.push({
-      id: "bus-hint",
-      mode: "bus",
-      title: "巴士走廊（參考）",
-      minutes: null,
-      fareHkd: null,
-      steps: ["長途可經青衣／荃灣等巴士走廊，通常比港鐵平", "實際路線請核對到達時間"],
-      why: "港鐵長途八達通較貴；巴士較平但受路面影響。",
-      weatherFit: tone === "severe" ? "poor" : "ok",
-      badges: [],
-      source: "computed",
-    });
-  }
-
-  const options = [...computed, ...extras];
+  const options = [mtrOption, ...surface].filter(Boolean) as AiTripOption[];
   if (!options.length) throw new Error("未能規劃此行程");
 
-  const recommendedId = pickRecommended(options, goal, tone, aiMode);
-  const badged = withBadges(options, recommendedId, goal);
+  const recommendedId = pickRecommended(options, tone, aiMode);
+  const badged = withBadges(options, recommendedId);
 
   return {
     fromName: from.name,
     toName: to.name,
     fromCode: from.code,
     toCode: to.code,
-    goal,
+    goal: "both",
     weather: {
       temperature: weather?.temperature ?? null,
       humidity: weather?.humidity ?? null,
@@ -336,8 +419,11 @@ export async function adviseTrip(fromRaw: string, toRaw: string, goal: AiTripGoa
     recommendedId,
     options: badged,
     disclaimer: usedAi
-      ? "港鐵時間／車費由本站路網計算。巴士班次同車費為 AI 估計，請以營運商到達時間為準。"
-      : "未使用 AI。港鐵同步行由本站計算；長途巴士僅作走廊提示。可在伺服器設定 GEMINI_API_KEY 以取得路線建議。",
+      ? "第 1 個港鐵方案的時間／車費由本站路網計算。其餘方案為 AI 估計，請以營運商到達時間為準。"
+      : aiError
+        ? `第 1 個為港鐵（本站計算）。其餘為參考提示。${aiError}`
+        : "第 1 個為港鐵（本站計算）。其餘為參考提示。",
     usedAi,
+    aiError,
   };
 }

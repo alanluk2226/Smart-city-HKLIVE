@@ -14,17 +14,20 @@ function tone(severity: AlertSeverity) {
     return {
       bar: "border-rose/40 bg-rose/12 text-ink",
       chip: "bg-rose/20 text-rose",
+      progress: "bg-rose/70",
     };
   }
   if (severity === "high") {
     return {
       bar: "border-amber/40 bg-amber/12 text-ink",
       chip: "bg-amber/20 text-amber",
+      progress: "bg-amber/70",
     };
   }
   return {
     bar: "border-sky/35 bg-sky/10 text-ink",
     chip: "bg-sky/20 text-sky",
+    progress: "bg-sky/70",
   };
 }
 
@@ -55,6 +58,8 @@ export function AlertsBar() {
   const [expanded, setExpanded] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +71,7 @@ export function AlertsBar() {
           const sig = signature(data.alerts);
           setHidden(readHidden(sig));
           setIndex(0);
+          setTick((t) => t + 1);
         })
         .catch(() => {});
     }
@@ -77,24 +83,41 @@ export function AlertsBar() {
     };
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const alerts = snap?.alerts ?? [];
   const current = alerts[index] ?? alerts[0] ?? null;
+  const canRotate = alerts.length > 1 && !hidden && !expanded && !paused && !reduceMotion;
 
   useEffect(() => {
-    if (alerts.length < 2 || hidden || expanded || paused) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
+    if (!canRotate) return;
+    setTick((t) => t + 1);
     const id = window.setInterval(() => {
       setIndex((i) => (i + 1) % alerts.length);
     }, ROTATE_MS);
     return () => clearInterval(id);
-  }, [alerts.length, hidden, expanded, paused]);
+  }, [alerts.length, canRotate, index]);
 
   if (!current) return null;
 
   const sig = signature(alerts);
   const styles = tone(current.severity);
   const countLabel = alerts.length > 1 ? `${index + 1}/${alerts.length}` : null;
+  const showProgress = alerts.length > 1 && !hidden && !expanded && !reduceMotion;
+
+  function goPrev() {
+    setIndex((i) => (i - 1 + alerts.length) % alerts.length);
+  }
+
+  function goNext() {
+    setIndex((i) => (i + 1) % alerts.length);
+  }
 
   if (hidden) {
     return (
@@ -106,7 +129,7 @@ export function AlertsBar() {
               writeHidden(null);
               setHidden(false);
             }}
-            className="text-[11px] text-muted hover:text-ink"
+            className="min-h-9 px-1 text-[11px] text-muted hover:text-ink"
           >
             {alerts.length} 則突發提示 · {alerts.map((a) => a.label).slice(0, 2).join("／")}
           </button>
@@ -122,11 +145,15 @@ export function AlertsBar() {
       aria-label="突發提示"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
+      }}
     >
-      <div className="mx-auto max-w-6xl px-4 py-1.5">
+      <div className="mx-auto max-w-6xl px-4 pt-1.5 pb-1">
         <div className="flex items-start gap-2">
           <span
-            className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide ${styles.chip}`}
+            className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide ${styles.chip}`}
           >
             {current.kind === "weather" ? "天氣" : "交通"}
           </span>
@@ -152,22 +179,33 @@ export function AlertsBar() {
               </div>
             ) : null}
           </div>
-          <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
+          <div className="flex shrink-0 items-center gap-0.5">
             {alerts.length > 1 ? (
-              <button
-                type="button"
-                aria-label="下一則提示"
-                onClick={() => setIndex((i) => (i + 1) % alerts.length)}
-                className="rounded px-1.5 py-0.5 text-xs text-muted hover:text-ink"
-              >
-                下一則
-              </button>
+              <>
+                <button
+                  type="button"
+                  aria-label="上一則提示"
+                  onClick={goPrev}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-ink/5 hover:text-ink"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  aria-label="下一則提示"
+                  onClick={goNext}
+                  className="inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-lg px-2 text-xs text-muted hover:bg-ink/5 hover:text-ink"
+                >
+                  <span className="hidden sm:inline">下一則</span>
+                  <ChevronRightIcon />
+                </button>
+              </>
             ) : null}
             <button
               type="button"
               aria-expanded={expanded}
               onClick={() => setExpanded((v) => !v)}
-              className="rounded px-1.5 py-0.5 text-xs text-muted hover:text-ink"
+              className="inline-flex h-9 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
             >
               {expanded ? "收起" : "詳情"}
             </button>
@@ -179,16 +217,58 @@ export function AlertsBar() {
                 setHidden(true);
                 setExpanded(false);
               }}
-              className="rounded px-1.5 py-0.5 text-xs text-muted hover:text-ink"
+              className="inline-flex h-9 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
             >
               隱藏
             </button>
           </div>
         </div>
+        {showProgress ? (
+          <div
+            className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-ink/10"
+            aria-hidden
+            title="自動輪播進度"
+          >
+            <div
+              key={tick}
+              className={`h-full origin-left rounded-full ${styles.progress} ${
+                paused ? "alerts-progress-bar is-paused" : "alerts-progress-bar"
+              }`}
+            />
+          </div>
+        ) : null}
         <span className="sr-only" aria-live="polite">
           {current.source}：{current.headline}
         </span>
       </div>
     </div>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M15 6 9 12l6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="m9 6 6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

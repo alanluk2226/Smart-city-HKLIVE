@@ -57,6 +57,18 @@ export function MtrApp() {
   const actionStation = actionCode ? mtrStation(actionCode) : null;
 
   useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const from = sp.get("from")?.trim() ?? "";
+    const to = sp.get("to")?.trim() ?? "";
+    if (!from || !to || from === to) return;
+    if (!mtrStation(from) || !mtrStation(to)) return;
+    setOrigin(from);
+    setDest(to);
+    setPickingDest(false);
+    setTripOpen(true);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     apiGet<RacecourseStatus>("/api/mtr/racecourse")
       .then((row) => {

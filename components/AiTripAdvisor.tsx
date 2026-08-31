@@ -15,13 +15,7 @@ import {
 } from "@/lib/ai-trip-store";
 import { apiPost } from "@/lib/client";
 import { MTR_LINE_NAMES, matchMtrStationsByName } from "@/lib/static/mtr-stations";
-import type { AiTripAdvice, AiTripGoal, AiTripOption, MtrStation } from "@/lib/types";
-
-const GOAL_LABEL: Record<AiTripGoal, string> = {
-  fastest: "最快",
-  cheapest: "最平",
-  both: "都睇",
-};
+import type { AiTripAdvice, AiTripOption, MtrStation } from "@/lib/types";
 
 const FIT_LABEL: Record<AiTripOption["weatherFit"], string> = {
   good: "天氣合適",
@@ -86,7 +80,15 @@ function PlaceField({
   );
 }
 
-function OptionCard({ opt, recommended }: { opt: AiTripOption; recommended: boolean }) {
+function OptionCard({
+  opt,
+  recommended,
+  index,
+}: {
+  opt: AiTripOption;
+  recommended: boolean;
+  index: number;
+}) {
   return (
     <article
       className={`rounded-xl border px-3 py-3 ${
@@ -94,6 +96,7 @@ function OptionCard({ opt, recommended }: { opt: AiTripOption; recommended: bool
       }`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-mono text-[10px] text-muted">方案 {index + 1}</span>
         <h4 className="text-sm font-medium">{opt.title}</h4>
         <span className="ml-auto font-mono text-sm text-teal">
           {opt.minutes != null ? `${opt.minutes} 分` : "視路面"}
@@ -107,9 +110,13 @@ function OptionCard({ opt, recommended }: { opt: AiTripOption; recommended: bool
             className={`rounded-full px-2 py-0.5 text-[10px] ${
               b === "建議"
                 ? "bg-teal/20 text-teal"
-                : b === "天氣不宜"
-                  ? "bg-amber/15 text-amber"
-                  : "bg-ink/5 text-muted"
+                : b === "最快"
+                  ? "bg-sky/15 text-sky"
+                  : b === "最平"
+                    ? "bg-violet/15 text-violet"
+                    : b === "天氣不宜"
+                      ? "bg-amber/15 text-amber"
+                      : "bg-ink/5 text-muted"
             }`}
           >
             {b}
@@ -135,10 +142,10 @@ function OptionCard({ opt, recommended }: { opt: AiTripOption; recommended: bool
       <p className="mt-2 text-[12px] leading-relaxed text-ink/90">{opt.why}</p>
       {opt.mtrFrom && opt.mtrTo ? (
         <Link
-          href="/transit/mtr"
+          href={`/transit/mtr?from=${encodeURIComponent(opt.mtrFrom)}&to=${encodeURIComponent(opt.mtrTo)}`}
           className="mt-2 inline-block text-[11px] text-teal hover:underline"
         >
-          去港鐵路綫圖睇沿途 →
+          去港鐵路綫圖睇呢程 →
         </Link>
       ) : null}
     </article>
@@ -148,7 +155,6 @@ function OptionCard({ opt, recommended }: { opt: AiTripOption; recommended: bool
 export function AiTripAdvisor() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [goal, setGoal] = useState<AiTripGoal>("both");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [advice, setAdvice] = useState<AiTripAdvice | null>(null);
@@ -172,7 +178,7 @@ export function AiTripAdvisor() {
     setTo(from);
   }
 
-  async function run(nextFrom = from, nextTo = to, nextGoal = goal) {
+  async function run(nextFrom = from, nextTo = to) {
     const a = nextFrom.trim();
     const b = nextTo.trim();
     if (!a || !b) {
@@ -182,13 +188,13 @@ export function AiTripAdvisor() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiPost<AiTripAdvice>("/api/ai/trip", { from: a, to: b, goal: nextGoal });
+      const data = await apiPost<AiTripAdvice>("/api/ai/trip", { from: a, to: b });
       setAdvice(data);
       setHistory(
         pushTripHistory({
           from: data.fromName,
           to: data.toName,
-          goal: nextGoal,
+          goal: "both",
           savedAt: Date.now(),
         }),
       );
@@ -202,8 +208,8 @@ export function AiTripAdvisor() {
 
   function starCurrent() {
     const trip: SavedTrip = advice
-      ? { from: advice.fromName, to: advice.toName, goal, savedAt: Date.now() }
-      : { from: from.trim(), to: to.trim(), goal, savedAt: Date.now() };
+      ? { from: advice.fromName, to: advice.toName, goal: "both", savedAt: Date.now() }
+      : { from: from.trim(), to: to.trim(), goal: "both", savedAt: Date.now() };
     if (!trip.from || !trip.to) return;
     const next = toggleTripStar(trip);
     setStars(next.stars);
@@ -225,7 +231,7 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            按而家天氣，比較步行、港鐵同巴士走廊。短途可能行路快過轉綫；長途巴士往往最平。
+            按而家天氣，固定比較 3 個方案：港鐵，再加兩個巴士／小巴／渡輪／輕鐵／電車等選擇。「最快」「最平」會標在方案上。
           </p>
         </div>
       </div>
@@ -250,22 +256,10 @@ export function AiTripAdvisor() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {(Object.keys(GOAL_LABEL) as AiTripGoal[]).map((g) => (
-            <button
-              key={g}
-              type="button"
-              onClick={() => setGoal(g)}
-              className={`rounded-full px-3 py-1 text-sm ${
-                goal === g ? "bg-teal/20 text-teal" : "border border-line text-muted hover:text-ink"
-              }`}
-            >
-              {GOAL_LABEL[g]}
-            </button>
-          ))}
           <button
             type="submit"
             disabled={loading}
-            className="ml-auto rounded-full bg-teal/20 px-4 py-1.5 text-sm text-teal hover:bg-teal/30 disabled:opacity-50"
+            className="rounded-full bg-teal/20 px-4 py-1.5 text-sm text-teal hover:bg-teal/30 disabled:opacity-50"
           >
             {loading ? "諗緊…" : "建議行程"}
           </button>
@@ -293,8 +287,7 @@ export function AiTripAdvisor() {
                     onClick={() => {
                       setFrom(trip.from);
                       setTo(trip.to);
-                      setGoal(trip.goal);
-                      void run(trip.from, trip.to, trip.goal);
+                      void run(trip.from, trip.to);
                     }}
                   >
                     {starred ? <span className="mr-1 text-amber">★</span> : null}
@@ -343,11 +336,22 @@ export function AiTripAdvisor() {
             </button>
           </div>
           <div className="grid gap-2">
-            {advice.options.map((opt) => (
-              <OptionCard key={opt.id} opt={opt} recommended={opt.id === advice.recommendedId} />
+            {advice.options.map((opt, index) => (
+              <OptionCard
+                key={opt.id}
+                opt={opt}
+                index={index}
+                recommended={opt.id === advice.recommendedId}
+              />
             ))}
           </div>
-          <p className="text-[11px] leading-relaxed text-muted">{advice.disclaimer}</p>
+          <p
+            className={`text-[11px] leading-relaxed ${
+              advice.usedAi ? "text-muted" : "text-amber"
+            }`}
+          >
+            {advice.disclaimer}
+          </p>
         </div>
       ) : null}
     </section>

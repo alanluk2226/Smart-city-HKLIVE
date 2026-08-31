@@ -178,9 +178,18 @@ export type Place = {
   meta?: Record<string, string | number | null>;
 };
 
+/** Kept for saved-trip compatibility; UI no longer asks the user to pick. */
 export type AiTripGoal = "fastest" | "cheapest" | "both";
 
-export type AiTripMode = "walk" | "mtr" | "bus" | "mix";
+export type AiTripMode =
+  | "walk"
+  | "mtr"
+  | "bus"
+  | "minibus"
+  | "ferry"
+  | "lrt"
+  | "tram"
+  | "mix";
 
 export type AiTripOption = {
   id: string;
@@ -215,4 +224,6 @@ export type AiTripAdvice = {
   options: AiTripOption[];
   disclaimer: string;
   usedAi: boolean;
+  /** Set when Gemini was attempted but failed (e.g. regional block). */
+  aiError?: string | null;
 };

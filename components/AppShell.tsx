@@ -25,9 +25,16 @@ export function AppShell({
     <div className="min-h-full flex flex-col">
       <header className="border-b border-line bg-elev/80 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
-          <Link href="/" className="shrink-0">
-            <div className="font-mono text-[11px] tracking-[0.28em] text-teal">HK LIVE</div>
-            <div className="text-sm font-medium">香港城市實況</div>
+          <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="HK LIVE">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.jpeg"
+              alt=""
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-xl object-cover ring-1 ring-teal/30"
+            />
+            <span className="font-mono text-[11px] tracking-[0.28em] text-teal">HK LIVE</span>
           </Link>
           <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
             {MODULES.map((m) => {
@@ -65,7 +72,7 @@ export function AppShell({
       </main>
       <footer className="border-t border-line text-muted text-xs px-4 py-4">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
-          <span>香港城市實況</span>
+          <span>由 Alan Luk 建立與維護</span>
           <span className="opacity-40" aria-hidden>
             ·
           </span>

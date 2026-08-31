@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { LocationOffBanner } from "@/components/LocationOffBanner";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
-import { apiGet, formatDistance, useGeo } from "@/lib/client";
+import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
 import type { FacilityPlace, FacilitySnapshot } from "@/lib/providers/facilities";
 import type { RegionFacet } from "@/lib/static/hk-districts";
@@ -26,13 +27,17 @@ export function FacilitiesApp() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const locate = useGeo((lat, lng) => {
-    setCenter({ lat, lng });
-    setHasLocated(true);
-    setMode("nearby");
-    setRegion(null);
-    setDistrict(null);
-  });
+  const locate = useGeo(
+    (lat, lng) => {
+      setCenter({ lat, lng });
+      setHasLocated(true);
+      setMode("nearby");
+      setRegion(null);
+      setDistrict(null);
+      setError("");
+    },
+    (message) => setError(message),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +119,7 @@ export function FacilitiesApp() {
   return (
     <AppShell>
       <div className="mb-4 space-y-3">
+        {mode === "nearby" ? <LocationOffBanner label="附近場地" /> : null}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -237,6 +243,17 @@ export function FacilitiesApp() {
                 {active.phone ? ` · ${active.phone}` : ""}
                 {active.courts ? ` · ${active.courts}` : ""}
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openWalkingDirections(active.lat, active.lng, active.name)
+                  }
+                  className="inline-flex items-center rounded-full bg-teal px-3.5 py-2 text-xs font-medium text-bg hover:opacity-90"
+                >
+                  前往場地
+                </button>
+              </div>
             </article>
           ) : (
             <div className="rounded-2xl border border-line bg-card p-6 text-sm text-muted">

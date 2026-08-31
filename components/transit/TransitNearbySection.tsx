@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { LocationOffBanner } from "@/components/LocationOffBanner";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
@@ -57,7 +58,13 @@ export function TransitNearbySection() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [loadingStops, setLoadingStops] = useState(false);
   const [error, setError] = useState("");
-  const locate = useGeo((lat, lng) => setCenter({ lat, lng }));
+  const locate = useGeo(
+    (lat, lng) => {
+      setCenter({ lat, lng });
+      setError("");
+    },
+    (message) => setError(message),
+  );
 
   const stops = useMemo(() => {
     if (!payload) return [];
@@ -127,6 +134,7 @@ export function TransitNearbySection() {
 
   return (
     <section className="space-y-4 rounded-2xl border border-line bg-card p-4">
+      <LocationOffBanner label="附近交通" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg">附近交通</h2>

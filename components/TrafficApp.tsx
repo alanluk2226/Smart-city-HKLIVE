@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { LocationOffBanner } from "@/components/LocationOffBanner";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
@@ -23,13 +24,17 @@ export function TrafficApp() {
   const [query, setQuery] = useState("");
   const [tick, setTick] = useState(0);
 
-  const locate = useGeo((lat, lng) => {
-    setCenter({ lat, lng });
-    setHasLocated(true);
-    setMode("nearby");
-    setRegion(null);
-    setDistrict(null);
-  });
+  const locate = useGeo(
+    (lat, lng) => {
+      setCenter({ lat, lng });
+      setHasLocated(true);
+      setMode("nearby");
+      setRegion(null);
+      setDistrict(null);
+      setError("");
+    },
+    (message) => setError(message),
+  );
 
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 60_000);
@@ -114,6 +119,7 @@ export function TrafficApp() {
   return (
     <AppShell>
       <div className="mb-4 space-y-3">
+        {mode === "nearby" ? <LocationOffBanner label="附近鏡頭" /> : null}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"

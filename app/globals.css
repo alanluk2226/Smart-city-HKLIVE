@@ -197,11 +197,31 @@ body {
   }
 }
 
+.alerts-progress-bar {
+  width: 100%;
+  transform: scaleX(0);
+  animation: alerts-progress 8s linear forwards;
+}
+
+.alerts-progress-bar.is-paused {
+  animation-play-state: paused;
+}
+
+@keyframes alerts-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .eta-arriving,
   .mtr-glow,
   .mtr-pulse,
-  .mtr-pulse-ring {
+  .mtr-pulse-ring,
+  .alerts-progress-bar {
     animation: none;
   }
 }

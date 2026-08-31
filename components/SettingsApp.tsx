@@ -7,7 +7,7 @@ import type { ThemeMode } from "@/lib/theme";
 
 const DATA_SOURCES = [
   { name: "DATA.GOV.HK", use: "公開數據總門戶" },
-  { name: "香港天文台", use: "天氣、警告、特別天氣提示" },
+  { name: "香港天文台", use: "天氣、警告、特別天氣提示、降雨雷達圖、風力／風向圖" },
   { name: "環境保護署", use: "空氣質素健康指數（AQHI）" },
   { name: "醫院管理局", use: "急症室輪候、專科門診新症預約時間" },
   { name: "運輸署", use: "道路 CCTV、特別交通消息、停車場空位、部分交通靜態資料" },
@@ -154,7 +154,7 @@ export function SettingsApp() {
               </p>
             </div>
             <p className="text-xs">
-              本說明只適用於此「香港城市實況」網站嘅運作方式，並非法律意見。資料內容以各官方來源為準。
+              本說明只適用於此「HK LIVE」網站嘅運作方式，並非法律意見。資料內容以各官方來源為準。
             </p>
           </div>
         </section>

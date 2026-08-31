@@ -21,8 +21,7 @@ export function TransitHub() {
       <section className="grid gap-4 sm:grid-cols-2">
         {TRANSIT_MODES.map((m, i) => (
           <Link key={m.href} href={m.href} className={`rounded-2xl border p-5 transition ${accent[i]}`}>
-            <div className="font-mono text-[11px] tracking-widest text-muted uppercase">{m.key}</div>
-            <div className="text-2xl mt-2">{m.title}</div>
+            <div className="text-2xl">{m.title}</div>
             <p className="text-sm text-muted mt-2">{m.blurb}</p>
             <div className="mt-4 text-sm">進入 →</div>
           </Link>
