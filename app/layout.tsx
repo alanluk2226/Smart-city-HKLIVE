@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { JetBrains_Mono, Noto_Sans_TC } from "next/font/google";
 import { LocationPrefProvider } from "@/components/LocationPrefProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -41,6 +43,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           <LocationPrefProvider>{children}</LocationPrefProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
