@@ -34,7 +34,11 @@ function isFatalGeminiError(message: string) {
   );
 }
 
-export async function geminiJson<T>(prompt: string, budgetMs = 14_000): Promise<T> {
+export async function geminiJson<T>(
+  prompt: string,
+  budgetMs = 14_000,
+  responseSchema?: Record<string, unknown>,
+): Promise<T> {
   const key = geminiApiKey();
   if (!key) throw new Error("未設定 GEMINI_API_KEY");
 
@@ -58,8 +62,12 @@ export async function geminiJson<T>(prompt: string, budgetMs = 14_000): Promise<
           body: JSON.stringify({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.25,
+              temperature: 0,
+              topP: 1,
+              topK: 1,
+              candidateCount: 1,
               responseMimeType: "application/json",
+              ...(responseSchema ? { responseSchema } : {}),
             },
           }),
           cache: "no-store",

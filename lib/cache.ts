@@ -40,6 +40,8 @@ export const TTL = {
   alerts: 60_000,
   facility: 5 * 60 * 1000,
   toilet: 6 * 60 * 60 * 1000,
+  /** Same origin/destination + weather tone → stable AI trip options. */
+  aiTrip: 30 * 60 * 1000,
   hsr: 30 * 60 * 1000,
   taxi: 6 * 60 * 60 * 1000,
 };

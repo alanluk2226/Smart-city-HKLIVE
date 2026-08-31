@@ -14,8 +14,8 @@ import {
   type SavedTrip,
 } from "@/lib/ai-trip-store";
 import { apiPost } from "@/lib/client";
-import { MTR_LINE_NAMES, matchMtrStationsByName } from "@/lib/static/mtr-stations";
-import type { AiTripAdvice, AiTripOption, MtrStation } from "@/lib/types";
+import { matchTripPlaces } from "@/lib/static/hk-places";
+import type { AiTripAdvice, AiTripOption } from "@/lib/types";
 
 const FIT_LABEL: Record<AiTripOption["weatherFit"], string> = {
   good: "天氣合適",
@@ -37,7 +37,7 @@ function PlaceField({
   placeholder: string;
 }) {
   const [open, setOpen] = useState(false);
-  const matches = useMemo(() => matchMtrStationsByName(value).slice(0, 6), [value]);
+  const matches = useMemo(() => matchTripPlaces(value, 8), [value]);
   const show =
     open &&
     value.trim().length >= 1 &&
@@ -59,18 +59,16 @@ function PlaceField({
         className="mt-1 w-full rounded-xl border border-line bg-elev px-3 py-2.5 text-ink outline-none focus:border-teal"
       />
       {show ? (
-        <ul className="absolute z-10 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-line bg-elev py-1 shadow-lg">
-          {matches.map((s: MtrStation) => (
-            <li key={s.code}>
+        <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-line bg-elev py-1 shadow-lg">
+          {matches.map((s) => (
+            <li key={s.id}>
               <button
                 type="button"
                 className="w-full px-3 py-2 text-left text-sm hover:bg-ink/5"
                 onClick={() => onChange(s.name)}
               >
                 {s.name}
-                <span className="ml-2 text-[11px] text-muted">
-                  {s.nameEn} · {s.lines.map((l) => MTR_LINE_NAMES[l] ?? l).join("／")}
-                </span>
+                <span className="ml-2 text-[11px] text-muted">{s.subtitle}</span>
               </button>
             </li>
           ))}
@@ -231,7 +229,7 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            按而家天氣，固定比較 3 個方案：港鐵，再加兩個巴士／小巴／渡輪／輕鐵／電車等選擇。「最快」「最平」會標在方案上。
+            混和架構：路線／車費由本站公開資料計算，AI 只跟天氣寫評語同揀建議。支援港鐵站、屋邨同行政區（例如逸東邨⇄羅湖：38→纜車站→E41→東鐵）。
           </p>
         </div>
       </div>
@@ -244,7 +242,7 @@ export function AiTripAdvisor() {
         }}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <PlaceField id="ai-from" label="起點" value={from} onChange={setFrom} placeholder="荃灣、東涌…" />
+          <PlaceField id="ai-from" label="起點" value={from} onChange={setFrom} placeholder="逸東邨、東涌、荃灣…" />
           <button
             type="button"
             onClick={swap}
@@ -252,7 +250,7 @@ export function AiTripAdvisor() {
           >
             對調
           </button>
-          <PlaceField id="ai-to" label="終點" value={to} onChange={setTo} placeholder="荃灣西、上水…" />
+          <PlaceField id="ai-to" label="終點" value={to} onChange={setTo} placeholder="羅湖、天水圍、北區…" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

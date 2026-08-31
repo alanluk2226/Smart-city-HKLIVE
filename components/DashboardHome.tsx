@@ -44,7 +44,7 @@ export function DashboardHome() {
         <div className="font-mono text-[11px] tracking-[0.28em] text-teal">主控台</div>
         <h1 className="text-3xl mt-1">HK LIVE</h1>
         <p className="text-muted mt-2 max-w-2xl">
-          以公開資料組成的主控台。出行助手會跟天氣比較步行、港鐵同巴士；再進入交通工具、天氣、醫療、路況、停車場、康文署場地與公共廁所。
+          以公開資料組成的主控台。出行助手支援港鐵站、屋邨同行政區，並跟天氣比較方案；再進入交通工具、天氣、醫療、路況、停車場、康文署場地與公共廁所。
         </p>
       </div>
 
