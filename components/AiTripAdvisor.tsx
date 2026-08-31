@@ -26,7 +26,7 @@ type ChatMessage = {
 };
 
 const WELCOME =
-  "你好，我係 HK LIVE 出行助手。用日常說話問我即可，例如：\n\n「東涌去何文田」\n「逸東邨到羅湖」\n「荃灣去中環」\n\n我會用本站港鐵／巴士資料計真實路線，再跟天氣畀建議——唔會亂估「視路面」假方案。";
+  "你好，我係 HK LIVE 出行助手。用日常說話問我即可，例如：\n\n「東涌去何文田」\n「逸東邨到羅湖」\n「荃灣去中環」\n\n每次通常畀 3 個方案。AI 只跟天氣寫評語同建議；每次俾出嘅方案有可能唔完全相同，請注意。標「參考」嘅巴士方案車程視路面。";
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -150,7 +150,7 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            像對話咁問：路線由本站公開資料計算，AI 只跟天氣寫評語。例如「東涌去何文田」「逸東邨到羅湖」。
+            像對話咁問，通常畀 3 個方案。AI 只跟天氣寫評語同建議；每次方案有可能唔同，請注意。例如「東涌去何文田」。
           </p>
         </div>
       </div>

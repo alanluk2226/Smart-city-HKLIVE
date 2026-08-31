@@ -296,10 +296,72 @@ ${catalog}
 4. weatherNote 一句話總結今日天氣點影響建議。`;
 }
 
-/** 只回傳真正計到嘅備選（而家得短途步行）；唔再塞「視路面」假方案。 */
-function realSurfaceExtras(walkOption: AiTripOption | null): AiTripOption[] {
-  return walkOption ? [walkOption] : [];
+/** 北區走廊嘅較平備選（有粗略時間；非 E41 精確替代） */
+function northCheaperBus(fromName: string, tone: ReturnType<typeof weatherTone>): AiTripOption {
+  return {
+    id: "bus-cheaper",
+    mode: "bus",
+    title: "巴士經青衣／荃灣（較平參考）",
+    minutes: 120,
+    fareHkd: 35,
+    steps: [
+      `於${fromName}乘巴士經青衣或荃灣往北區`,
+      "轉乘較多，車程通常長過 E41 轉大埔墟",
+      "適合唔趕時間、想慳車費時；實際請核對班次",
+    ],
+    why: "一般較平但較慢；時間為粗略估計，受路面影響。",
+    weatherFit: tone === "severe" || tone === "wet" ? "poor" : "ok",
+    badges: [],
+    source: "computed",
+  };
 }
+
+/** 未有第三條精確走廊時嘅誠實參考（唔扮精確分鐘） */
+function referenceBusOption(
+  fromName: string,
+  toName: string,
+  tone: ReturnType<typeof weatherTone>,
+): AiTripOption {
+  return {
+    id: "bus-ref",
+    mode: "bus",
+    title: "其他巴士／轉乘（參考）",
+    minutes: null,
+    fareHkd: null,
+    steps: [
+      `由${fromName}往${toName}可查城巴／九巴／龍運 App 或地圖「公共交通」`,
+      "長途巴士通常較港鐵平，但車程視路面，非本站精確計算",
+    ],
+    why: "本站暫未鎖定第三條精確走廊；此為一般參考，請以營運商為準。",
+    weatherFit: tone === "severe" || tone === "wet" ? "poor" : "ok",
+    badges: [],
+    source: "computed",
+  };
+}
+
+function padToThreeOptions(
+  options: AiTripOption[],
+  walkOption: AiTripOption | null,
+  fromName: string,
+  toName: string,
+  tone: ReturnType<typeof weatherTone>,
+  hasNorthCorridor: boolean,
+): AiTripOption[] {
+  const out = [...options];
+  const has = (id: string) => out.some((o) => o.id === id);
+
+  if (walkOption && !out.some((o) => o.mode === "walk")) out.push(walkOption);
+  if (out.length < 3 && hasNorthCorridor && !has("bus-cheaper")) {
+    out.push(northCheaperBus(fromName, tone));
+  }
+  if (out.length < 3 && !has("bus-ref")) {
+    out.push(referenceBusOption(fromName, toName, tone));
+  }
+  return out.slice(0, 3);
+}
+
+const VARIABILITY_NOTE =
+  "AI 只跟天氣寫評語同建議；每次俾出嘅方案（尤其「建議」標籤）有可能唔完全相同，請注意。";
 
 /** 東涌 ⇄ 何文田／黃埔／愛民：城巴 E21A（一程直達市區） */
 const E21A_DEST = new Set(["HOM", "WHA"]);
@@ -384,9 +446,14 @@ function buildChatReply(input: {
       opt.minutes != null ? `約 ${opt.minutes} 分鐘` : "時間視實際班次";
     const fare = opt.fareHkd != null ? `，成人車費約 $${opt.fareHkd}` : "";
 
-    lines.push(`${i + 1}. ${opt.title}${tagText}`);
+    const ref = opt.id === "bus-ref" || opt.id === "bus-cheaper" ? "〔參考〕" : "";
+    lines.push(`${i + 1}. ${opt.title}${tagText}${ref}`);
     lines.push(`路線：${opt.steps.join("；")}`);
-    lines.push(`車程：${time}${fare}。`);
+    lines.push(
+      opt.minutes == null
+        ? "車程：視路面／班次（非本站精確計算）。"
+        : `車程：${time}${fare}。`,
+    );
     if (opt.why) lines.push(`說明：${opt.why}`);
     lines.push("");
   }
@@ -555,16 +622,19 @@ export async function adviseTrip(
       }
     : null;
 
-  // —— 只展示本站真正計到嘅方案（唔再塞「視路面」假巴士／混合行程）——
+  // —— 盡量 3 個方案：精確走廊優先，不足則加誠實「參考」——
   let options: AiTripOption[] = [];
   if (mtrOption) options.push(mtrOption);
   if (knownCorridor) options.push(knownCorridor);
   if (e21aOption) options.push(e21aOption);
-  for (const extra of realSurfaceExtras(walkOption)) {
-    if (options.some((o) => o.id === extra.id || o.mode === "walk")) continue;
-    options.push(extra);
-  }
-  options = options.slice(0, 3);
+  options = padToThreeOptions(
+    options,
+    walkOption,
+    from.name,
+    to.name,
+    tone,
+    Boolean(knownCorridor),
+  );
   if (!options.length) throw new Error("未能規劃此行程");
 
   const warnings = weather?.warnings.map((w) => w.name).filter(Boolean) ?? [];
@@ -595,7 +665,7 @@ export async function adviseTrip(
           steps: o.steps,
         })),
       });
-      const cacheKey = `ai-trip:rank:v2:${from.id}:${to.id}:${tone}:${options.map((o) => o.id).join(",")}`;
+      const cacheKey = `ai-trip:rank:v3:${from.id}:${to.id}:${tone}:${options.map((o) => o.id).join(",")}`;
       const ai = await cached(cacheKey, TTL.aiTrip, () =>
         geminiJson<AiRankOut>(prompt, 14_000, AI_RANK_SCHEMA as unknown as Record<string, unknown>),
       );
@@ -619,11 +689,15 @@ export async function adviseTrip(
 
   const recommendedId = pickRecommended(options, tone, aiRecommendedId);
   const badged = withBadges(options, recommendedId);
-  const disclaimer = usedAi
-    ? `以上路線／車費由本站用港鐵／巴士公開資料計算（${badged.length} 個方案）；AI 只跟天氣寫評語同揀建議，請以營運商到達時間為準。`
-    : aiError
-      ? `以上路線由本站計算（${badged.length} 個方案）。${aiError}`
-      : `以上路線由本站用港鐵／巴士公開資料計算（${badged.length} 個方案）。未有可靠巴士資料時唔會亂估。`;
+  const disclaimer = [
+    VARIABILITY_NOTE,
+    `以上共 ${badged.length} 個方案；標「參考」者車程視路面，非精確計算。`,
+    usedAi
+      ? "有時間／車費嘅方案來自港鐵／巴士公開資料；請以營運商到達時間為準。"
+      : aiError
+        ? aiError
+        : "有時間／車費嘅方案來自港鐵／巴士公開資料；請以營運商到達時間為準。",
+  ].join(" ");
 
   const reply = buildChatReply({
     fromName: from.name,
