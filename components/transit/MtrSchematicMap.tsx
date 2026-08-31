@@ -631,7 +631,7 @@ export function MtrSchematicMap({
                   <div className="mt-4 flex gap-2">
                     <button
                       type="button"
-                      onClick={requestLocation}
+                      onClick={() => requestLocation()}
                       className="flex-1 rounded-xl bg-teal px-3 py-2.5 text-sm text-bg hover:opacity-90"
                     >
                       允許定位
@@ -663,7 +663,7 @@ export function MtrSchematicMap({
                   <div className="mt-4 flex gap-2">
                     <button
                       type="button"
-                      onClick={requestLocation}
+                      onClick={() => requestLocation()}
                       className="flex-1 rounded-xl bg-teal px-3 py-2.5 text-sm text-bg hover:opacity-90"
                     >
                       再試一次
