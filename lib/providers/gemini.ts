@@ -1,10 +1,7 @@
-const MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-];
+/** Prefer one strong flash model, then one lite fallback — keep total under Vercel maxDuration. */
+const MODELS = ["gemini-3.7-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
+
+const PER_MODEL_MS = 10_000;
 
 export function geminiApiKey() {
   return (
@@ -31,12 +28,24 @@ function parseJsonObject(raw: string): unknown {
   return JSON.parse(trimmed) as unknown;
 }
 
-export async function geminiJson<T>(prompt: string): Promise<T> {
+function isFatalGeminiError(message: string) {
+  return /location is not supported|API key not valid|API_KEY_INVALID|PERMISSION_DENIED|403/i.test(
+    message,
+  );
+}
+
+export async function geminiJson<T>(prompt: string, budgetMs = 14_000): Promise<T> {
   const key = geminiApiKey();
   if (!key) throw new Error("未設定 GEMINI_API_KEY");
 
+  const deadline = Date.now() + budgetMs;
   let last: Error | null = null;
+
   for (const model of MODELS) {
+    const remaining = deadline - Date.now();
+    if (remaining < 1_500) break;
+    const timeoutMs = Math.min(PER_MODEL_MS, remaining);
+
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -54,7 +63,7 @@ export async function geminiJson<T>(prompt: string): Promise<T> {
             },
           }),
           cache: "no-store",
-          signal: AbortSignal.timeout(22_000),
+          signal: AbortSignal.timeout(timeoutMs),
         },
       );
       const json = (await res.json()) as GeminiResponse;
@@ -66,6 +75,10 @@ export async function geminiJson<T>(prompt: string): Promise<T> {
       return parseJsonObject(text) as T;
     } catch (err) {
       last = err instanceof Error ? err : new Error("Gemini 失敗");
+      if (isFatalGeminiError(last.message)) throw last;
+      if (/timeout|aborted|AbortError/i.test(last.message)) {
+        last = new Error("Gemini 回應逾時");
+      }
     }
   }
   throw last ?? new Error("Gemini 失敗");

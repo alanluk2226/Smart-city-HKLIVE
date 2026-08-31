@@ -2,7 +2,7 @@ import { jsonError, jsonOk } from "@/lib/api";
 import { adviseTrip } from "@/lib/providers/ai-trip";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 45;
 /** Gemini API blocks many HK origins; run this function in US East. */
 export const preferredRegion = "iad1";
 

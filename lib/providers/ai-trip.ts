@@ -338,6 +338,7 @@ export async function adviseTrip(
           mtr: plan,
           walk: walkOk && walk ? { meters: walk.distanceMeters, minutes: walk.durationMinutes } : null,
         }),
+        14_000,
       );
       usedAi = true;
       if (ai.weatherNote?.trim()) weatherNote = ai.weatherNote.trim();

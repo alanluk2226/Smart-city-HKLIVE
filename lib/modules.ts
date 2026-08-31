@@ -43,8 +43,8 @@ export const MODULES = [
     href: "/facilities",
     key: "facilities",
     chip: "場地",
-    title: "康文署場地",
-    blurb: "全港體育館、球場、泳池、泳灘等，按行政區同類型瀏覽",
+    title: "場地／廁所",
+    blurb: "康文署場地，以及食環署公廁與地政總署商場（通常有洗手間），按行政區同類型瀏覽",
     accent: "lime",
   },
 ] as const;

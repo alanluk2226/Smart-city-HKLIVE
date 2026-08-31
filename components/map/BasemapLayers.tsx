@@ -3,19 +3,27 @@
 import { useEffect, useState } from "react";
 import { TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { useTheme } from "@/components/ThemeProvider";
 import { getGoogleMapsApiKey, loadGoogleMapsApi } from "@/lib/googleMaps";
-import { OSM_BASEMAP_MAX_ZOOM, OSM_BASEMAP_URL } from "@/lib/mapTiles";
+import {
+  GOOGLE_DARK_STYLES,
+  OSM_BASEMAP_ATTR,
+  OSM_BASEMAP_MAX_ZOOM,
+  OSM_BASEMAP_URL,
+} from "@/lib/mapTiles";
+import type { ThemeMode } from "@/lib/theme";
 
 const GOOGLE_MUTANT_SCRIPT =
   "https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/dist/Leaflet.GoogleMutant.js";
 
+/** Standard OSM — free, detailed; same tiles in light/dark (no API key). */
 function OsmBasemap() {
   return (
     <TileLayer
       url={OSM_BASEMAP_URL}
       maxZoom={OSM_BASEMAP_MAX_ZOOM}
       maxNativeZoom={OSM_BASEMAP_MAX_ZOOM}
-      attribution="&copy; OpenStreetMap"
+      attribution={OSM_BASEMAP_ATTR}
     />
   );
 }
@@ -51,36 +59,46 @@ function loadClassicScript(src: string, id: string) {
   });
 }
 
-async function createGoogleMutant(): Promise<MutantLayer> {
+async function createGoogleMutant(theme: ThemeMode): Promise<MutantLayer> {
   const g = window as typeof window & { L?: typeof L };
   g.L = L;
 
   await loadClassicScript(GOOGLE_MUTANT_SCRIPT, "hk-city-live-google-mutant");
 
   const leaflet = g.L ?? L;
+  const options = {
+    type: "roadmap" as const,
+    maxZoom: 21,
+    maxNativeZoom: 21,
+    styles: theme === "dark" ? GOOGLE_DARK_STYLES : undefined,
+  };
+
   const factory = (
     leaflet as unknown as {
-      gridLayer?: { googleMutant?: (options: object) => MutantLayer };
-      GridLayer?: { GoogleMutant?: new (options: object) => MutantLayer };
+      gridLayer?: { googleMutant?: (opts: object) => MutantLayer };
     }
   ).gridLayer?.googleMutant;
 
   if (factory) {
-    return factory({ type: "roadmap", maxZoom: 21, maxNativeZoom: 21 });
+    return factory(options);
   }
 
   const Ctor = (
-    leaflet as unknown as { GridLayer?: { GoogleMutant?: new (options: object) => MutantLayer } }
+    leaflet as unknown as { GridLayer?: { GoogleMutant?: new (opts: object) => MutantLayer } }
   ).GridLayer?.GoogleMutant;
 
   if (!Ctor) throw new Error("Leaflet.GoogleMutant 未能掛到 Leaflet");
 
-  return new Ctor({ type: "roadmap", maxZoom: 21, maxNativeZoom: 21 });
+  return new Ctor(options);
 }
 
-function GoogleBasemap() {
+function GoogleBasemap({ theme }: { theme: ThemeMode }) {
   const map = useMap();
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [theme]);
 
   useEffect(() => {
     let layer: L.GridLayer | null = null;
@@ -99,14 +117,13 @@ function GoogleBasemap() {
         await loadGoogleMapsApi();
         if (cancelled) return;
 
-        const mutant = await createGoogleMutant();
+        const mutant = await createGoogleMutant(theme);
         if (cancelled) return;
 
         mutant.addGoogleLayer("TransitLayer");
         mutant.addTo(map);
         layer = mutant;
 
-        // Google often renders a .gm-err-container instead of throwing
         timer = window.setTimeout(() => {
           if (cancelled) return;
           const errNode = document.querySelector(".gm-err-container");
@@ -139,16 +156,20 @@ function GoogleBasemap() {
       observer?.disconnect();
       if (layer && map.hasLayer(layer)) map.removeLayer(layer);
     };
-  }, [map]);
+  }, [map, theme]);
 
   if (failed) return <OsmBasemap />;
   return null;
 }
 
-/** Google roadmap (+ transit) when API key is set; otherwise free OSM. */
+/**
+ * Google roadmap (+ transit, theme-styled) when API key is set;
+ * otherwise free OSM (same detailed tiles in light/dark — Carto free dark tiles now need a key).
+ */
 export function BasemapLayers() {
+  const { theme } = useTheme();
   const key = getGoogleMapsApiKey();
-  if (key) return <GoogleBasemap />;
+  if (key) return <GoogleBasemap theme={theme} />;
   return <OsmBasemap />;
 }
 

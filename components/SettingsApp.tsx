@@ -12,6 +12,8 @@ const DATA_SOURCES = [
   { name: "醫院管理局", use: "急症室輪候、專科門診新症預約時間" },
   { name: "運輸署", use: "道路 CCTV、特別交通消息、停車場空位、部分交通靜態資料" },
   { name: "康樂及文化事務署", use: "體育館、球場、泳池、泳灘等場地資料" },
+  { name: "食物環境衞生署", use: "公共廁所、暢通易達洗手間及公共浴室位置" },
+  { name: "地政總署 iGeoCom", use: "全港商場／購物中心位置（作通常有洗手間標記，唔標樓層）" },
   { name: "公共交通營運商", use: "巴士、小巴、港鐵、輕鐵、渡輪、電車等到達／路線資料" },
 ];
 
@@ -144,7 +146,7 @@ export function SettingsApp() {
             <div>
               <h3 className="font-medium text-ink">對外連線</h3>
               <p className="mt-1.5">
-                為顯示公開數據，伺服器會向天文台、DATA.GOV.HK、運輸署、醫管局、康文署及各交通營運商等來源擷取資料。地圖底圖可能由 Google Maps 或 OpenStreetMap 提供（視環境設定而定）。
+                為顯示公開數據，伺服器會向天文台、DATA.GOV.HK、運輸署、醫管局、康文署、食環署、地政總署及各交通營運商等來源擷取資料。地圖底圖可能由 Google Maps 或 OpenStreetMap 提供（視環境設定而定）。
               </p>
             </div>
             <div>

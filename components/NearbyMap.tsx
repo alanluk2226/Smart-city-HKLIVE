@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { apiGet, formatDistance, openWalkingDirections } from "@/lib/client";
@@ -30,13 +30,16 @@ const icon = L.icon({
   iconAnchor: [12, 41],
 });
 
-const selectedIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [30, 49],
-  iconAnchor: [15, 49],
+const selectedPinIcon = L.divIcon({
   className: "nearby-map-pin-selected",
+  html: `<div style="
+      width: 22px; height: 22px; margin-left: -11px; margin-top: -11px;
+      border-radius: 999px; border: 3px solid #fff;
+      background: #b4e645;
+      box-shadow: 0 0 0 3px rgba(180,230,69,.45), 0 4px 14px rgba(0,0,0,.35);
+    "></div>`,
+  iconSize: [0, 0],
+  iconAnchor: [0, 0],
 });
 
 function escapeHtml(s: string) {
@@ -121,31 +124,53 @@ function badgeIcon(badge: string, selected: boolean, level: MapBadgeLevel = "unk
   });
 }
 
-function Recenter({
-  lat,
-  lng,
+function FitAllOnce({
   walkPoints,
   fitPoints,
 }: {
-  lat: number;
-  lng: number;
   walkPoints: [number, number][] | null;
   fitPoints?: Array<{ lat: number; lng: number }>;
 }) {
   const map = useMap();
+  const lastFitKey = useRef("");
+
   useEffect(() => {
     if (walkPoints?.length) {
       map.fitBounds(L.latLngBounds(walkPoints), { padding: [40, 40], maxZoom: 16 });
       return;
     }
-    if (fitPoints && fitPoints.length >= 2) {
-      const bounds = L.latLngBounds(fitPoints.map((p) => [p.lat, p.lng] as [number, number]));
-      bounds.extend([lat, lng]);
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
-      return;
-    }
-    map.setView([lat, lng], map.getZoom());
-  }, [lat, lng, map, walkPoints, fitPoints]);
+    if (!fitPoints || fitPoints.length < 2) return;
+    const key = fitPoints.map((p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join("|");
+    if (key === lastFitKey.current) return;
+    lastFitKey.current = key;
+    const bounds = L.latLngBounds(fitPoints.map((p) => [p.lat, p.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
+  }, [map, walkPoints, fitPoints]);
+
+  return null;
+}
+
+/** Fly to the selected pin and zoom in so it is obvious among many markers. */
+function FocusSelected({
+  selectedId,
+  selectedPoint,
+  focusZoom,
+}: {
+  selectedId?: string;
+  selectedPoint?: { lat: number; lng: number } | null;
+  focusZoom: number;
+}) {
+  const map = useMap();
+  const lastId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!selectedId || !selectedPoint) return;
+    if (selectedId === lastId.current) return;
+    lastId.current = selectedId;
+    const targetZoom = Math.max(map.getZoom(), focusZoom);
+    map.flyTo([selectedPoint.lat, selectedPoint.lng], targetZoom, { duration: 0.45 });
+  }, [selectedId, selectedPoint, map, focusZoom]);
+
   return null;
 }
 
@@ -159,6 +184,7 @@ export function NearbyMap({
   className = "",
   zoom = 15,
   fitAllPoints = false,
+  focusZoom = 16,
 }: {
   lat: number;
   lng: number;
@@ -170,11 +196,14 @@ export function NearbyMap({
   zoom?: number;
   /** When true, zoom to show all points (e.g. territory hospitals) */
   fitAllPoints?: boolean;
+  /** Minimum zoom when focusing a selected list/map item */
+  focusZoom?: number;
 }) {
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetId, setWalkTargetId] = useState<string | null>(null);
   const [walkLoading, setWalkLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const markerRefs = useRef(new Map<string, L.Marker>());
 
   useEffect(() => {
     setMapReady(true);
@@ -189,6 +218,21 @@ export function NearbyMap({
     return points.map((p) => ({ lat: p.lat, lng: p.lng }));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stable when coordinates unchanged
   }, [fitAllPoints, fitKey]);
+
+  const selectedPoint = useMemo(() => {
+    if (!selectedId) return null;
+    return points.find((p) => p.id === selectedId) ?? null;
+  }, [points, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const marker = markerRefs.current.get(selectedId);
+    if (!marker) return;
+    const t = window.setTimeout(() => {
+      marker.openPopup();
+    }, 480);
+    return () => window.clearTimeout(t);
+  }, [selectedId, selectedPoint?.lat, selectedPoint?.lng]);
 
   async function showWalkRoute(point: Point) {
     if (walkTargetId === point.id && walkRoute) {
@@ -218,10 +262,12 @@ export function NearbyMap({
     );
   }
 
+  const mapKey = fitAllPoints ? `fit-${fitKey.length}-${points.length}` : `view-${zoom}`;
+
   return (
     <div className={`overflow-hidden border border-line ${heightClass} ${className || "rounded-xl"}`}>
       <MapContainer
-        key={`${lat.toFixed(4)}-${lng.toFixed(4)}-${fitAllPoints ? "fit" : "view"}`}
+        key={mapKey}
         center={[lat, lng]}
         zoom={zoom}
         maxZoom={mapMaxZoom()}
@@ -230,11 +276,11 @@ export function NearbyMap({
         attributionControl={false}
       >
         <BasemapLayers />
-        <Recenter
-          lat={lat}
-          lng={lng}
-          walkPoints={walkRoute?.points ?? null}
-          fitPoints={fitPoints}
+        <FitAllOnce walkPoints={walkRoute?.points ?? null} fitPoints={fitPoints} />
+        <FocusSelected
+          selectedId={selectedId}
+          selectedPoint={selectedPoint}
+          focusZoom={focusZoom}
         />
         {walkRoute ? (
           <Polyline
@@ -255,14 +301,18 @@ export function NearbyMap({
           const pin = p.badge
             ? badgeIcon(p.badge, on, p.badgeLevel ?? "unknown")
             : on
-              ? selectedIcon
+              ? selectedPinIcon
               : icon;
           return (
             <Marker
               key={p.id}
               position={[p.lat, p.lng]}
               icon={pin}
-              zIndexOffset={on ? 800 : 0}
+              zIndexOffset={on ? 1000 : 0}
+              ref={(m) => {
+                if (m) markerRefs.current.set(p.id, m);
+                else markerRefs.current.delete(p.id);
+              }}
               eventHandlers={{
                 click: () => onSelect?.(p),
               }}

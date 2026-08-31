@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "HK LIVE",
-  description: "整合交通工具、天氣、急症室、路況 CCTV、停車場與康文署場地的公開資料主控台",
+  description: "整合交通工具、天氣、急症室、路況 CCTV、停車場、康文署場地與公共廁所的公開資料主控台",
   icons: {
     icon: "/logo.jpeg",
     apple: "/logo.jpeg",

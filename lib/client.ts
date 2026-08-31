@@ -1,10 +1,22 @@
 import { getLocationEnabled } from "@/lib/location-pref";
 
-export async function apiGet<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  const json = (await res.json()) as { ok: boolean; error?: string; data: T };
+async function readApiJson<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  let json: { ok?: boolean; error?: string; data?: T };
+  try {
+    json = JSON.parse(text) as { ok?: boolean; error?: string; data?: T };
+  } catch {
+    if (res.status === 504 || /timeout|timed out|An error/i.test(text)) {
+      throw new Error("伺服器回應逾時，請再試一次。");
+    }
+    throw new Error(res.ok ? "伺服器回傳格式錯誤" : `伺服器錯誤（${res.status}）`);
+  }
   if (!json.ok) throw new Error(json.error || "載入失敗");
-  return json.data;
+  return json.data as T;
+}
+
+export async function apiGet<T>(url: string): Promise<T> {
+  return readApiJson<T>(await fetch(url));
 }
 
 export async function apiPost<T>(url: string, body: unknown): Promise<T> {
@@ -13,9 +25,7 @@ export async function apiPost<T>(url: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as { ok: boolean; error?: string; data: T };
-  if (!json.ok) throw new Error(json.error || "載入失敗");
-  return json.data;
+  return readApiJson<T>(res);
 }
 
 export function formatDistance(meters?: number) {

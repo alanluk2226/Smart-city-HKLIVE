@@ -13,10 +13,17 @@ function stripDistrictSuffix(raw: string) {
   return raw.replace(/區$/, "").replace(/\s+/g, "").trim();
 }
 
+/** Older FEHD labels still split 油尖旺 into 油尖／旺角. */
+const DISTRICT_ALIASES: Record<string, string> = {
+  油尖: "油尖旺區",
+  旺角: "油尖旺區",
+};
+
 /** Normalize open-data labels like「大埔」／「大埔區」to the canonical「大埔區」. */
 export function canonicalDistrict(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
   const n = stripDistrictSuffix(raw);
+  if (DISTRICT_ALIASES[n]) return DISTRICT_ALIASES[n];
   for (const list of Object.values(HK_DISTRICT_ORDER)) {
     for (const d of list) {
       if (stripDistrictSuffix(d) === n) return d;
