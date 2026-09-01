@@ -9,6 +9,7 @@ import { RouteInfoBanner, etaArriveLabel } from "@/components/transit/RouteInfoB
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
+import { pickInitialRouteStop } from "@/lib/nearest-stop";
 import type { RouteHit, StopHit } from "@/lib/types";
 
 const BUS_ROUTE_MAX_LEN = 5;
@@ -169,8 +170,12 @@ export function RouteEtaBrowser({
       if (route.routeId) params.set("routeId", route.routeId);
       const loaded = await apiGet<StopHit[]>(`/api/stops?${params}`);
       setStops(loaded);
-      if (loaded.length) pickStop(loaded[0], route);
-      else setStops([]);
+      if (!loaded.length) {
+        setStops([]);
+        return;
+      }
+      const initial = await pickInitialRouteStop(loaded);
+      if (initial) pickStop(initial, route);
     } catch (err) {
       setStops([]);
       setError(err instanceof Error ? err.message : "無法載入車站");

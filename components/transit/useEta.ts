@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/client";
+import { filterDisplayEtas } from "@/lib/eta-filter";
 import type { EtaResult, StopHit } from "@/lib/types";
 
 export function useEta(selected: StopHit | null) {
@@ -17,6 +18,10 @@ export function useEta(selected: StopHit | null) {
     const stop = selected;
     let cancelled = false;
 
+    function publish(rows: EtaResult[]) {
+      if (!cancelled) setEtas(filterDisplayEtas(rows));
+    }
+
     async function load() {
       setLoading(true);
       setError("");
@@ -30,14 +35,14 @@ export function useEta(selected: StopHit | null) {
               ),
             ),
           );
-          if (!cancelled) setEtas(batches.flat());
+          publish(batches.flat());
           return;
         }
         if (stop.operator === "lrt") {
           const rows = await apiGet<EtaResult[]>(
             `/api/eta?operator=lrt&stopId=${stop.stopId}&stopName=${encodeURIComponent(stop.name)}`,
           );
-          if (!cancelled) setEtas(rows);
+          publish(rows);
           return;
         }
         if (stop.operator === "nlb") {
@@ -50,7 +55,7 @@ export function useEta(selected: StopHit | null) {
           if (stop.routeIds?.length) params.set("routeIds", stop.routeIds.join(","));
           if (stop.routeId) params.set("routeId", stop.routeId);
           const rows = await apiGet<EtaResult[]>(`/api/eta?${params}`);
-          if (!cancelled) setEtas(rows);
+          publish(rows);
           return;
         }
         const params = new URLSearchParams({
@@ -66,7 +71,7 @@ export function useEta(selected: StopHit | null) {
         const rows = await apiGet<EtaResult[]>(`/api/eta?${params}`);
         const route = stop.route?.trim().toUpperCase();
         const filtered = route ? rows.filter((row) => row.route.toUpperCase() === route) : rows;
-        if (!cancelled) setEtas(filtered);
+        publish(filtered);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "無法載入到達時間");
       } finally {

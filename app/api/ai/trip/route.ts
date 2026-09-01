@@ -1,41 +1,68 @@
 import { jsonError, jsonOk } from "@/lib/api";
-import { adviseTrip } from "@/lib/providers/ai-trip";
-import { canResolveTripPair, parseTripQuery } from "@/lib/trip-query";
+import { runAssistant } from "@/lib/providers/ai-assistant";
+import type { AiAssistantChatTurn } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
 /** Gemini API blocks many HK origins; run this function in US East. */
 export const preferredRegion = "iad1";
 
-export async function POST(request: Request) {
-  let body: { from?: unknown; to?: unknown; message?: unknown };
-  try {
-    body = (await request.json()) as { from?: unknown; to?: unknown; message?: unknown };
-  } catch {
-    return jsonError("請提供起點與終點，或一句行程問題");
-  }
-
-  let from = typeof body.from === "string" ? body.from.trim() : "";
-  let to = typeof body.to === "string" ? body.to.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
-
-  if ((!from || !to) && message) {
-    const parsed = parseTripQuery(message);
-    if (!parsed) {
-      return jsonError("請用「東涌去何文田」或「逸東邨到羅湖」呢種問法；起終點要係港鐵站、屋邨或行政區。");
+function asTurns(raw: unknown): AiAssistantChatTurn[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AiAssistantChatTurn[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const role = (item as { role?: unknown }).role;
+    const text = (item as { text?: unknown }).text;
+    if ((role === "user" || role === "assistant") && typeof text === "string" && text.trim()) {
+      out.push({ role, text: text.trim() });
     }
-    from = parsed.from;
-    to = parsed.to;
+  }
+  return out.slice(-16);
+}
+
+export async function POST(request: Request) {
+  let body: {
+    from?: unknown;
+    to?: unknown;
+    message?: unknown;
+    messages?: unknown;
+    lastTrip?: unknown;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonError("請提供對話內容，或一句行程問題");
   }
 
-  if (!from || !to) return jsonError("請輸入起點與終點，例如：東涌去何文田");
-  if (!canResolveTripPair(from, to)) {
-    return jsonError(`未能辨識「${from}」或「${to}」。試下港鐵站、屋邨或行政區名，例如東涌、何文田、逸東邨、羅湖。`);
+  const from = typeof body.from === "string" ? body.from.trim() : "";
+  const to = typeof body.to === "string" ? body.to.trim() : "";
+  const message = typeof body.message === "string" ? body.message.trim() : "";
+  const messages = asTurns(body.messages);
+
+  let lastTrip: { from: string; to: string } | null = null;
+  if (body.lastTrip && typeof body.lastTrip === "object") {
+    const lf = (body.lastTrip as { from?: unknown }).from;
+    const lt = (body.lastTrip as { to?: unknown }).to;
+    if (typeof lf === "string" && typeof lt === "string" && lf.trim() && lt.trim()) {
+      lastTrip = { from: lf.trim(), to: lt.trim() };
+    }
+  }
+
+  if (!messages.length && !message && !(from && to)) {
+    return jsonError("請輸入問題，例如天氣點，或「東涌去何文田」");
   }
 
   try {
-    return jsonOk(await adviseTrip(from, to));
+    const result = await runAssistant({
+      messages,
+      message: message || undefined,
+      from: from || undefined,
+      to: to || undefined,
+      lastTrip,
+    });
+    return jsonOk(result);
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "無法建議行程", 502);
+    return jsonError(error instanceof Error ? error.message : "無法回應", 502);
   }
 }

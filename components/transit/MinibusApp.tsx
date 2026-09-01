@@ -8,6 +8,7 @@ import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic"
 import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
 import { apiGet, openWalkingDirections } from "@/lib/client";
+import { pickInitialRouteStop } from "@/lib/nearest-stop";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
 const MINIBUS_ROUTE_MAX_LEN = 4;
@@ -121,19 +122,19 @@ export function MinibusApp() {
       });
       const loaded = await apiGet<StopHit[]>(`/api/stops?${params}`);
       setStops(loaded);
-      if (loaded.length) {
-        const first = loaded[0];
-        setSelected({
-          ...first,
-          route: first.route ?? route.route,
-          routeId: first.routeId ?? route.routeId,
-          bound: first.bound ?? route.bound,
-          serviceType: first.serviceType ?? route.serviceType,
-          region: first.region ?? route.region,
-        });
-      } else {
+      if (!loaded.length) {
         setStops([]);
+        return;
       }
+      const initial = (await pickInitialRouteStop(loaded)) ?? loaded[0];
+      setSelected({
+        ...initial,
+        route: initial.route ?? route.route,
+        routeId: initial.routeId ?? route.routeId,
+        bound: initial.bound ?? route.bound,
+        serviceType: initial.serviceType ?? route.serviceType,
+        region: initial.region ?? route.region,
+      });
     } catch (err) {
       setStops([]);
       setError(err instanceof Error ? err.message : "無法載入車站");

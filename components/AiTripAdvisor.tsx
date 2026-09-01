@@ -14,7 +14,7 @@ import {
   type SavedTrip,
 } from "@/lib/ai-trip-store";
 import { apiPost } from "@/lib/client";
-import type { AiTripAdvice } from "@/lib/types";
+import type { AiAssistantResponse, AiTripAdvice } from "@/lib/types";
 
 type ChatRole = "user" | "assistant" | "system";
 
@@ -26,7 +26,9 @@ type ChatMessage = {
 };
 
 const WELCOME =
-  "你好，我係 HK LIVE 出行助手。用日常說話問我即可，例如：\n\n「東涌去何文田」\n「逸東邨到羅湖」\n「荃灣去中環」\n\n每次通常畀 3 個方案。AI 只跟天氣寫評語同建議；每次俾出嘅方案有可能唔完全相同，請注意。標「參考」嘅巴士方案車程視路面。";
+  "你好，我係 HK LIVE 助手。可以問天氣、交通概況，或者點去邊度。\n\n例如：\n「今日天氣點？」\n「東涌去何文田」\n「荃灣去中環」——之後可以講「改去旺角」接龍。\n\n問點去時會用固定格式列出本站計算嘅方案；AI 主要寫天氣評語同自由對話。標「參考」嘅巴士方案車程視路面。";
+
+const HISTORY_TURNS = 12;
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -47,7 +49,12 @@ function ReplyBody({ text }: { text: string }) {
             </p>
           );
         }
-        if (line.startsWith("路線：") || line.startsWith("車程：") || line.startsWith("說明：") || line.startsWith("天氣：")) {
+        if (
+          line.startsWith("路線：") ||
+          line.startsWith("車程：") ||
+          line.startsWith("說明：") ||
+          line.startsWith("天氣：")
+        ) {
           return (
             <p key={i} className="pl-5 text-[13px] text-muted">
               {line}
@@ -91,32 +98,55 @@ export function AiTripAdvisor() {
     const text = raw.trim();
     if (!text || loading) return;
 
+    const userMsg: ChatMessage = { id: newId(), role: "user", text };
+    const nextMessages = [...messages, userMsg];
     setInput("");
-    setMessages((prev) => [...prev, { id: newId(), role: "user", text }]);
+    setMessages(nextMessages);
     setLoading(true);
 
+    const historyPayload = nextMessages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .filter((m) => m.id !== "welcome")
+      .slice(-HISTORY_TURNS)
+      .map((m) => ({ role: m.role as "user" | "assistant", text: m.text }));
+
+    const lastAdvice = [...nextMessages].reverse().find((m) => m.advice)?.advice;
+    const lastTrip = lastAdvice
+      ? { from: lastAdvice.fromName, to: lastAdvice.toName }
+      : undefined;
+
     try {
-      const data = await apiPost<AiTripAdvice>("/api/ai/trip", { message: text });
-      setMessages((prev) => [
-        ...prev,
-        { id: newId(), role: "assistant", text: data.reply, advice: data },
-      ]);
-      setHistory(
-        pushTripHistory({
-          from: data.fromName,
-          to: data.toName,
-          goal: "both",
-          savedAt: Date.now(),
-        }),
-      );
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "無法建議行程";
+      const data = await apiPost<AiAssistantResponse>("/api/ai/trip", {
+        messages: historyPayload,
+        lastTrip,
+      });
       setMessages((prev) => [
         ...prev,
         {
           id: newId(),
           role: "assistant",
-          text: `${msg}\n\n可以再試：「東涌去何文田」或「逸東邨到羅湖」。`,
+          text: data.reply,
+          advice: data.advice ?? undefined,
+        },
+      ]);
+      if (data.advice) {
+        setHistory(
+          pushTripHistory({
+            from: data.advice.fromName,
+            to: data.advice.toName,
+            goal: "both",
+            savedAt: Date.now(),
+          }),
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "無法回應";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: newId(),
+          role: "assistant",
+          text: `${msg}\n\n可以再試問天氣，或「東涌去何文田」「荃灣去中環」。`,
         },
       ]);
     } finally {
@@ -147,10 +177,10 @@ export function AiTripAdvisor() {
     <section className="rounded-2xl border border-teal/30 bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="font-mono text-[11px] tracking-[0.2em] text-teal">WEATHER ROUTE</div>
+          <div className="font-mono text-[11px] tracking-[0.2em] text-teal">HK LIVE CHAT</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            像對話咁問，通常畀 3 個方案。AI 只跟天氣寫評語同建議；每次方案有可能唔同，請注意。例如「東涌去何文田」。
+            像 Gemini 咁傾；問點去會用固定格式列出本站計算方案。可接龍講「改去旺角」。
           </p>
         </div>
       </div>
@@ -254,7 +284,7 @@ export function AiTripAdvisor() {
         {loading ? (
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-bl-md border border-line bg-card px-3.5 py-2.5 text-sm text-muted">
-              諗緊路線…
+              諗緊…
             </div>
           </div>
         ) : null}
@@ -271,7 +301,7 @@ export function AiTripAdvisor() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="問我：東涌去何文田…"
+          placeholder="問天氣，或：東涌去何文田…"
           disabled={loading}
           className="min-w-0 flex-1 rounded-xl border border-line bg-elev px-3 py-2.5 text-ink outline-none focus:border-teal disabled:opacity-60"
         />

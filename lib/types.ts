@@ -229,3 +229,17 @@ export type AiTripAdvice = {
   /** Set when Gemini was attempted but failed (e.g. regional block). */
   aiError?: string | null;
 };
+
+export type AiAssistantChatTurn = {
+  role: "user" | "assistant";
+  text: string;
+};
+
+/** Unified assistant reply: free chat or grounded route advice. */
+export type AiAssistantResponse = {
+  mode: "route" | "chat";
+  reply: string;
+  usedAi: boolean;
+  aiError?: string | null;
+  advice: AiTripAdvice | null;
+};

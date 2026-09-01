@@ -14,7 +14,7 @@ npm run dev
 可選：複製 `.env.example` 為 `.env.local`，填入：
 
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`（Maps JavaScript API）。有 key 時街圖用 Google；否則用 OpenStreetMap。
-- `GEMINI_API_KEY`（主控台出行助手；只在伺服器呼叫 Gemini，比較天氣／步行／港鐵／巴士）。冇 key 時仍會顯示港鐵同步行計算。
+- `GEMINI_API_KEY`（主控台出行助手；伺服器呼叫 Gemini 做多輪對話。問「點去」時路線／車費仍由本站計算，AI 只寫天氣評語）。冇 key 時點去問題仍可顯示港鐵等計算方案。
 
 ## 模組
 
