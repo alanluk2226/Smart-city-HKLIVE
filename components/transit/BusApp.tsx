@@ -30,7 +30,7 @@ export function BusApp() {
       operator={filter === "all" ? undefined : filter}
       placeholder={PLACEHOLDERS[filter]}
       belowSearch={
-        <div className="flex w-full max-w-xl flex-wrap justify-center gap-2">
+        <div className="flex w-full flex-wrap justify-center gap-2 max-lg:justify-start max-lg:overflow-x-auto max-lg:flex-nowrap max-lg:pb-1">
           {FILTERS.map(({ id, label }) => (
             <button
               key={id}

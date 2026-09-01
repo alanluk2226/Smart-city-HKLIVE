@@ -2,12 +2,15 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { GmbEtaExtras, GmbRoutePlate } from "@/components/transit/GmbBadges";
+import { MinibusRouteKeypad } from "@/components/transit/MinibusRouteKeypad";
 import { RouteInfoBanner, etaArriveLabel } from "@/components/transit/RouteInfoBanner";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
+
+const MINIBUS_ROUTE_MAX_LEN = 4;
 
 function NavigateToStopButton({ lat, lng, name }: { lat: number; lng: number; name: string }) {
   return (
@@ -186,6 +189,27 @@ export function MinibusApp() {
     setOpen(Boolean(q.trim()));
     setError("");
   }
+
+  function appendMinibusQuery(next: string) {
+    setQ((prev) => {
+      if (prev.length >= MINIBUS_ROUTE_MAX_LEN) return prev;
+      return `${prev}${next}`.toUpperCase();
+    });
+  }
+
+  const routePickButtons = suggestions.map((route, i) => (
+    <button
+      key={`${route.region}-${route.route}-${route.routeId}-${route.bound}-${i}`}
+      type="button"
+      onClick={() => void pickRoute(route)}
+      className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 active:bg-white/10"
+    >
+      <GmbRoutePlate route={route.route} region={route.region} />
+      <span className="min-w-0 pt-0.5 text-sm">
+        {route.orig} → {route.dest}
+      </span>
+    </button>
+  ));
 
   if (picked) {
     return (
@@ -380,7 +404,39 @@ export function MinibusApp() {
   }
 
   return (
-    <div className="space-y-5">
+    <>
+      <div className="flex max-lg:-mx-4 max-lg:h-[calc(100dvh-11rem)] max-lg:max-h-[calc(100dvh-11rem)] max-lg:flex-col max-lg:overflow-hidden lg:hidden">
+        <div className="shrink-0 border-b border-line bg-card px-4 py-3 text-center">
+          <p className="text-xs text-muted">路線編號</p>
+          <div className="mt-1 min-h-[2.5rem] font-mono text-3xl tracking-[0.12em] text-ink">
+            {q || <span className="text-base tracking-normal text-muted">輸入路線號碼</span>}
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {error ? <p className="px-4 py-2 text-center text-sm text-rose">{error}</p> : null}
+          {searching && q.trim() ? <p className="px-4 py-2 text-center text-sm text-muted">搜尋中…</p> : null}
+          {!q.trim() ? (
+            <p className="px-4 py-6 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關小巴</p>
+          ) : !searching && !suggestions.length ? (
+            <p className="px-4 py-6 text-center text-sm text-muted">搵唔到呢個編號。試下 10、48M、N27 等。</p>
+          ) : (
+            <div className="divide-y divide-line">{routePickButtons}</div>
+          )}
+          <p className="px-4 py-3 text-center text-xs text-muted">
+            專線小巴（綠Van）唔使先揀港島／九龍／新界；紅色小巴冇官方到站資料。
+          </p>
+        </div>
+
+        <MinibusRouteKeypad
+          onDigit={appendMinibusQuery}
+          onLetter={appendMinibusQuery}
+          onReset={() => setQ("")}
+          onDelete={() => setQ((prev) => prev.slice(0, -1))}
+        />
+      </div>
+
+      <div className="hidden space-y-5 lg:block">
       <div className="flex flex-col items-center px-1 pt-2 md:pt-6">
         <p className="mb-1 text-sm text-muted">路線編號</p>
         <h2 className="mb-4 text-center text-xl font-medium tracking-wide md:text-2xl">輸入小巴路線</h2>
@@ -451,6 +507,7 @@ export function MinibusApp() {
       </div>
 
       {error ? <p className="text-center text-sm text-rose">{error}</p> : null}
-    </div>
+      </div>
+    </>
   );
 }

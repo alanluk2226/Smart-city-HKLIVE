@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BusOperatorIcon } from "@/components/transit/BusOperatorIcon";
+import { BusRouteKeypad } from "@/components/transit/BusRouteKeypad";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import { formatBusDistance } from "@/lib/bus-distance";
 import { RouteInfoBanner, etaArriveLabel } from "@/components/transit/RouteInfoBanner";
@@ -8,6 +10,8 @@ import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic"
 import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
 import type { RouteHit, StopHit } from "@/lib/types";
+
+const BUS_ROUTE_MAX_LEN = 5;
 
 function NavigateToStopButton({
   lat,
@@ -122,6 +126,33 @@ export function RouteEtaBrowser({
     void search(presetQuery);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetQuery, operator, region]);
+
+  useEffect(() => {
+    if (mode !== "bus") return;
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const runLive = () => {
+      if (!mq.matches) return;
+      const needle = q.trim();
+      if (!needle) {
+        setRoutes([]);
+        setHasSearched(false);
+        setSearching(false);
+        setError("");
+        return;
+      }
+      void search(needle);
+    };
+    const timer = window.setTimeout(runLive, 220);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, mode, operator, region]);
+
+  function appendBusQuery(next: string) {
+    setQ((prev) => {
+      if (prev.length >= BUS_ROUTE_MAX_LEN) return prev;
+      return `${prev}${next}`.toUpperCase();
+    });
+  }
 
   async function pickRoute(route: RouteHit) {
     setError("");
@@ -360,67 +391,114 @@ export function RouteEtaBrowser({
     );
   }
 
+  const routePickButtons = routes.map((r, i) => (
+    <button
+      key={`${r.operator}-${r.route}-${r.bound}-${r.routeId}-${i}`}
+      type="button"
+      onClick={() => void pickRoute(r)}
+      className="w-full rounded-lg px-3 py-2.5 text-left hover:bg-white/5 active:bg-white/10"
+    >
+      {mode === "bus" ? (
+        <div className="flex items-start gap-3">
+          <BusOperatorIcon operator={r.operator} />
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-xl leading-tight text-ink">{r.route}</div>
+            <div className="truncate text-sm text-ink">往 {r.dest}</div>
+            <div className="text-xs text-muted">{r.operatorName}</div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <span className="mr-2 text-xs text-amber">{r.operatorName}</span>
+          <span className="mr-2 font-mono">{r.route}</span>
+          {r.subtitle}
+        </>
+      )}
+    </button>
+  ));
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col items-center px-1 pt-2 md:pt-6">
-        <p className="mb-1 text-sm text-muted">路線編號</p>
-        <h2 className="mb-4 text-center text-xl font-medium tracking-wide md:text-2xl">
-          {mode === "minibus" ? "輸入小巴路線" : "輸入巴士路線"}
-        </h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void search(q);
-          }}
-          className="flex w-full max-w-xl flex-col gap-3 sm:flex-row"
-        >
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={placeholder}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            className="w-full rounded-2xl border border-line bg-card px-5 py-4 text-center font-mono text-2xl tracking-[0.12em] outline-none placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted focus:border-teal md:text-3xl"
+    <div className={mode === "bus" ? "" : "space-y-5"}>
+      {mode === "bus" ? (
+        <div className="flex max-lg:-mx-4 max-lg:h-[calc(100dvh-11rem)] max-lg:max-h-[calc(100dvh-11rem)] max-lg:flex-col max-lg:overflow-hidden lg:hidden">
+          <div className="shrink-0 border-b border-line bg-card px-4 py-3 text-center">
+            <p className="text-xs text-muted">路線編號</p>
+            <div className="mt-1 min-h-[2.5rem] font-mono text-3xl tracking-[0.12em] text-ink">
+              {q || <span className="text-base tracking-normal text-muted">輸入路線號碼</span>}
+            </div>
+          </div>
+
+          {belowSearch ? <div className="shrink-0 border-b border-line px-3 py-2">{belowSearch}</div> : null}
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {error ? <p className="px-4 py-2 text-center text-sm text-rose">{error}</p> : null}
+            {searching && q.trim() ? <p className="px-4 py-2 text-center text-sm text-muted">搜尋中…</p> : null}
+            {!q.trim() ? (
+              <p className="px-4 py-6 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關巴士</p>
+            ) : hasSearched && !routes.length && !searching ? (
+              <p className="px-4 py-6 text-center text-sm text-muted">搵唔到呢條路線，試下其他編號或營運商篩選。</p>
+            ) : (
+              <div className="divide-y divide-line">{routePickButtons}</div>
+            )}
+          </div>
+
+          <BusRouteKeypad
+            onDigit={appendBusQuery}
+            onLetter={appendBusQuery}
+            onReset={() => setQ("")}
+            onDelete={() => setQ((prev) => prev.slice(0, -1))}
           />
-          <button
-            type="submit"
-            className="shrink-0 rounded-2xl bg-teal px-6 py-4 text-base font-medium text-bg hover:opacity-90 sm:min-w-28"
+        </div>
+      ) : null}
+
+      <div className={mode === "bus" ? "hidden space-y-5 lg:block" : "space-y-5"}>
+        <div className="flex flex-col items-center px-1 pt-2 md:pt-6">
+          <p className="mb-1 text-sm text-muted">路線編號</p>
+          <h2 className="mb-4 text-center text-xl font-medium tracking-wide md:text-2xl">
+            {mode === "minibus" ? "輸入小巴路線" : "輸入巴士路線"}
+          </h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void search(q);
+            }}
+            className="flex w-full max-w-xl flex-col gap-3 sm:flex-row"
           >
-            {searching ? "搜尋中…" : "搜尋"}
-          </button>
-        </form>
-        {!showRouteList ? (
-          <p className="mt-3 text-center text-sm text-muted">打路線號就會顯示可揀方向</p>
-        ) : null}
-      </div>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={placeholder}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full rounded-2xl border border-line bg-card px-5 py-4 text-center font-mono text-2xl tracking-[0.12em] outline-none placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted focus:border-teal md:text-3xl"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-2xl bg-teal px-6 py-4 text-base font-medium text-bg hover:opacity-90 sm:min-w-28"
+            >
+              {searching ? "搜尋中…" : "搜尋"}
+            </button>
+          </form>
+          {!showRouteList ? (
+            <p className="mt-3 text-center text-sm text-muted">打路線號就會顯示可揀方向</p>
+          ) : null}
+        </div>
 
-      {belowSearch ? <div className="flex justify-center">{belowSearch}</div> : null}
+        {belowSearch ? <div className="flex justify-center">{belowSearch}</div> : null}
 
-      {error ? <p className="text-center text-sm text-rose">{error}</p> : null}
+        {error ? <p className="text-center text-sm text-rose">{error}</p> : null}
 
-      {showRouteList ? (
-        <section className="mx-auto w-full max-w-xl rounded-2xl border border-line bg-card p-3">
-          <h2 className="mb-2 px-1 text-sm text-muted">揀路線方向</h2>
-          <div className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto">
-            {routes.map((r, i) => (
-              <button
-                key={`${r.operator}-${r.route}-${r.bound}-${r.routeId}-${i}`}
-                type="button"
-                onClick={() => void pickRoute(r)}
-                className="w-full rounded-lg px-3 py-2.5 text-left hover:bg-white/5"
-              >
-                <span className="mr-2 text-xs text-amber">{r.operatorName}</span>
-                <span className="mr-2 font-mono">{r.route}</span>
-                {r.subtitle}
-              </button>
-            ))}
+        {showRouteList ? (
+          <section className="mx-auto w-full max-w-xl rounded-2xl border border-line bg-card p-3">
+            <h2 className="mb-2 px-1 text-sm text-muted">揀路線方向</h2>
+            <div className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto">{routePickButtons}</div>
             {!routes.length && !searching ? (
               <div className="px-3 py-2 text-sm text-muted">搵唔到呢條路線，試下其他編號或營運商篩選。</div>
             ) : null}
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }
