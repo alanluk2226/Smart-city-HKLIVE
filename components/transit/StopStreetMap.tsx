@@ -108,12 +108,10 @@ function FitStops({
   const key = points.map((p) => p.join(",")).join("|");
   const walkKey = walkPoints?.map((p) => p.join(",")).join("|") ?? "";
   const selKey = selected ? `${selected[0].toFixed(5)},${selected[1].toFixed(5)}` : "";
-  const lastFocus = useRef("");
   const locatedOnce = useRef(false);
 
-  // Reset focus tracking when the route geometry changes
+  // Reset location framing when the route geometry changes
   useEffect(() => {
-    lastFocus.current = "";
     locatedOnce.current = false;
   }, [key]);
 
@@ -141,20 +139,23 @@ function FitStops({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, key, walkKey, selKey]);
 
-  // Selected stop (nearest-by-location default or user tap) → zoom in on that stop
+  // Selected stop (list tap or map pin) → pan/zoom to that stop every time it changes.
+  // Depend on selKey only — a new [lat,lng] array each render must not cancel flyTo.
   useEffect(() => {
     if (walkPoints?.length) return;
     if (!selected) return;
-    const focusId = `${key}|${selKey}`;
-    if (lastFocus.current === focusId) return;
-    lastFocus.current = focusId;
+    const lat = selected[0];
+    const lng = selected[1];
     const t = window.setTimeout(() => {
       const z = Math.max(map.getZoom(), focusZoom);
-      map.flyTo(selected, z, { duration: 0.4 });
-      map.invalidateSize();
-    }, 40);
-    return () => window.clearTimeout(t);
-  }, [map, key, selKey, selected, walkKey, walkPoints, focusZoom]);
+      map.flyTo([lat, lng], z, { duration: 0.45 });
+    }, 0);
+    return () => {
+      window.clearTimeout(t);
+      map.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, selKey, walkKey, walkPoints, focusZoom]);
 
   // Location arrives after a stop is already focused → if nearby, frame stop + user
   useEffect(() => {
@@ -433,7 +434,7 @@ export function StopStreetMap({
                 icon={pinIcon(stop.seq, isSel, colors.idle, colors.active, colors.glow, compact)}
                 eventHandlers={{ click: () => onSelect(stop) }}
               >
-                <Popup>
+                <Popup autoPan={false}>
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-zinc-900">
                       {stop.seq ? `${stop.seq}. ` : ""}
