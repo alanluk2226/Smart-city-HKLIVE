@@ -181,6 +181,9 @@ export type Place = {
 /** Kept for saved-trip compatibility; UI no longer asks the user to pick. */
 export type AiTripGoal = "fastest" | "cheapest" | "both";
 
+/** Follow-up like「巴士呢／港鐵呢／混合呢」— same OD, different mode emphasis. */
+export type TripPreferMode = "any" | "bus" | "mtr" | "mix";
+
 export type AiTripMode =
   | "walk"
   | "mtr"

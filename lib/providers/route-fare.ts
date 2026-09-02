@@ -18,11 +18,20 @@ type HkBusRoute = {
   dest?: { zh?: string; en?: string };
   fares?: string[] | null;
   jt?: string | number | null;
+  stops?: Record<string, string[]>;
 };
 
-type HkBusPayload = {
-  routeList: Record<string, HkBusRoute>;
+export type HkBusStop = {
+  location: { lat: number; lng: number };
+  name: { zh?: string; en?: string };
 };
+
+export type HkBusCatalog = {
+  routeList: Record<string, HkBusRoute>;
+  stopList: Record<string, HkBusStop>;
+};
+
+type HkBusPayload = HkBusCatalog;
 
 const CO_MAP: Record<string, string> = {
   kmb: "kmb",
@@ -61,11 +70,21 @@ function destScore(want: string | undefined, got: string | undefined): number {
   return 0;
 }
 
-async function hkBusRoutes(): Promise<Record<string, HkBusRoute>> {
-  return cached("hkbus:route-fare", TTL.route, async () => {
+export async function hkBusCatalog(): Promise<HkBusCatalog> {
+  return cached("hkbus:catalog:v1", TTL.route, async () => {
     const json = await fetchJson<HkBusPayload>(HKBUS_URL, 60_000);
-    return json.routeList ?? {};
+    const routeList = json.routeList ?? {};
+    const stopList = json.stopList ?? {};
+    if (Object.keys(routeList).length < 50) {
+      throw new Error("hkbus 路線資料無效或空白");
+    }
+    return { routeList, stopList };
   });
+}
+
+async function hkBusRoutes(): Promise<Record<string, HkBusRoute>> {
+  const { routeList } = await hkBusCatalog();
+  return routeList;
 }
 
 function parseTdJourney(xml: string, companyFilter?: (co: string) => boolean): Map<string, number> {

@@ -1,4 +1,10 @@
 import { cached, TTL } from "@/lib/cache";
+import {
+  directBusToOption,
+  findDirectBuses,
+  optionRouteNumbers,
+  type DirectBusHit,
+} from "@/lib/providers/direct-bus";
 import { geminiApiKey, geminiJson } from "@/lib/providers/gemini";
 import { mtrTrip } from "@/lib/providers/mtr-trip";
 import { lookupRouteInfo } from "@/lib/providers/route-fare";
@@ -12,7 +18,7 @@ import {
   type ResolvedTripPlace,
 } from "@/lib/static/hk-places";
 import { MTR_LINE_NAMES } from "@/lib/static/mtr-stations";
-import type { AiTripAdvice, AiTripGoal, AiTripOption, MtrTripPlan } from "@/lib/types";
+import type { AiTripAdvice, AiTripGoal, AiTripOption, MtrTripPlan, TripPreferMode } from "@/lib/types";
 
 /** AI 只評天氣／揀建議，唔再發明路線。 */
 type AiRankOut = {
@@ -105,8 +111,18 @@ function pickRecommended(
   options: AiTripOption[],
   tone: ReturnType<typeof weatherTone>,
   aiRecommendedId?: string,
+  preferMode: TripPreferMode = "any",
 ): string {
   if (!options.length) return "";
+  if (preferMode === "bus") {
+    return options.find((o) => o.mode === "bus" || o.mode === "minibus")?.id ?? options[0].id;
+  }
+  if (preferMode === "mtr") {
+    return options.find((o) => o.mode === "mtr")?.id ?? options[0].id;
+  }
+  if (preferMode === "mix") {
+    return options.find((o) => o.mode === "mix")?.id ?? options[0].id;
+  }
   const ids = new Set(options.map((o) => o.id));
   if (aiRecommendedId && ids.has(aiRecommendedId)) {
     const hit = options.find((o) => o.id === aiRecommendedId)!;
@@ -239,13 +255,13 @@ function withBadges(options: AiTripOption[], recommendedId: string) {
   const priced = options.filter((o) => o.fareHkd != null);
   const cheapestId = [...priced].sort((a, b) => (a.fareHkd ?? 99) - (b.fareHkd ?? 99))[0]?.id;
   return options.map((o) => {
-    const badges: string[] = [];
+    const badges: string[] = [...o.badges];
     if (o.id === recommendedId) badges.push("建議");
     if (o.id === fastestId) badges.push("最快");
     if (o.id === cheapestId) badges.push("最平");
     if (o.mode === "walk" && o.fareHkd === 0) badges.push("免費");
     if (o.weatherFit === "poor") badges.push("天氣不宜");
-    return { ...o, badges };
+    return { ...o, badges: [...new Set(badges)] };
   });
 }
 
@@ -339,6 +355,15 @@ function referenceBusOption(
   };
 }
 
+function hasRealBus(options: AiTripOption[]) {
+  return options.some(
+    (o) =>
+      o.id.startsWith("bus-direct-") ||
+      o.id.startsWith("bus-e21") ||
+      (o.mode === "bus" && o.id !== "bus-ref" && o.id !== "bus-cheaper"),
+  );
+}
+
 function padToThreeOptions(
   options: AiTripOption[],
   walkOption: AiTripOption | null,
@@ -354,10 +379,63 @@ function padToThreeOptions(
   if (out.length < 3 && hasNorthCorridor && !has("bus-cheaper")) {
     out.push(northCheaperBus(fromName, tone));
   }
-  if (out.length < 3 && !has("bus-ref")) {
+  if (out.length < 3 && !has("bus-ref") && !hasRealBus(out)) {
     out.push(referenceBusOption(fromName, toName, tone));
   }
   return out.slice(0, 3);
+}
+
+function mixRailBusOption(
+  from: ResolvedTripPlace,
+  to: ResolvedTripPlace,
+  mtr: AiTripOption | null,
+  bestBus: AiTripOption | null,
+  tone: ReturnType<typeof weatherTone>,
+): AiTripOption | null {
+  if (!mtr && !bestBus) return null;
+  const busNos = bestBus ? optionRouteNumbers(bestBus).slice(0, 2).join("／") : "";
+  const busBit = bestBus
+    ? `另一配搭：先乘 ${busNos || bestBus.title} 離開${from.name}，喺美孚／荔景／葵芳／奧運等轉港鐵往${to.anchor.name}`
+    : `另一配搭：先乘對外巴士過青馬／過海，再轉港鐵往${to.anchor.name}`;
+  return {
+    id: "mix-rail-bus",
+    mode: "mix",
+    title: `港鐵 + 巴士混合 ${from.name} → ${to.name}`,
+    minutes: mtr?.minutes ?? null,
+    fareHkd: null,
+    steps: [
+      `乘港鐵至${to.anchor.name}站（或中途奧運／南昌／荔景），再轉巴士／專線小巴前往${to.name}`,
+      busBit,
+    ],
+    why: "混合可避開全程巴士塞車，時間通常較純長途巴士穩陣；實際轉車點請以地圖／營運商為準。",
+    weatherFit: tone === "severe" ? "ok" : "good",
+    badges: [],
+    source: "computed",
+  };
+}
+
+async function enrichDirectBus(
+  hit: DirectBusHit,
+  fromName: string,
+  toName: string,
+  tone: ReturnType<typeof weatherTone>,
+  index: number,
+): Promise<AiTripOption> {
+  const base = directBusToOption(hit, fromName, toName, tone, index);
+  const info = await lookupRouteInfo({
+    operator: hit.operator,
+    route: hit.route,
+    bound: hit.bound === "I" ? "I" : "O",
+    dest: hit.destName,
+    seq: hit.fromSeq,
+    stopCount: Math.max(hit.toSeq, hit.fromSeq + 1),
+  }).catch(() => null);
+  if (!info) return base;
+  return {
+    ...base,
+    fareHkd: info.fareAdult ?? base.fareHkd,
+    minutes: info.remainingMinutes ?? info.journeyMinutes ?? base.minutes,
+  };
 }
 
 const VARIABILITY_NOTE =
@@ -567,6 +645,7 @@ export async function adviseTrip(
   fromRaw: string,
   toRaw: string,
   _goal: AiTripGoal = "both",
+  preferMode: TripPreferMode = "any",
 ): Promise<AiTripAdvice> {
   const from = resolveTripPlace(fromRaw);
   const to = resolveTripPlace(toRaw);
@@ -598,26 +677,32 @@ export async function adviseTrip(
   const needE21 =
     (isTungChungArea(from) && isMongKokArea(to)) || (isTungChungArea(to) && isMongKokArea(from));
 
-  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta, e21aMeta, e21Meta] = await Promise.all([
-    mtrTrip(from.anchor.code, to.anchor.code).catch(() => null),
-    walkRoute(from.lat, from.lng, to.lat, to.lng).catch(() => null),
-    needTapRail ? mtrTrip("TAP", eastForE41).catch(() => null) : Promise.resolve(null),
-    needAccessWalk
-      ? walkRoute(from.lat, from.lng, from.anchor.lat, from.anchor.lng).catch(() => null)
-      : Promise.resolve(null),
-    needEgressWalk
-      ? walkRoute(to.anchor.lat, to.anchor.lng, to.lat, to.lng).catch(() => null)
-      : Promise.resolve(null),
-    needE41Meta
-      ? lookupRouteInfo({ operator: "kmb", route: "E41", dest: "大埔頭" }).catch(() => null)
-      : Promise.resolve(null),
-    needE21a
-      ? lookupRouteInfo({ operator: "ctb", route: "E21A", dest: "愛民" }).catch(() => null)
-      : Promise.resolve(null),
-    needE21
-      ? lookupRouteInfo({ operator: "ctb", route: "E21", dest: "大角咀" }).catch(() => null)
-      : Promise.resolve(null),
-  ]);
+  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta, e21aMeta, e21Meta, directHits] =
+    await Promise.all([
+      mtrTrip(from.anchor.code, to.anchor.code).catch(() => null),
+      walkRoute(from.lat, from.lng, to.lat, to.lng).catch(() => null),
+      needTapRail ? mtrTrip("TAP", eastForE41).catch(() => null) : Promise.resolve(null),
+      needAccessWalk
+        ? walkRoute(from.lat, from.lng, from.anchor.lat, from.anchor.lng).catch(() => null)
+        : Promise.resolve(null),
+      needEgressWalk
+        ? walkRoute(to.anchor.lat, to.anchor.lng, to.lat, to.lng).catch(() => null)
+        : Promise.resolve(null),
+      needE41Meta
+        ? lookupRouteInfo({ operator: "kmb", route: "E41", dest: "大埔頭" }).catch(() => null)
+        : Promise.resolve(null),
+      needE21a
+        ? lookupRouteInfo({ operator: "ctb", route: "E21A", dest: "愛民" }).catch(() => null)
+        : Promise.resolve(null),
+      needE21
+        ? lookupRouteInfo({ operator: "ctb", route: "E21", dest: "大角咀" }).catch(() => null)
+        : Promise.resolve(null),
+      findDirectBuses(from.lat, from.lng, to.lat, to.lng, {
+        limit: 5,
+        fromHints: [from.name, from.anchor.name, from.district ?? ""],
+        toHints: [to.name, to.anchor.name, to.district ?? ""],
+      }).catch(() => [] as DirectBusHit[]),
+    ]);
 
   // E41 全程約 100 分；東涌↔大埔墟約佔一半多，取公開資料校準後夾在 50–70
   const e41SegmentMin = (() => {
@@ -717,15 +802,41 @@ export async function adviseTrip(
       }
     : null;
 
-  // —— 盡量 3 個方案：精確走廊優先，不足則加誠實「參考」——
+  const directOptions = await Promise.all(
+    directHits.map((hit, i) => enrichDirectBus(hit, from.name, to.name, tone, i)),
+  );
+  const scannedNos = new Set(directOptions.flatMap((o) => optionRouteNumbers(o)));
+  const fallbackBuses = [e21Option, e21aOption].filter((o): o is AiTripOption => {
+    if (!o) return false;
+    const nos = optionRouteNumbers(o);
+    return !nos.some((n) => scannedNos.has(n));
+  });
+  const busOptions = [...directOptions, ...fallbackBuses];
+  const mixOption =
+    knownCorridor ?? mixRailBusOption(from, to, mtrOption, busOptions[0] ?? null, tone);
+
+  // 按用戶跟進（巴士呢／港鐵呢／混合呢）揀方案；未指定時港鐵＋直達巴士＋混合
   let options: AiTripOption[] = [];
-  if (mtrOption) options.push(mtrOption);
-  if (knownCorridor) options.push(knownCorridor);
-  if (e21Option) options.push(e21Option);
-  if (e21aOption) options.push(e21aOption);
+  if (preferMode === "bus") {
+    options = [...busOptions];
+  } else if (preferMode === "mtr") {
+    if (mtrOption) options.push(mtrOption);
+    if (walkOption) options.push(walkOption);
+  } else if (preferMode === "mix") {
+    if (mixOption) options.push(mixOption);
+    if (mtrOption) options.push(mtrOption);
+    if (busOptions[0]) options.push(busOptions[0]);
+  } else {
+    if (mtrOption) options.push(mtrOption);
+    if (knownCorridor && knownCorridor.id !== mixOption?.id) options.push(knownCorridor);
+    if (busOptions[0]) options.push(busOptions[0]);
+    if (mixOption && !options.some((o) => o.id === mixOption.id) && options.length < 3) {
+      options.push(mixOption);
+    }
+  }
   options = padToThreeOptions(
     options,
-    walkOption,
+    preferMode === "bus" || preferMode === "mix" ? null : walkOption,
     from.name,
     to.name,
     tone,
@@ -761,7 +872,7 @@ export async function adviseTrip(
           steps: o.steps,
         })),
       });
-      const cacheKey = `ai-trip:rank:v3:${from.id}:${to.id}:${tone}:${options.map((o) => o.id).join(",")}`;
+      const cacheKey = `ai-trip:rank:v4:${from.id}:${to.id}:${preferMode}:${tone}:${options.map((o) => o.id).join(",")}`;
       const ai = await cached(cacheKey, TTL.aiTrip, () =>
         geminiJson<AiRankOut>(prompt, 14_000, AI_RANK_SCHEMA as unknown as Record<string, unknown>),
       );
@@ -783,7 +894,7 @@ export async function adviseTrip(
     aiError = "未設定 GEMINI_API_KEY（本機用 .env.local；線上用 Vercel Environment Variables）。";
   }
 
-  const recommendedId = pickRecommended(options, tone, aiRecommendedId);
+  const recommendedId = pickRecommended(options, tone, aiRecommendedId, preferMode);
   const badged = withBadges(options, recommendedId);
   const disclaimer = [
     VARIABILITY_NOTE,

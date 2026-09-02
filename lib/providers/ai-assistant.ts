@@ -6,7 +6,12 @@ import {
   isLikelyTransitTripQuery,
   parseTripQuery,
 } from "@/lib/trip-query";
-import type { AiAssistantChatTurn, AiAssistantResponse, AiTripAdvice } from "@/lib/types";
+import type {
+  AiAssistantChatTurn,
+  AiAssistantResponse,
+  AiTripAdvice,
+  TripPreferMode,
+} from "@/lib/types";
 
 const INTENT_SCHEMA = {
   type: "OBJECT",
@@ -35,6 +40,44 @@ function lastUserText(messages: AiAssistantChatTurn[]) {
     }
   }
   return "";
+}
+
+/** 「巴士呢／混合呢／港鐵呢」— 同一程，只換交通方式 */
+function parseModeFollowUp(
+  raw: string,
+  lastTrip?: { from: string; to: string } | null,
+): { from: string; to: string; preferMode: TripPreferMode } | null {
+  if (!lastTrip?.from || !lastTrip.to) return null;
+  const t = raw
+    .trim()
+    .replace(/[？?！!。．.]+$/g, "")
+    .replace(/^(咁|噉|那|那麼|嗯|好|哦|喔|唔該|請問|想)/, "")
+    .trim();
+  if (!t) return null;
+
+  const wantsMix = /混合|巴士.+(?:轉|加|\+|同).*(?:港鐵|地鐵)|(?:港鐵|地鐵).+(?:轉|加|\+|同).*巴士|轉車搭|巴士\s*\+\s*港鐵/.test(
+    t,
+  );
+  if (wantsMix) {
+    return { from: lastTrip.from, to: lastTrip.to, preferMode: "mix" };
+  }
+
+  if (
+    /^(?:改|轉)?(?:搭|坐|乘)?(?:純)?巴士(?:直達)?(?:呢|呀|咋|啦|喎)?$/.test(t) ||
+    /^(?:有冇|有沒有|有無)?直達巴士/.test(t) ||
+    /巴士點搭|點搭巴士|改搭巴士|想搭巴士|巴士方案|純巴士/.test(t)
+  ) {
+    return { from: lastTrip.from, to: lastTrip.to, preferMode: "bus" };
+  }
+
+  if (
+    /^(?:改|轉)?(?:搭|坐|乘)?(?:港鐵|地鐵)(?:呢|呀|咋|啦|喎)?$/.test(t) ||
+    /港鐵方案|改搭港鐵|地鐵呢/.test(t)
+  ) {
+    return { from: lastTrip.from, to: lastTrip.to, preferMode: "mtr" };
+  }
+
+  return null;
 }
 
 /** 「改去旺角」「咁去中環呢」— reuse lastTrip.from；唔再要求站庫認得終點 */
@@ -98,7 +141,8 @@ ${transcript}
 - 科技／AI／LLM／程式／數學／閒聊／解釋概念／天氣閒談 → 一律 intent=chat。
 - 英文句入面有 "to"（例如 send them to transformer）唔等於去邊度。
 - 有疑問時一定選 chat；唔好為咗答得似出行顧問而硬當 route。
-- 只有真係問點去但又缺地名時先 askClarify=true。`;
+- 只有真係問點去但又缺地名時先 askClarify=true。
+- 若有上一程，用戶只講「巴士呢／港鐵呢／混合呢／直達巴士」→ intent=route，from／to 沿用上一程。`;
 
   return geminiJson<IntentOut>(prompt, 8_000, INTENT_SCHEMA as unknown as Record<string, unknown>);
 }
@@ -168,6 +212,28 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
   }
 }
 
+function preferModeInstruction(preferMode: TripPreferMode) {
+  if (preferMode === "bus") {
+    return "用戶只要巴士／小巴方案：優先一程直達；必須寫完整編號＋方向＋上落車站。唔好主推港鐵。";
+  }
+  if (preferMode === "mtr") {
+    return "用戶只要港鐵方案：詳細寫綫路同轉車；巴士只可當一句備註。";
+  }
+  if (preferMode === "mix") {
+    return "用戶要巴士＋港鐵混合：寫清楚喺邊站轉；可同時提純巴士作對照，但主方案必須係混合。";
+  }
+  return "交通方式不限：可同時列港鐵、直達巴士、混合；第一個方案用你認為最方便快捷嘅。";
+}
+
+function groundedBusLines(grounded: AiTripAdvice | null) {
+  if (!grounded) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App）。";
+  const buses = grounded.options.filter((o) => o.mode === "bus" || o.mode === "minibus");
+  if (!buses.length) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App）。";
+  return buses
+    .map((o) => `- ${o.title}｜${o.steps.join(" → ")}`)
+    .join("\n");
+}
+
 /**
  * Gemini 主導規劃：接受任意地名；本站港鐵計算只作可選參考。
  * 天氣／路況建議交畀模型自行決定。
@@ -177,6 +243,7 @@ async function geminiFreeRoute(
   to: string,
   grounded: AiTripAdvice | null,
   userHint: string,
+  preferMode: TripPreferMode = "any",
 ): Promise<AiAssistantResponse> {
   const trip = {
     from: grounded?.fromName || from,
@@ -219,13 +286,16 @@ async function geminiFreeRoute(
 
 ${groundedBlock}
 
+本站按公開站距自動掃到嘅直達巴士（有就必須引用完整編號＋方向，禁止改用字母唔同嘅兄弟線，例如有 E21A 就唔好改推 E21）：
+${groundedBusLines(grounded)}
+
+今次指定交通方式：${preferModeInstruction(preferMode)}
+
 輸出要求：
 1. 先用 1–2 句按天氣或用戶提到嘅路況／故障，講你建議邊個方案同原因（由你自行決定）。
-2. 然後列 2–3 個方案（港鐵／巴士／小巴／混合皆可），每項含路線步驟、約略時間、約略車費（用「約」）。
-3. 例子：落雨→優先港鐵；太子塞車→避巴士改港鐵；港鐵故障→改巴士／小巴。
-4. 巴士編號（重要）：E21 系列字母唔同、終點唔同，一定要寫完整編號+方向+落車站。
-   - 東涌⇄旺角：城巴 E21（往大角咀／維港灣）。
-   - 東涌⇄何文田／香港都會大學／愛民／黃埔：優先城巴 E21A（往愛民）或 E21B（往何文田），一程直達；禁止建議「搭 E21 再轉車」。
+2. 然後列 2–3 個方案（跟上面指定方式），每項含路線步驟、約略時間、約略車費（用「約」）。
+3. 例子：落雨→優先港鐵；塞車→避長途巴士改港鐵；港鐵故障→改巴士／小巴。
+4. 巴士編號必須完整（含字母）＋方向＋上落車站。唔好把同一系列當成同一條線。
 5. 唔好虛構即時到站分鐘；唔好聲稱可控制交通燈。
 6. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
 
@@ -283,16 +353,17 @@ async function routeAdvice(
   from: string,
   to: string,
   userHint = "",
+  preferMode: TripPreferMode = "any",
 ): Promise<AiAssistantResponse> {
   let grounded: AiTripAdvice | null = null;
   if (canResolveTripPair(from, to)) {
     try {
-      grounded = await adviseTrip(from, to);
+      grounded = await adviseTrip(from, to, "both", preferMode);
     } catch {
       grounded = null;
     }
   }
-  return geminiFreeRoute(from, to, grounded, userHint);
+  return geminiFreeRoute(from, to, grounded, userHint, preferMode);
 }
 
 /**
@@ -325,6 +396,11 @@ export async function runAssistant(input: {
 
   if (input.from?.trim() && input.to?.trim()) {
     return routeAdvice(input.from.trim(), input.to.trim(), userText);
+  }
+
+  const modeFollow = parseModeFollowUp(userText, input.lastTrip);
+  if (modeFollow) {
+    return routeAdvice(modeFollow.from, modeFollow.to, userText, modeFollow.preferMode);
   }
 
   // 規則只認明確短地名「A 去 B」；長英文句入面嘅 "to" 唔會再誤觸
