@@ -152,7 +152,8 @@ export async function searchGmbRoutes(q: string, regionFilter?: string): Promise
       a.code.localeCompare(b.code, "en", { numeric: true }) ||
       a.region.localeCompare(b.region),
   );
-  const picked = scored.slice(0, 12);
+  const codeLimit = needle.length <= 1 ? 28 : needle.length <= 2 ? 20 : 12;
+  const picked = scored.slice(0, codeLimit);
   const groups = await Promise.all(
     picked.map(async ({ region, code }) => {
       try {
@@ -181,7 +182,7 @@ export async function searchGmbRoutes(q: string, regionFilter?: string): Promise
       }
     }),
   );
-  return groups.flat().slice(0, 24);
+  return groups.flat().slice(0, needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 24);
 }
 
 export async function gmbRouteStops(routeId: string, routeSeq: string): Promise<StopHit[]> {

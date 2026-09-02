@@ -142,25 +142,25 @@ export function RouteEtaBrowser({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetQuery, operator, region]);
 
+  // 桌面同手機：打一個字母／數字就即時列出前綴相符路線（例如 S → S1／S6…；S6 → S6／S61…）
+  // 已揀路線睇車站時唔好再 live search，否則 debounce 會清掉 stops／地圖
   useEffect(() => {
-    if (mode !== "bus") return;
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const runLive = () => {
-      if (!mq.matches) return;
-      const needle = q.trim();
-      if (!needle) {
-        setRoutes([]);
-        setHasSearched(false);
-        setSearching(false);
-        setError("");
-        return;
-      }
+    if (pickedRoute) return;
+    const needle = q.trim();
+    if (!needle) {
+      searchSeq.current += 1;
+      setRoutes([]);
+      setHasSearched(false);
+      setSearching(false);
+      setError("");
+      return;
+    }
+    const timer = window.setTimeout(() => {
       void search(needle);
-    };
-    const timer = window.setTimeout(runLive, 220);
+    }, 220);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, mode, operator, region]);
+  }, [q, mode, operator, region, pickedRoute]);
 
   function appendBusQuery(next: string) {
     setQ((prev) => {
@@ -170,10 +170,13 @@ export function RouteEtaBrowser({
   }
 
   async function pickRoute(route: RouteHit) {
+    // 作廢進行中嘅 live search，避免佢哋 setStops([])／清掉已揀路線
+    const seq = ++searchSeq.current;
     setError("");
     setSelected(null);
     setPickedRoute(route);
     setLoadingStops(true);
+    setSearching(false);
     try {
       const params = new URLSearchParams({
         operator: route.operator,
@@ -183,18 +186,23 @@ export function RouteEtaBrowser({
       });
       if (route.routeId) params.set("routeId", route.routeId);
       const loaded = await apiGet<StopHit[]>(`/api/stops?${params}`);
-      setStops(loaded);
+      if (seq !== searchSeq.current) return;
       if (!loaded.length) {
         setStops([]);
+        setError("呢條路線暫時拎唔到車站資料，可試另一個方向。");
         return;
       }
+      // 開咗定位就預設最近站；同 stops 一齊 set，等地圖一開始就放大到該站
       const initial = await pickInitialRouteStop(loaded);
+      if (seq !== searchSeq.current) return;
+      setStops(loaded);
       if (initial) pickStop(initial, route);
     } catch (err) {
+      if (seq !== searchSeq.current) return;
       setStops([]);
       setError(err instanceof Error ? err.message : "無法載入車站");
     } finally {
-      setLoadingStops(false);
+      if (seq === searchSeq.current) setLoadingStops(false);
     }
   }
 
@@ -216,7 +224,6 @@ export function RouteEtaBrowser({
     setError("");
   }
 
-  const showRouteList = hasSearched && !pickedRoute;
   const inStopsView = Boolean(pickedRoute);
 
   if (inStopsView && pickedRoute) {
@@ -242,6 +249,9 @@ export function RouteEtaBrowser({
               selectedSeq={selected?.seq}
               onSelect={pickStop}
               accent="teal"
+              compactMarkers
+              labelZoom={16}
+              focusZoom={17}
               heightClass="h-full"
               className="h-full max-md:rounded-none max-md:border-x-0"
             />
@@ -453,7 +463,9 @@ export function RouteEtaBrowser({
             {error ? <p className="px-4 py-2 text-center text-sm text-rose">{error}</p> : null}
             {searching && q.trim() ? <p className="px-4 py-2 text-center text-sm text-muted">搜尋中…</p> : null}
             {!q.trim() ? (
-              <p className="px-4 py-6 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關巴士</p>
+              <p className="px-4 py-6 text-center text-sm text-muted">
+                用下面鍵盤輸入字母或數字（例如 S、S6），會即時列出相關巴士
+              </p>
             ) : hasSearched && !routes.length && !searching ? (
               <p className="px-4 py-6 text-center text-sm text-muted">
                 {error
@@ -487,15 +499,23 @@ export function RouteEtaBrowser({
             }}
             className="flex w-full max-w-xl flex-col gap-3 sm:flex-row"
           >
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={placeholder}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              className="w-full rounded-2xl border border-line bg-card px-5 py-4 text-center font-mono text-2xl tracking-[0.12em] outline-none placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted focus:border-teal md:text-3xl"
-            />
+            <div className="relative w-full">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value.toUpperCase())}
+                placeholder={placeholder}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                className="w-full rounded-2xl border border-line bg-card px-5 py-4 text-center font-mono text-2xl tracking-[0.12em] outline-none placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted focus:border-teal md:text-3xl"
+              />
+              {searching && q.trim() ? (
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted">
+                  搜尋中…
+                </span>
+              ) : null}
+            </div>
             <button
               type="submit"
               className="shrink-0 rounded-2xl bg-teal px-6 py-4 text-base font-medium text-bg hover:opacity-90 sm:min-w-28"
@@ -503,18 +523,20 @@ export function RouteEtaBrowser({
               {searching ? "搜尋中…" : "搜尋"}
             </button>
           </form>
-          {!showRouteList ? (
-            <p className="mt-3 text-center text-sm text-muted">打路線號就會顯示可揀方向</p>
-          ) : null}
+          <p className="mt-3 text-center text-sm text-muted">
+            打一個字母或數字就會列出相關路線（例如 S、S6），再揀方向
+          </p>
         </div>
 
         {belowSearch ? <div className="flex justify-center">{belowSearch}</div> : null}
 
         {error ? <p className="text-center text-sm text-rose">{error}</p> : null}
 
-        {showRouteList ? (
+        {q.trim() ? (
           <section className="mx-auto w-full max-w-xl rounded-2xl border border-line bg-card p-3">
-            <h2 className="mb-2 px-1 text-sm text-muted">揀路線方向</h2>
+            <h2 className="mb-2 px-1 text-sm text-muted">
+              {searching && !routes.length ? "搵緊路線…" : "揀路線方向"}
+            </h2>
             <div className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto">{routePickButtons}</div>
             {!routes.length && !searching ? (
               <div className="px-3 py-2 text-sm text-muted">

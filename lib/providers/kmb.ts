@@ -81,7 +81,7 @@ export async function searchKmbRoutes(q: string): Promise<RouteHit[]> {
       if (ae !== be) return ae - be;
       return au.localeCompare(bu, "en", { numeric: true });
     })
-    .slice(0, 20)
+    .slice(0, needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 24)
     .map((r) => ({
       operator: "kmb" as const,
       operatorName: OPERATOR_NAME,

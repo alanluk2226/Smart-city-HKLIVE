@@ -121,12 +121,12 @@ export function MinibusApp() {
         bound: route.bound ?? "1",
       });
       const loaded = await apiGet<StopHit[]>(`/api/stops?${params}`);
-      setStops(loaded);
       if (!loaded.length) {
         setStops([]);
         return;
       }
       const initial = (await pickInitialRouteStop(loaded)) ?? loaded[0];
+      setStops(loaded);
       setSelected({
         ...initial,
         route: initial.route ?? route.route,
@@ -235,6 +235,9 @@ export function MinibusApp() {
               selectedSeq={selected?.seq}
               onSelect={setSelected}
               accent="emerald"
+              compactMarkers
+              labelZoom={16}
+              focusZoom={17}
               heightClass="h-full"
               className="h-full max-md:rounded-none max-md:border-x-0"
             />

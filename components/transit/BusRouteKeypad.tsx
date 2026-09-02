@@ -1,7 +1,20 @@
 "use client";
 
-/** Letters that appear in HK bus route suffixes — keypad only exposes these to avoid bad searches. */
-export const BUS_ROUTE_KEYPAD_LETTERS = ["A", "B", "E", "H", "K", "N", "P", "R"] as const;
+/** Letters that appear in HK bus route numbers — keypad only exposes these to avoid bad searches. */
+export const BUS_ROUTE_KEYPAD_LETTERS = [
+  "A",
+  "B",
+  "C",
+  "E",
+  "H",
+  "K",
+  "M",
+  "N",
+  "P",
+  "R",
+  "S",
+  "X",
+] as const;
 
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 

@@ -138,7 +138,7 @@ export async function searchMtrBusRoutes(q: string): Promise<RouteHit[]> {
       if (ae !== be) return ae - be;
       return a.route.localeCompare(b.route, "en", { numeric: true });
     })
-    .slice(0, 12);
+    .slice(0, needle.length <= 1 ? 36 : needle.length <= 2 ? 24 : 12);
 
   const hits: RouteHit[] = [];
   for (const r of matched) {

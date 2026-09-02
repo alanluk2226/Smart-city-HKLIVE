@@ -74,7 +74,7 @@ export async function searchNlbRoutes(q: string): Promise<RouteHit[]> {
       if (ae !== be) return ae - be;
       return a.routeNo.localeCompare(b.routeNo, "en", { numeric: true });
     })
-    .slice(0, 20)
+    .slice(0, needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 24)
     .map((r) => {
       const { orig, dest } = splitRouteName(r.routeName_c);
       const extra = r.specialRoute ? ` · ${r.specialRoute}` : "";

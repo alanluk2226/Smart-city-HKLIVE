@@ -28,7 +28,7 @@ export function AppShell({
           <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="HK LIVE">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo.jpeg"
+              src="/logo-square.jpeg"
               alt=""
               width={40}
               height={40}

@@ -67,8 +67,10 @@ export async function searchCtbRoutes(q: string): Promise<RouteHit[]> {
       if (ae !== be) return ae - be;
       return au.localeCompare(bu, "en", { numeric: true });
     });
+  // 短字首（S、A、E）要列出更多前綴相符路線，方便逐字縮小
+  const limit = needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 20;
   const hits: RouteHit[] = [];
-  for (const r of matched.slice(0, 10)) {
+  for (const r of matched.slice(0, limit)) {
     hits.push({
       operator: "ctb",
       operatorName: OPERATOR_NAME,

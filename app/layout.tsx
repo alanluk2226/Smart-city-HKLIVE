@@ -21,8 +21,11 @@ export const metadata: Metadata = {
   title: "HK LIVE",
   description: "整合交通工具、天氣、急症室、路況 CCTV、停車場、康文署場地與公共廁所的公開資料主控台",
   icons: {
-    icon: "/logo.jpeg",
-    apple: "/logo.jpeg",
+    icon: [
+      { url: "/favicon.png", type: "image/png", sizes: "48x48" },
+      { url: "/logo-square.jpeg", type: "image/jpeg", sizes: "256x256" },
+    ],
+    apple: [{ url: "/logo-square.jpeg", type: "image/jpeg", sizes: "256x256" }],
   },
 };
 

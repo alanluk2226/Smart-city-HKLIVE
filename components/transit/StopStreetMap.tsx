@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
@@ -95,23 +95,41 @@ function FitStops({
   selected,
   here,
   walkPoints,
+  focusZoom = 17,
 }: {
   points: [number, number][];
   selected: [number, number] | null;
   here: [number, number] | null;
   walkPoints: [number, number][] | null;
+  /** Zoom when focusing a tapped / nearest stop (mobile bus／minibus) */
+  focusZoom?: number;
 }) {
   const map = useMap();
   const key = points.map((p) => p.join(",")).join("|");
   const walkKey = walkPoints?.map((p) => p.join(",")).join("|") ?? "";
+  const selKey = selected ? `${selected[0].toFixed(5)},${selected[1].toFixed(5)}` : "";
+  const lastFocus = useRef("");
+  const locatedOnce = useRef(false);
 
+  // Reset focus tracking when the route geometry changes
   useEffect(() => {
-    if (walkPoints?.length) {
-      const t = window.setTimeout(() => {
-        map.fitBounds(L.latLngBounds(walkPoints), { padding: [48, 48], maxZoom: 17 });
-      }, 0);
-      return () => window.clearTimeout(t);
-    }
+    lastFocus.current = "";
+    locatedOnce.current = false;
+  }, [key]);
+
+  // Walking directions: frame the path
+  useEffect(() => {
+    if (!walkPoints?.length) return;
+    const t = window.setTimeout(() => {
+      map.fitBounds(L.latLngBounds(walkPoints), { padding: [48, 48], maxZoom: 17 });
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [map, walkKey, walkPoints]);
+
+  // No stop selected yet → show the whole route (and user if known)
+  useEffect(() => {
+    if (walkPoints?.length) return;
+    if (selected) return;
     if (!points.length) return;
     const bounds = L.latLngBounds(points);
     if (here) bounds.extend(here);
@@ -121,27 +139,39 @@ function FitStops({
     }, 0);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, key, walkKey]);
+  }, [map, key, walkKey, selKey]);
 
-  useEffect(() => {
-    if (walkPoints?.length) return;
-    if (!here) return;
-    const t = window.setTimeout(() => {
-      const bounds = L.latLngBounds(points.length ? points : [here]);
-      bounds.extend(here);
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 17 });
-    }, 0);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, here?.[0], here?.[1], walkKey]);
-
-  const selKey = selected ? `${selected[0]},${selected[1]}` : "";
+  // Selected stop (nearest-by-location default or user tap) → zoom in on that stop
   useEffect(() => {
     if (walkPoints?.length) return;
     if (!selected) return;
-    const t = window.setTimeout(() => map.panTo(selected), 0);
+    const focusId = `${key}|${selKey}`;
+    if (lastFocus.current === focusId) return;
+    lastFocus.current = focusId;
+    const t = window.setTimeout(() => {
+      const z = Math.max(map.getZoom(), focusZoom);
+      map.flyTo(selected, z, { duration: 0.4 });
+      map.invalidateSize();
+    }, 40);
     return () => window.clearTimeout(t);
-  }, [map, selKey, selected, walkKey]);
+  }, [map, key, selKey, selected, walkKey, walkPoints, focusZoom]);
+
+  // Location arrives after a stop is already focused → if nearby, frame stop + user
+  useEffect(() => {
+    if (walkPoints?.length) return;
+    if (!selected || !here || locatedOnce.current) return;
+    locatedOnce.current = true;
+    const dist = map.distance(selected, here);
+    if (dist >= 1400) return;
+    const t = window.setTimeout(() => {
+      map.fitBounds(L.latLngBounds([selected, here]), {
+        padding: [56, 56],
+        maxZoom: focusZoom,
+      });
+    }, 80);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, here?.[0], here?.[1], selKey, walkKey, focusZoom]);
 
   return null;
 }
@@ -179,6 +209,7 @@ export function StopStreetMap({
   heightClass = "h-56 sm:h-72",
   className = "",
   popupWalkButton = true,
+  focusZoom = 17,
 }: {
   stops: StopHit[];
   selectedId?: string;
@@ -201,6 +232,8 @@ export function StopStreetMap({
   className?: string;
   /** When false, marker popup points users to the sheet instead of duplicating walk CTA */
   popupWalkButton?: boolean;
+  /** Min zoom when focusing the selected / nearest stop */
+  focusZoom?: number;
 }) {
   const defaultPin = pinColors(null, accent, false);
   const idle = defaultPin.idle;
@@ -328,7 +361,7 @@ export function StopStreetMap({
         <MapContainer
           key={mapKey}
           center={[center.lat, center.lng]}
-          zoom={15}
+          zoom={selected ? focusZoom : 15}
           maxZoom={mapMaxZoom()}
           minZoom={minZoom}
           className="h-full w-full"
@@ -343,6 +376,7 @@ export function StopStreetMap({
             selected={selected ? [selected.lat, selected.lng] : null}
             here={here ? [here.lat, here.lng] : null}
             walkPoints={walkRoute?.points ?? null}
+            focusZoom={focusZoom}
           />
           {showRouteLine && line.length > 1 ? (
             <Polyline positions={line} pathOptions={{ color: active, weight: 3, opacity: 0.55 }} />

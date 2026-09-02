@@ -48,7 +48,19 @@ export async function GET(request: Request) {
       const warnings = [kmb.warning, ctb.warning, nlb.warning, mtrb.warning].filter(
         (w): w is string => Boolean(w),
       );
-      const busRoutes = [...kmb.routes, ...ctb.routes, ...nlb.routes, ...mtrb.routes];
+      const needle = q.toUpperCase();
+      const busRoutes = [...kmb.routes, ...ctb.routes, ...nlb.routes, ...mtrb.routes].sort(
+        (a, b) => {
+          const au = a.route.toUpperCase();
+          const bu = b.route.toUpperCase();
+          const ae = au === needle ? 0 : 1;
+          const be = bu === needle ? 0 : 1;
+          if (ae !== be) return ae - be;
+          const byRoute = au.localeCompare(bu, "en", { numeric: true });
+          if (byRoute !== 0) return byRoute;
+          return a.operatorName.localeCompare(b.operatorName, "zh-Hant");
+        },
+      );
       if (mode === "bus") {
         return jsonOk({ routes: busRoutes, stations: [], warnings });
       }
