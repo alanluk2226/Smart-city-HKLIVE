@@ -81,7 +81,7 @@ async function classifyIntent(
     ? `上一程成功行程：${lastTrip.from} → ${lastTrip.to}`
     : "上一程成功行程：無";
 
-  const prompt = `你係 HK LIVE 意圖分類器。判斷用戶最新一句係咪問「點去／點轉／改去邊」公共交通行程。
+  const prompt = `你係 HK LIVE 意圖分類器。只判斷用戶最新一句係咪喺問「點由 A 去 B」嘅公共交通行程。
 
 ${lastTripLine}
 
@@ -89,10 +89,11 @@ ${lastTripLine}
 ${transcript}
 
 規則：
-- 問由 A 去 B、改終點、點樣搭車、屋邨／醫院／商場點去 → intent=route，盡量填 from／to（可用用戶原詞，唔限港鐵站）。
-- 天氣、塞車閒聊、一般知識（唔係問點去）→ intent=chat。
-- route 但起終點唔清 → askClarify=true，clarifyQuestion 用粵語書面語追問一句。
-- 香港地名可以係屋邨、醫院、街道、地標，唔好拒絕。`;
+- 明確問由 A 去 B、改終點、點樣搭車去某地 → intent=route，填 from／to（可用用戶原詞）。
+- 其他全部 intent=chat：閒聊、科技／AI／LLM、一般知識、天氣本身、塞車閒談、問候、解釋概念等。
+- 句中出現「去」「build」「model」等英／中詞，但唔係問香港點搭車 → 仍然係 chat。
+- 只有真正唔知起終點嘅「點去」先 askClarify=true；閒聊唔好追問起終點。
+- 有疑問時寧願選 chat，唔好亂當 route。`;
 
   return geminiJson<IntentOut>(prompt, 8_000, INTENT_SCHEMA as unknown as Record<string, unknown>);
 }
@@ -126,17 +127,20 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
   }
 
   const weatherLine = await weatherContextLine();
-  const system = `你是 HK LIVE 智能助手（香港智慧城市主控台）。用香港粵語書面語（繁體）回答，簡潔自然，像 Gemini 對話。
+  const system = `你是 HK LIVE AI，香港智慧城市主控台入面嘅對話助手。用香港粵語書面語（繁體）回答，簡潔自然，像朋友傾偈（Gemini 風格）。
 
-你可以討論天氣、交通、任意香港地點點去（屋邨、醫院、商場等），並按天氣／路況畀建議。
-本站即時天氣背景（可引用）：${weatherLine}
+你嘅角色：
+- 可以閒聊、答一般知識、科技／AI、天氣、交通……跟住用戶真正問嘅嘢答。
+- 「傾下偈都得」——唔係每一次都要畀出行方案。
+- 只有用戶明確問「點去／點搭車／由 A 去 B」時，先討論路線；否則禁止硬拗成港鐵／巴士方案，亦唔好亂估起終點。
 
-建議原則（由你自行判斷，唔使死跟固定模板）：
-- 落雨／雷暴／颱風：優先有蓋港鐵、少露天轉車。
-- 用戶提到某區塞車（如太子、隧道）：可建議改港鐵或避開該走廊。
-- 用戶提到港鐵故障／延誤／信號問題：可改建議巴士、小巴、其他走廊。
-- 時間／車費用「約」，唔好假裝即時到站。
-- 回答唔好過長；先講建議再列 2–3 個方案。`;
+可選背景（只有問天氣／出門先引用；閒聊／科技題唔使硬扯）：
+${weatherLine}
+
+回答原則：
+- 直接答用戶問題；唔好離題。
+- 唔好為無關話題編造路線、車費、車程。
+- 回答長度適中，唔好過長。`;
 
   try {
     const turns = messages
@@ -218,8 +222,9 @@ ${groundedBlock}
 1. 先用 1–2 句按天氣或用戶提到嘅路況／故障，講你建議邊個方案同原因（由你自行決定）。
 2. 然後列 2–3 個方案（港鐵／巴士／小巴／混合皆可），每項含路線步驟、約略時間、約略車費（用「約」）。
 3. 例子：落雨→優先港鐵；太子塞車→避巴士改港鐵；港鐵故障→改巴士／小巴。
-4. 唔好虛構即時到站分鐘；唔好聲稱可控制交通燈。
-5. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
+4. 巴士編號（重要）：有字母變體嘅線（E21／E21A／E21B／E21C／E21D／E21X 等）一定要寫完整編號 + 往邊個終點／方向 + 落車站。禁止淨寫「搭 E21」。東涌⇄旺角優先「城巴 E21（往大角咀／維港灣），旺角一帶下車」；E21A 係往愛民（可途經旺角落車，但唔好同 E21 混為一談）。
+5. 唔好虛構即時到站分鐘；唔好聲稱可控制交通燈。
+6. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
 
   const userText = [
     `由「${trip.from}」去「${trip.to}」。`,
@@ -319,6 +324,7 @@ export async function runAssistant(input: {
     return routeAdvice(input.from.trim(), input.to.trim(), userText);
   }
 
+  // 規則只認明確「A 去 B」句式；其餘交意圖分類，有疑問當閒聊
   const ruled = ruleRoutePair(userText, input.lastTrip);
   if (ruled) return routeAdvice(ruled.from, ruled.to, userText);
 
@@ -329,10 +335,10 @@ export async function runAssistant(input: {
         const from = intent.from?.trim() || input.lastTrip?.from || "";
         const to = intent.to?.trim() || "";
         if (from && to) {
-          // 唔再要求站庫認得——直接交畀 Gemini（有得計港鐵就當參考）
           return routeAdvice(from, to, userText);
         }
-        if (intent.askClarify || !from || !to) {
+        // 起終點唔清：只喺確實係 route 意圖時先追問；否則當閒聊
+        if (intent.askClarify) {
           const q =
             intent.clarifyQuestion?.trim() ||
             "想由邊度去邊度？例如「逸東邨去瑪嘉烈醫院」或「東涌去何文田」；接住上一程可講「改去旺角」。";

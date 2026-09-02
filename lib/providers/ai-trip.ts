@@ -365,9 +365,19 @@ const VARIABILITY_NOTE =
 
 /** 東涌 ⇄ 何文田／黃埔／愛民：城巴 E21A（一程直達市區） */
 const E21A_DEST = new Set(["HOM", "WHA"]);
+/** 東涌 ⇄ 旺角／旺角東：城巴 E21（往大角咀），唔好同 E21A 等變體撈亂 */
+const E21_MONG_DEST = new Set(["MOK", "MKK"]);
 
 function isE21aArea(place: ResolvedTripPlace) {
   return E21A_DEST.has(place.anchor.code) || place.id === "estate-oi-man";
+}
+
+function isMongKokArea(place: ResolvedTripPlace) {
+  return (
+    E21_MONG_DEST.has(place.anchor.code) ||
+    place.name.includes("旺角") ||
+    place.nameEn.toLowerCase().includes("mong kok")
+  );
 }
 
 function e21aBusOption(input: {
@@ -409,11 +419,66 @@ function e21aBusOption(input: {
   return {
     id: "bus-e21a",
     mode: "bus",
-    title: tucToCity ? `城巴 E21A 往${city.name}一帶` : `城巴 E21A 往${tuc.name}`,
+    title: tucToCity ? `城巴 E21A（往愛民）往${city.name}一帶` : `城巴 E21A（往東涌／機場）往${tuc.name}`,
     minutes,
     fareHkd: fare,
     steps,
-    why: "一程巴士直達市區，無需轉港鐵；車程受路面影響，惡劣天氣時港鐵較穩。",
+    why: "一程巴士直達市區，無需轉港鐵；注意係 E21A 往愛民，唔係 E21／E21B 等其他變體。車程受路面影響，惡劣天氣時港鐵較穩。",
+    weatherFit: tone === "severe" || tone === "wet" ? "ok" : "good",
+    badges: [],
+    source: "computed",
+  };
+}
+
+/** 東涌 ⇄ 旺角：城巴 E21（往大角咀／維港灣），明確同 E21A／B／C／D／X 區分 */
+function e21MongKokBusOption(input: {
+  from: ResolvedTripPlace;
+  to: ResolvedTripPlace;
+  tone: ReturnType<typeof weatherTone>;
+  fareHkd: number | null;
+  journeyMinutes: number | null;
+}): AiTripOption | null {
+  const { from, to, tone, fareHkd, journeyMinutes } = input;
+  const tucToMk = isTungChungArea(from) && isMongKokArea(to);
+  const mkToTuc = isTungChungArea(to) && isMongKokArea(from);
+  if (!tucToMk && !mkToTuc) return null;
+
+  const tuc = tucToMk ? from : to;
+  const mk = tucToMk ? to : from;
+  const feeder = tuc.feeder;
+  const busMin =
+    journeyMinutes != null && journeyMinutes > 35
+      ? Math.min(70, Math.max(50, Math.round(journeyMinutes * 0.75)))
+      : 55;
+  const minutes = (feeder?.minutes ?? 0) + busMin;
+  const fare = Math.round(((feeder?.fareHkd ?? 0) + (fareHkd ?? 14)) * 10) / 10;
+
+  const steps = tucToMk
+    ? [
+        ...(feeder
+          ? [`於${tuc.name}乘 ${feeder.route} 號巴士前往${feeder.alight}／東涌市中心`]
+          : [`於${tuc.name}前往東涌巴士站`]),
+        "乘城巴 E21（往大角咀／維港灣方向）——唔好搭錯 E21A／E21B／E21C／E21D／E21X",
+        `於旺角一帶下車（近${mk.name}／旺角地鐵站），再步行前往目的地`,
+      ]
+    : [
+        `於${mk.name}一帶乘城巴 E21（往東涌／逸東邨／機場方向）——確認係 E21，唔係 E21A 等變體`,
+        "途經葵涌、青嶼幹線往東涌",
+        ...(feeder
+          ? [`於東涌下車後轉 ${feeder.route} 號巴士前往${tuc.name}`]
+          : [`下車後前往${tuc.name}`]),
+      ];
+
+  return {
+    id: "bus-e21",
+    mode: "bus",
+    title: tucToMk
+      ? `城巴 E21（往大角咀）往${mk.name}`
+      : `城巴 E21（往東涌）往${tuc.name}`,
+    minutes,
+    fareHkd: fare,
+    steps,
+    why: "E21 系列字母唔同、終點唔同：去旺角應搭 E21（往大角咀／維港灣）；E21A 終點愛民、E21B 何文田等。一程巴士途經旺角，車程受路面影響。",
     weatherFit: tone === "severe" || tone === "wet" ? "ok" : "good",
     badges: [],
     source: "computed",
@@ -513,8 +578,10 @@ export async function adviseTrip(
   const needE41Meta = eastForE41 != null;
   const needE21a =
     (isTungChungArea(from) && isE21aArea(to)) || (isTungChungArea(to) && isE21aArea(from));
+  const needE21 =
+    (isTungChungArea(from) && isMongKokArea(to)) || (isTungChungArea(to) && isMongKokArea(from));
 
-  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta, e21aMeta] = await Promise.all([
+  const [plan, walk, tapRail, accessWalk, egressWalk, e41Meta, e21aMeta, e21Meta] = await Promise.all([
     mtrTrip(from.anchor.code, to.anchor.code).catch(() => null),
     walkRoute(from.lat, from.lng, to.lat, to.lng).catch(() => null),
     needTapRail ? mtrTrip("TAP", eastForE41).catch(() => null) : Promise.resolve(null),
@@ -529,6 +596,9 @@ export async function adviseTrip(
       : Promise.resolve(null),
     needE21a
       ? lookupRouteInfo({ operator: "ctb", route: "E21A", dest: "愛民" }).catch(() => null)
+      : Promise.resolve(null),
+    needE21
+      ? lookupRouteInfo({ operator: "ctb", route: "E21", dest: "大角咀" }).catch(() => null)
       : Promise.resolve(null),
   ]);
 
@@ -556,6 +626,14 @@ export async function adviseTrip(
     tone,
     fareHkd: e21aMeta?.fareAdult ?? null,
     journeyMinutes: e21aMeta?.journeyMinutes ?? null,
+  });
+
+  const e21Option = e21MongKokBusOption({
+    from,
+    to,
+    tone,
+    fareHkd: e21Meta?.fareAdult ?? null,
+    journeyMinutes: e21Meta?.journeyMinutes ?? null,
   });
 
   const walkOk = walk && walk.durationMinutes <= 40 && walk.distanceMeters <= 3200;
@@ -626,6 +704,7 @@ export async function adviseTrip(
   let options: AiTripOption[] = [];
   if (mtrOption) options.push(mtrOption);
   if (knownCorridor) options.push(knownCorridor);
+  if (e21Option) options.push(e21Option);
   if (e21aOption) options.push(e21aOption);
   options = padToThreeOptions(
     options,
