@@ -191,9 +191,30 @@ const RAW_PLACES: RawPlace[] = [
   { id: "estate-hau-tak", kind: "estate", name: "厚德邨", nameEn: "Hau Tak Estate", aliases: ["厚德"], lat: 22.317, lng: 114.265, district: "西貢區", anchorMtr: "HAH" },
   { id: "estate-kin-ming", kind: "estate", name: "健明邨", nameEn: "Kin Ming Estate", aliases: ["健明"], lat: 22.308, lng: 114.252, district: "西貢區", anchorMtr: "TKO" },
 
-  // —— 九龍／港島常見屋邨 ——
+  // —— 九龍／港島常見屋邨／院校 ——
   { id: "estate-oi-man", kind: "estate", name: "愛民邨", nameEn: "Oi Man Estate", aliases: ["愛民"], lat: 22.315, lng: 114.178, district: "九龍城區", anchorMtr: "HOM" },
   { id: "estate-ho-man-tin", kind: "estate", name: "何文田邨", nameEn: "Ho Man Tin Estate", aliases: ["何文田邨"], lat: 22.31, lng: 114.182, district: "九龍城區", anchorMtr: "HOM" },
+  {
+    id: "landmark-hkmu",
+    kind: "landmark",
+    name: "香港都會大學",
+    nameEn: "Hong Kong Metropolitan University",
+    aliases: [
+      "都會大學",
+      "都大",
+      "HKMU",
+      "hkmu",
+      "Hong Kong Metropolitan University",
+      "Metropolitan University",
+      "公開大學",
+      "港公開大",
+    ],
+    lat: 22.3162,
+    lng: 114.1795,
+    district: "九龍城區",
+    anchorMtr: "HOM",
+    tags: ["university", "e21a"],
+  },
   { id: "estate-lok-fu", kind: "estate", name: "樂富邨", nameEn: "Lok Fu Estate", aliases: ["樂富邨"], lat: 22.338, lng: 114.187, district: "黃大仙區", anchorMtr: "LOF" },
   { id: "estate-wong-tai-sin", kind: "estate", name: "黃大仙下邨", nameEn: "Lower Wong Tai Sin Estate", aliases: ["黃大仙邨"], lat: 22.342, lng: 114.194, district: "黃大仙區", anchorMtr: "WTS" },
   { id: "estate-tszp", kind: "estate", name: "彩雲邨", nameEn: "Choi Wan Estate", aliases: ["彩雲"], lat: 22.334, lng: 114.214, district: "黃大仙區", anchorMtr: "DIH" },

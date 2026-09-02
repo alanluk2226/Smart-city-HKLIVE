@@ -363,16 +363,29 @@ function padToThreeOptions(
 const VARIABILITY_NOTE =
   "AI 只跟天氣寫評語同建議；每次俾出嘅方案（尤其「建議」標籤）有可能唔完全相同，請注意。";
 
-/** 東涌 ⇄ 何文田／黃埔／愛民：城巴 E21A（一程直達市區） */
+/** 東涌 ⇄ 何文田／都會大學／黃埔／愛民：城巴 E21A／E21B（一程直達） */
 const E21A_DEST = new Set(["HOM", "WHA"]);
-/** 東涌 ⇄ 旺角／旺角東：城巴 E21（往大角咀），唔好同 E21A 等變體撈亂 */
+/** 東涌 ⇄ 旺角／旺角東：城巴 E21（往大角咀），唔好同 E21A／B 撈亂 */
 const E21_MONG_DEST = new Set(["MOK", "MKK"]);
 
 function isE21aArea(place: ResolvedTripPlace) {
-  return E21A_DEST.has(place.anchor.code) || place.id === "estate-oi-man";
+  if (E21A_DEST.has(place.anchor.code)) return true;
+  if (
+    place.id === "estate-oi-man" ||
+    place.id === "estate-ho-man-tin" ||
+    place.id === "landmark-hkmu"
+  ) {
+    return true;
+  }
+  if (place.name.includes("都會大學") || place.name.includes("何文田") || place.name.includes("愛民")) {
+    return true;
+  }
+  return /metropolitan|hkmu|ho man tin|oi man/i.test(place.nameEn);
 }
 
 function isMongKokArea(place: ResolvedTripPlace) {
+  // 何文田／都會大學一帶唔好當旺角（否則會錯推 E21）
+  if (isE21aArea(place)) return false;
   return (
     E21_MONG_DEST.has(place.anchor.code) ||
     place.name.includes("旺角") ||
@@ -398,18 +411,20 @@ function e21aBusOption(input: {
   const busMin = journeyMinutes != null && journeyMinutes > 40 ? Math.min(75, Math.max(55, Math.round(journeyMinutes * 0.7))) : 65;
   const minutes = (feeder?.minutes ?? 0) + busMin;
   const fare = Math.round(((feeder?.fareHkd ?? 0) + (fareHkd ?? 14)) * 10) / 10;
+  const hkmu = city.id === "landmark-hkmu" || city.name.includes("都會大學");
 
   const steps = tucToCity
     ? [
         ...(feeder
           ? [`於${tuc.name}乘 ${feeder.route} 號巴士前往${feeder.alight}／東涌市中心`]
           : [`於${tuc.name}前往東涌巴士站`]),
-        "乘城巴 E21A（往愛民邨方向）",
-        "途經青嶼幹線、葵涌，直達旺角／窩打老道／忠孝街一帶",
-        `於${city.name}附近下車（何文田／愛民邨一帶）`,
+        "乘城巴 E21A（往愛民邨）或 E21B（往何文田）——一程直達，唔好搭 E21（終點大角咀）再轉車",
+        hkmu
+          ? `於香港都會大學／何文田／忠孝街一帶下車，步行前往${city.name}`
+          : `於${city.name}附近下車（何文田／愛民邨一帶）`,
       ]
     : [
-        `於${city.name}一帶乘城巴 E21A（往機場／東涌方向）`,
+        `於${city.name}一帶乘城巴 E21A／E21B（往東涌／機場方向）`,
         "途經窩打老道、旺角、葵涌、青嶼幹線往東涌",
         ...(feeder
           ? [`於東涌下車後轉 ${feeder.route} 號巴士前往${tuc.name}`]
@@ -419,11 +434,13 @@ function e21aBusOption(input: {
   return {
     id: "bus-e21a",
     mode: "bus",
-    title: tucToCity ? `城巴 E21A（往愛民）往${city.name}一帶` : `城巴 E21A（往東涌／機場）往${tuc.name}`,
+    title: tucToCity
+      ? `城巴 E21A／E21B 往${city.name}`
+      : `城巴 E21A／E21B 往${tuc.name}`,
     minutes,
     fareHkd: fare,
     steps,
-    why: "一程巴士直達市區，無需轉港鐵；注意係 E21A 往愛民，唔係 E21／E21B 等其他變體。車程受路面影響，惡劣天氣時港鐵較穩。",
+    why: "東涌往何文田／都會大學／愛民應搭 E21A 或 E21B 直達；E21 只去大角咀，唔適合呢程。車程受路面影響，惡劣天氣時港鐵較穩。",
     weatherFit: tone === "severe" || tone === "wet" ? "ok" : "good",
     badges: [],
     source: "computed",
