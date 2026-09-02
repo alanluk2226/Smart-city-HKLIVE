@@ -5,8 +5,26 @@ import { searchKmbRoutes } from "@/lib/providers/kmb";
 import { searchMtrBusRoutes } from "@/lib/providers/mtr-bus";
 import { searchNlbRoutes } from "@/lib/providers/nlb";
 import { MTR_LINE_NAMES, searchMtrStations } from "@/lib/static/mtr-stations";
+import type { RouteHit } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
+type OpSearch = { routes: RouteHit[]; warning?: string };
+
+async function collect(label: string, fn: () => Promise<RouteHit[]>): Promise<OpSearch> {
+  try {
+    return { routes: await fn() };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "未知錯誤";
+    console.error(`[search] ${label} failed:`, detail);
+    return { routes: [], warning: `${label}資料暫時無法載入，請再試` };
+  }
+}
+
+function emptyOp(): OpSearch {
+  return { routes: [] };
+}
 
 export async function GET(request: Request) {
   const p = new URL(request.url).searchParams;
@@ -22,13 +40,20 @@ export async function GET(request: Request) {
       const wantNlb = !operator || operator === "all" || operator === "nlb";
       const wantMtrb = !operator || operator === "all" || operator === "mtrb";
       const [kmb, ctb, nlb, mtrb] = await Promise.all([
-        wantKmb ? searchKmbRoutes(q).catch(() => []) : Promise.resolve([]),
-        wantCtb ? searchCtbRoutes(q).catch(() => []) : Promise.resolve([]),
-        wantNlb ? searchNlbRoutes(q).catch(() => []) : Promise.resolve([]),
-        wantMtrb ? searchMtrBusRoutes(q).catch(() => []) : Promise.resolve([]),
+        wantKmb ? collect("九巴／龍運", () => searchKmbRoutes(q)) : Promise.resolve(emptyOp()),
+        wantCtb ? collect("城巴", () => searchCtbRoutes(q)) : Promise.resolve(emptyOp()),
+        wantNlb ? collect("嶼巴", () => searchNlbRoutes(q)) : Promise.resolve(emptyOp()),
+        wantMtrb ? collect("港鐵巴士", () => searchMtrBusRoutes(q)) : Promise.resolve(emptyOp()),
       ]);
-      if (mode === "bus") return jsonOk({ routes: [...kmb, ...ctb, ...nlb, ...mtrb], stations: [] });
-      const gmb = await searchGmbRoutes(q, region).catch(() => []);
+      const warnings = [kmb.warning, ctb.warning, nlb.warning, mtrb.warning].filter(
+        (w): w is string => Boolean(w),
+      );
+      const busRoutes = [...kmb.routes, ...ctb.routes, ...nlb.routes, ...mtrb.routes];
+      if (mode === "bus") {
+        return jsonOk({ routes: busRoutes, stations: [], warnings });
+      }
+      const gmb = await collect("專線小巴", () => searchGmbRoutes(q, region));
+      if (gmb.warning) warnings.push(gmb.warning);
       const mtr = searchMtrStations(q).map((s) => ({
         operator: "mtr" as const,
         operatorName: "港鐵",
@@ -38,15 +63,21 @@ export async function GET(request: Request) {
         subtitle: s.lines.map((l) => MTR_LINE_NAMES[l] ?? l).join("／"),
         stopId: s.code,
       }));
-      return jsonOk({ routes: [...kmb, ...ctb, ...nlb, ...mtrb, ...gmb], stations: mtr });
-    }
-    if (mode === "minibus") {
       return jsonOk({
-        routes: await searchGmbRoutes(q, region).catch(() => []),
-        stations: [],
+        routes: [...busRoutes, ...gmb.routes],
+        stations: mtr,
+        warnings,
       });
     }
-    return jsonOk({ routes: [], stations: [] });
+    if (mode === "minibus") {
+      const gmb = await collect("專線小巴", () => searchGmbRoutes(q, region));
+      return jsonOk({
+        routes: gmb.routes,
+        stations: [],
+        warnings: gmb.warning ? [gmb.warning] : [],
+      });
+    }
+    return jsonOk({ routes: [], stations: [], warnings: [] });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "搜尋失敗", 502);
   }

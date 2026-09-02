@@ -1,8 +1,10 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useLocationPref } from "@/components/LocationPrefProvider";
 import { useTheme } from "@/components/ThemeProvider";
+import { clearAiChat, hasAiChat } from "@/lib/ai-trip-store";
 import type { ThemeMode } from "@/lib/theme";
 
 const DATA_SOURCES = [
@@ -20,9 +22,32 @@ const DATA_SOURCES = [
 export function SettingsApp() {
   const { theme, setTheme } = useTheme();
   const { locationEnabled, setLocationEnabled } = useLocationPref();
+  const [chatExists, setChatExists] = useState(false);
+  const [clearedNote, setClearedNote] = useState<string | null>(null);
+
+  const refreshChatFlag = useCallback(() => {
+    setChatExists(hasAiChat());
+  }, []);
+
+  useEffect(() => {
+    refreshChatFlag();
+  }, [refreshChatFlag]);
+
+  function handleClearAiChat() {
+    if (
+      !window.confirm(
+        "確定清除所有出行AI對話記錄？此操作無法復原。\n（收藏嘅行程方案唔會刪除。）",
+      )
+    ) {
+      return;
+    }
+    clearAiChat();
+    setChatExists(false);
+    setClearedNote("已清除所有 AI 對話記錄。");
+  }
 
   return (
-    <AppShell title="設定" subtitle="外觀、定位、資料來源同私隱說明">
+    <AppShell title="設定" subtitle="外觀、定位、出行AI、資料來源同私隱說明">
       <div className="mx-auto max-w-xl space-y-4">
         <section className="rounded-2xl border border-line bg-card p-4 sm:p-5">
           <h2 className="text-base font-medium">外觀</h2>
@@ -86,6 +111,28 @@ export function SettingsApp() {
           </p>
         </section>
 
+        <section className="rounded-2xl border border-line bg-card p-4 sm:p-5">
+          <h2 className="text-base font-medium">出行AI</h2>
+          <p className="mt-1 text-sm text-muted">
+            對話會保存在你嘅瀏覽器本機；關閉網站後再開仍然睇到。收藏方案另存，唔會因清除對話而刪除。
+          </p>
+          <button
+            type="button"
+            onClick={handleClearAiChat}
+            disabled={!chatExists}
+            className="mt-4 w-full rounded-xl border border-rose/40 bg-rose/10 px-4 py-2.5 text-sm text-rose hover:bg-rose/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            清除所有 AI 對話記錄
+          </button>
+          {clearedNote ? (
+            <p className="mt-2 text-xs text-teal">{clearedNote}</p>
+          ) : (
+            <p className="mt-2 text-xs text-muted">
+              {chatExists ? "而家有保存緊嘅對話。" : "而家冇對話記錄。"}
+            </p>
+          )}
+        </section>
+
         <section id="sources" className="scroll-mt-28 rounded-2xl border border-line bg-card p-4 sm:p-5">
           <h2 className="text-base font-medium">資料來源</h2>
           <p className="mt-1 text-sm text-muted">
@@ -124,9 +171,9 @@ export function SettingsApp() {
             <div>
               <h3 className="font-medium text-ink">儲存在你裝置嘅設定</h3>
               <p className="mt-1.5">
-                主題（淺色／深色）、定位開關、突發提示收起狀態、出行助手收藏／歷史等，會用瀏覽器{" "}
+                主題（淺色／深色）、定位開關、突發提示收起狀態、出行AI對話／收藏等，會用瀏覽器{" "}
                 <span className="text-ink">localStorage / sessionStorage</span>{" "}
-                保存在本機。你可以隨時清除瀏覽器網站資料刪除。
+                保存在本機。你可以隨時清除瀏覽器網站資料刪除，或喺本頁「出行AI」清除對話記錄。
               </p>
             </div>
             <div>
@@ -138,9 +185,9 @@ export function SettingsApp() {
               </p>
             </div>
             <div>
-              <h3 className="font-medium text-ink">出行助手（如有啟用）</h3>
+              <h3 className="font-medium text-ink">出行AI（如有啟用）</h3>
               <p className="mt-1.5">
-                若伺服器已設定 AI 金鑰，你輸入嘅起點、終點同相關查詢會經本網站伺服器傳送至第三方 AI 服務以產生建議。請避免輸入敏感個人資料。
+                若伺服器已設定 AI 金鑰，你輸入嘅起點、終點同相關查詢會經本網站伺服器傳送至第三方 AI 服務以產生建議。對話內容會保存在你裝置本機，方便你關閉網站後繼續睇；可喺設定頁清除。請避免輸入敏感個人資料。
               </p>
             </div>
             <div>

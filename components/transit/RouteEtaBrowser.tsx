@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BusOperatorIcon } from "@/components/transit/BusOperatorIcon";
 import { BusRouteKeypad } from "@/components/transit/BusRouteKeypad";
 import { apiGet, openWalkingDirections } from "@/lib/client";
@@ -82,6 +82,8 @@ export function RouteEtaBrowser({
   const [error, setError] = useState("");
   /** false = hide expanded ETA cards; only show soonest time on the stop row */
   const [showEtaDetails, setShowEtaDetails] = useState(true);
+  /** 忽略過期搜尋回應，避免手機逐字輸入時舊請求覆蓋 E21A 結果 */
+  const searchSeq = useRef(0);
   const { etas, loading, error: etaError } = useEta(selected);
   const { info: routeInfo, loading: routeInfoLoading } = useRouteInfo(
     pickedRoute,
@@ -101,6 +103,7 @@ export function RouteEtaBrowser({
   async function search(query: string) {
     const needle = query.trim();
     if (!needle) return;
+    const seq = ++searchSeq.current;
     setSearching(true);
     setError("");
     setSelected(null);
@@ -110,14 +113,25 @@ export function RouteEtaBrowser({
       const params = new URLSearchParams({ q: needle, mode });
       if (operator) params.set("operator", operator);
       if (region) params.set("region", region);
-      const data = await apiGet<{ routes: RouteHit[] }>(`/api/search?${params}`);
+      const data = await apiGet<{ routes: RouteHit[]; warnings?: string[] }>(
+        `/api/search?${params}`,
+      );
+      if (seq !== searchSeq.current) return;
       setRoutes(data.routes);
       setHasSearched(true);
+      if (data.warnings?.length) {
+        setError(
+          data.routes.length
+            ? data.warnings.join("；")
+            : `${data.warnings.join("；")}。若仍搵唔到可再試一次。`,
+        );
+      }
     } catch (err) {
+      if (seq !== searchSeq.current) return;
       setError(err instanceof Error ? err.message : "搜尋失敗");
       setHasSearched(true);
     } finally {
-      setSearching(false);
+      if (seq === searchSeq.current) setSearching(false);
     }
   }
 
@@ -441,7 +455,11 @@ export function RouteEtaBrowser({
             {!q.trim() ? (
               <p className="px-4 py-6 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關巴士</p>
             ) : hasSearched && !routes.length && !searching ? (
-              <p className="px-4 py-6 text-center text-sm text-muted">搵唔到呢條路線，試下其他編號或營運商篩選。</p>
+              <p className="px-4 py-6 text-center text-sm text-muted">
+                {error
+                  ? "暫時拎唔到營運商資料，請再試一次；亦可以檢查係咪揀咗錯誤營運商篩選。"
+                  : "搵唔到呢條路線，試下其他編號或營運商篩選。"}
+              </p>
             ) : (
               <div className="divide-y divide-line">{routePickButtons}</div>
             )}
@@ -499,7 +517,11 @@ export function RouteEtaBrowser({
             <h2 className="mb-2 px-1 text-sm text-muted">揀路線方向</h2>
             <div className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto">{routePickButtons}</div>
             {!routes.length && !searching ? (
-              <div className="px-3 py-2 text-sm text-muted">搵唔到呢條路線，試下其他編號或營運商篩選。</div>
+              <div className="px-3 py-2 text-sm text-muted">
+                {error
+                  ? "暫時拎唔到營運商資料，請再試一次；亦可以檢查係咪揀咗錯誤營運商篩選。"
+                  : "搵唔到呢條路線，試下其他編號或營運商篩選。"}
+              </div>
             ) : null}
           </section>
         ) : null}

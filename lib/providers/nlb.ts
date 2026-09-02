@@ -50,8 +50,12 @@ function nlbEtaIso(raw: string): string {
 
 export async function nlbRoutes(): Promise<NlbRoute[]> {
   return cached("nlb:routes", TTL.route, async () => {
-    const json = await fetchJson<{ routes: NlbRoute[] }>(`${BASE}/route.php?action=list`);
-    return json.routes ?? [];
+    const json = await fetchJson<{ routes: NlbRoute[] }>(`${BASE}/route.php?action=list`, 20_000);
+    const rows = json.routes ?? [];
+    if (!Array.isArray(rows) || rows.length < 10) {
+      throw new Error("嶼巴路線名單無效或空白");
+    }
+    return rows;
   });
 }
 

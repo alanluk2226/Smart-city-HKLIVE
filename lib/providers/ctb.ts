@@ -41,8 +41,13 @@ type CtbEta = {
 
 export async function ctbRoutes(): Promise<CtbRoute[]> {
   return cached("ctb:routes", TTL.route, async () => {
-    const json = await fetchJson<CtbList<CtbRoute>>(`${BASE}/route/ctb`);
-    return json.data;
+    const json = await fetchJson<CtbList<CtbRoute>>(`${BASE}/route/ctb`, 20_000);
+    const rows = json.data;
+    // 拒絕快取空／殘缺名單，避免 Vercel 實例長時間搜唔到城巴
+    if (!Array.isArray(rows) || rows.length < 50) {
+      throw new Error("城巴路線名單無效或空白");
+    }
+    return rows;
   });
 }
 
@@ -50,9 +55,18 @@ export async function searchCtbRoutes(q: string): Promise<RouteHit[]> {
   const needle = q.trim().toUpperCase();
   if (!needle) return [];
   const routes = await ctbRoutes();
-  const matched = routes.filter(
-    (r) => r.route.toUpperCase() === needle || r.route.toUpperCase().startsWith(needle),
-  );
+  const matched = routes
+    .filter(
+      (r) => r.route.toUpperCase() === needle || r.route.toUpperCase().startsWith(needle),
+    )
+    .sort((a, b) => {
+      const au = a.route.toUpperCase();
+      const bu = b.route.toUpperCase();
+      const ae = au === needle ? 0 : 1;
+      const be = bu === needle ? 0 : 1;
+      if (ae !== be) return ae - be;
+      return au.localeCompare(bu, "en", { numeric: true });
+    });
   const hits: RouteHit[] = [];
   for (const r of matched.slice(0, 10)) {
     hits.push({

@@ -173,6 +173,11 @@ async function geminiFreeRoute(
   grounded: AiTripAdvice | null,
   userHint: string,
 ): Promise<AiAssistantResponse> {
+  const trip = {
+    from: grounded?.fromName || from,
+    to: grounded?.toName || to,
+  };
+
   if (!geminiApiKey()) {
     if (grounded) {
       return {
@@ -181,6 +186,7 @@ async function geminiFreeRoute(
         usedAi: grounded.usedAi,
         aiError: grounded.aiError ?? null,
         advice: grounded,
+        trip,
       };
     }
     return {
@@ -190,6 +196,7 @@ async function geminiFreeRoute(
       usedAi: false,
       aiError: "未設定 GEMINI_API_KEY",
       advice: null,
+      trip: null,
     };
   }
 
@@ -215,7 +222,7 @@ ${groundedBlock}
 5. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
 
   const userText = [
-    `由「${from}」去「${to}」。`,
+    `由「${trip.from}」去「${trip.to}」。`,
     userHint && userHint !== `${from}去${to}` && userHint !== `${from}到${to}`
       ? `用戶原話／補充：${userHint}`
       : "",
@@ -234,8 +241,9 @@ ${groundedBlock}
       reply: reply.trim(),
       usedAi: true,
       aiError: null,
-      // 若有本站計算仍附上，方便前端收藏／路綫圖；回覆正文以 Gemini 為準
+      // 若有本站計算仍附上，方便前端路綫圖；回覆正文以 Gemini 為準
       advice: grounded,
+      trip,
     };
   } catch (err) {
     const raw = err instanceof Error ? err.message : "Gemini 失敗";
@@ -249,14 +257,16 @@ ${groundedBlock}
         usedAi: grounded.usedAi,
         aiError,
         advice: grounded,
+        trip,
       };
     }
     return {
       mode: "chat",
-      reply: `暫時未能規劃「${from}」→「${to}」：${aiError}`,
+      reply: `暫時未能規劃「${trip.from}」→「${trip.to}」：${aiError}`,
       usedAi: false,
       aiError,
       advice: null,
+      trip: null,
     };
   }
 }

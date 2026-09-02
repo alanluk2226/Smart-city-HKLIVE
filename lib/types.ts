@@ -242,4 +242,6 @@ export type AiAssistantResponse = {
   usedAi: boolean;
   aiError?: string | null;
   advice: AiTripAdvice | null;
+  /** Gemini 判定的起終點；route 模式會填，方便收藏即使冇本站計算。 */
+  trip?: { from: string; to: string } | null;
 };

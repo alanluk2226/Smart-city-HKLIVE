@@ -51,8 +51,12 @@ function boundLabel(bound: string) {
 
 export async function kmbRoutes(): Promise<KmbRoute[]> {
   return cached("kmb:routes", TTL.route, async () => {
-    const json = await fetchJson<KmbList<KmbRoute>>(`${BASE}/route`);
-    return json.data;
+    const json = await fetchJson<KmbList<KmbRoute>>(`${BASE}/route`, 20_000);
+    const rows = json.data;
+    if (!Array.isArray(rows) || rows.length < 50) {
+      throw new Error("九巴路線名單無效或空白");
+    }
+    return rows;
   });
 }
 
@@ -69,6 +73,14 @@ export async function searchKmbRoutes(q: string): Promise<RouteHit[]> {
   const routes = await kmbRoutes();
   return routes
     .filter((r) => r.route.toUpperCase() === needle || r.route.toUpperCase().startsWith(needle))
+    .sort((a, b) => {
+      const au = a.route.toUpperCase();
+      const bu = b.route.toUpperCase();
+      const ae = au === needle ? 0 : 1;
+      const be = bu === needle ? 0 : 1;
+      if (ae !== be) return ae - be;
+      return au.localeCompare(bu, "en", { numeric: true });
+    })
     .slice(0, 20)
     .map((r) => ({
       operator: "kmb" as const,

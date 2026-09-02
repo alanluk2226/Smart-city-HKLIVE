@@ -69,7 +69,7 @@ function parseCsv(text: string): string[][] {
 async function mtrBusRoutes(): Promise<MtrBusRouteRow[]> {
   return cached("mtrb:routes", TTL.route, async () => {
     const text = await fetchText(ROUTES_URL, 20_000);
-    return parseCsv(text)
+    const rows = parseCsv(text)
       .filter((row) => row.length >= 7)
       .map((row) => ({
         route: row[0].trim(),
@@ -81,6 +81,10 @@ async function mtrBusRoutes(): Promise<MtrBusRouteRow[]> {
         referenceId: row[6].trim(),
       }))
       .filter((row) => row.route && row.referenceId);
+    if (rows.length < 5) {
+      throw new Error("港鐵巴士路線名單無效或空白");
+    }
+    return rows;
   });
 }
 
