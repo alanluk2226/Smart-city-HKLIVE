@@ -1,7 +1,11 @@
 import { adviseTrip } from "@/lib/providers/ai-trip";
 import { geminiApiKey, geminiChat, geminiJson } from "@/lib/providers/gemini";
 import { getWeather } from "@/lib/providers/weather";
-import { canResolveTripPair, parseTripQuery } from "@/lib/trip-query";
+import {
+  canResolveTripPair,
+  isLikelyTransitTripQuery,
+  parseTripQuery,
+} from "@/lib/trip-query";
 import type { AiAssistantChatTurn, AiAssistantResponse, AiTripAdvice } from "@/lib/types";
 
 const INTENT_SCHEMA = {
@@ -81,7 +85,7 @@ async function classifyIntent(
     ? `上一程成功行程：${lastTrip.from} → ${lastTrip.to}`
     : "上一程成功行程：無";
 
-  const prompt = `你係 HK LIVE 意圖分類器。只判斷用戶最新一句係咪喺問「點由 A 去 B」嘅公共交通行程。
+  const prompt = `你係 HK LIVE 意圖分類器。只判斷用戶最新一句係咪喺問「香港實際地點之間點搭車／點去」。
 
 ${lastTripLine}
 
@@ -89,11 +93,12 @@ ${lastTripLine}
 ${transcript}
 
 規則：
-- 明確問由 A 去 B、改終點、點樣搭車去某地 → intent=route，填 from／to（可用用戶原詞）。
-- 其他全部 intent=chat：閒聊、科技／AI／LLM、一般知識、天氣本身、塞車閒談、問候、解釋概念等。
-- 句中出現「去」「build」「model」等英／中詞，但唔係問香港點搭車 → 仍然係 chat。
-- 只有真正唔知起終點嘅「點去」先 askClarify=true；閒聊唔好追問起終點。
-- 有疑問時寧願選 chat，唔好亂當 route。`;
+- intent=route 只適用：由真實地理起點去真實地理終點（屋邨、醫院、商場、港鐵站、街道、地區等），想搭公共交通。
+- from／to 必須係地名，絕對唔可以係抽象概念（Embedding、Transformer、Token、Model、知識、理論等）。
+- 科技／AI／LLM／程式／數學／閒聊／解釋概念／天氣閒談 → 一律 intent=chat。
+- 英文句入面有 "to"（例如 send them to transformer）唔等於去邊度。
+- 有疑問時一定選 chat；唔好為咗答得似出行顧問而硬當 route。
+- 只有真係問點去但又缺地名時先 askClarify=true。`;
 
   return geminiJson<IntentOut>(prompt, 8_000, INTENT_SCHEMA as unknown as Record<string, unknown>);
 }
@@ -127,20 +132,16 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
   }
 
   const weatherLine = await weatherContextLine();
-  const system = `你是 HK LIVE AI，香港智慧城市主控台入面嘅對話助手。用香港粵語書面語（繁體）回答，簡潔自然，像朋友傾偈（Gemini 風格）。
+  const system = `你是 HK LIVE AI。用繁體中文（香港粵語書面語為主，用戶用英文可夾英文）自然回答，語氣同平常同 Gemini 傾偈一樣。
 
-你嘅角色：
-- 可以閒聊、答一般知識、科技／AI、天氣、交通……跟住用戶真正問嘅嘢答。
-- 「傾下偈都得」——唔係每一次都要畀出行方案。
-- 只有用戶明確問「點去／點搭車／由 A 去 B」時，先討論路線；否則禁止硬拗成港鐵／巴士方案，亦唔好亂估起終點。
+重要（必須遵守）：
+- 呢個模式係普通對話，唔係出行規劃模式。
+- 禁止用「出行顧問」「知識路線」「港鐵直達法」「巴士特快線」「方案一／二／三」「預計車費／車程」等旅行框架去包裝任何非出行問題。
+- 用戶問科技、AI、LLM、Embedding、學習方法、閒聊等 → 直接答內容本身，唔好比喻成搭車。
+- 唔好提熱帶氣旋／天氣，除非用戶問天氣或出門。
+- 唔好主動規劃去邊度；用戶叫你點去先至講路線。
 
-可選背景（只有問天氣／出門先引用；閒聊／科技題唔使硬扯）：
-${weatherLine}
-
-回答原則：
-- 直接答用戶問題；唔好離題。
-- 唔好為無關話題編造路線、車費、車程。
-- 回答長度適中，唔好過長。`;
+可選香港天氣（多數情況可忽略）：${weatherLine}`;
 
   try {
     const turns = messages
@@ -324,21 +325,26 @@ export async function runAssistant(input: {
     return routeAdvice(input.from.trim(), input.to.trim(), userText);
   }
 
-  // 規則只認明確「A 去 B」句式；其餘交意圖分類，有疑問當閒聊
+  // 規則只認明確短地名「A 去 B」；長英文句入面嘅 "to" 唔會再誤觸
   const ruled = ruleRoutePair(userText, input.lastTrip);
-  if (ruled) return routeAdvice(ruled.from, ruled.to, userText);
+  if (ruled && isLikelyTransitTripQuery(userText, ruled.from, ruled.to)) {
+    return routeAdvice(ruled.from, ruled.to, userText);
+  }
 
   if (geminiApiKey()) {
     try {
       const intent = await classifyIntent(messages, input.lastTrip);
       if (intent.intent === "route") {
-        const from = intent.from?.trim() || input.lastTrip?.from || "";
+        const from = intent.from?.trim() || "";
         const to = intent.to?.trim() || "";
-        if (from && to) {
+        if (from && to && isLikelyTransitTripQuery(userText, from, to)) {
           return routeAdvice(from, to, userText);
         }
-        // 起終點唔清：只喺確實係 route 意圖時先追問；否則當閒聊
-        if (intent.askClarify) {
+        // 分類器亂填抽象 from／to → 當閒聊，唔追問起終點
+        if (
+          intent.askClarify &&
+          !/\b(embedding|transformer|llm|token|matrix|model)\b/i.test(userText)
+        ) {
           const q =
             intent.clarifyQuestion?.trim() ||
             "想由邊度去邊度？例如「逸東邨去瑪嘉烈醫院」或「東涌去何文田」；接住上一程可講「改去旺角」。";
