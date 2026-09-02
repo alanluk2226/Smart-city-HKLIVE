@@ -1,3 +1,5 @@
+import { haversineMeters } from "@/lib/geo";
+import { HOSPITALS } from "@/lib/static/hospitals";
 import { mtrStation, resolveMtrPlace, MTR_STATIONS } from "@/lib/static/mtr-stations";
 import type { MtrStation } from "@/lib/types";
 
@@ -302,7 +304,61 @@ function asResolvedFromPlace(p: HkPlace): ResolvedTripPlace {
 
 const NORTH_EAL_CODES = new Set(["TAP", "FAN", "SHS", "LOW"]);
 
-/** Resolve MTR station, estate, district or landmark. Exact MTR name wins over district aliases. */
+/** English / short aliases → canonical HA hospital name */
+const HOSPITAL_ALIASES: Record<string, string> = {
+  瑪嘉烈: "瑪嘉烈醫院",
+  "princess margaret hospital": "瑪嘉烈醫院",
+  "princess margaret": "瑪嘉烈醫院",
+  pmh: "瑪嘉烈醫院",
+  瑪麗: "瑪麗醫院",
+  qmh: "瑪麗醫院",
+  伊利沙伯: "伊利沙伯醫院",
+  qeh: "伊利沙伯醫院",
+  威爾斯: "威爾斯親王醫院",
+  威院: "威爾斯親王醫院",
+  pwh: "威爾斯親王醫院",
+  廣華: "廣華醫院",
+  屯門醫院: "屯門醫院",
+  北大嶼山: "北大嶼山醫院",
+  北大嶼山醫院: "北大嶼山醫院",
+};
+
+function nearestMtrStation(lat: number, lng: number): MtrStation {
+  let best = MTR_STATIONS[0];
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const s of MTR_STATIONS) {
+    const d = haversineMeters(lat, lng, s.lat, s.lng);
+    if (d < bestD) {
+      bestD = d;
+      best = s;
+    }
+  }
+  return best;
+}
+
+function resolveHospitalPlace(raw: string, n: string): ResolvedTripPlace | undefined {
+  const aliased = HOSPITAL_ALIASES[n] || HOSPITAL_ALIASES[raw];
+  const want = aliased ?? raw;
+  const hit =
+    HOSPITALS.find((h) => h.name === want) ||
+    HOSPITALS.find((h) => h.name.includes(want) || want.includes(h.name.replace(/醫院$/, ""))) ||
+    HOSPITALS.find((h) => h.name.toLowerCase().includes(n));
+  if (!hit) return undefined;
+  const anchor = nearestMtrStation(hit.lat, hit.lng);
+  return {
+    id: `hospital:${hit.name}`,
+    kind: "landmark",
+    name: hit.name,
+    nameEn: hit.name,
+    lat: hit.lat,
+    lng: hit.lng,
+    district: hit.cluster,
+    tags: ["hospital"],
+    anchor,
+  };
+}
+
+/** Resolve MTR station, estate, district, hospital or landmark. Exact MTR name wins over district aliases. */
 export function resolveTripPlace(q: string): ResolvedTripPlace | undefined {
   const raw = q.trim();
   if (!raw) return undefined;
@@ -312,6 +368,9 @@ export function resolveTripPlace(q: string): ResolvedTripPlace | undefined {
     (s) => s.name === raw || s.nameEn.toLowerCase() === n || s.code.toLowerCase() === n,
   );
   if (mtrExact) return asResolvedFromMtr(mtrExact);
+
+  const hospital = resolveHospitalPlace(raw, n);
+  if (hospital) return hospital;
 
   const exactPlace = HK_PLACES.find(
     (p) =>

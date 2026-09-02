@@ -26,7 +26,7 @@ type ChatMessage = {
 };
 
 const WELCOME =
-  "你好，我係 HK LIVE 助手。可以問天氣、交通概況，或者點去邊度。\n\n例如：\n「今日天氣點？」\n「東涌去何文田」\n「荃灣去中環」——之後可以講「改去旺角」接龍。\n\n問點去時會用固定格式列出本站計算嘅方案；AI 主要寫天氣評語同自由對話。標「參考」嘅巴士方案車程視路面。";
+  "你好，我係 HK LIVE 助手。可以問天氣、路況，或者任意香港地點點去（屋邨、醫院、商場都得）。\n\n例如：\n「逸東邨去瑪嘉烈醫院」\n「Yat Tung Estate 去 瑪嘉烈醫院」\n「今日落雨，東涌去何文田？」\n\nGemini 會按天氣，以及你提到嘅塞車或港鐵故障，自行建議；本站港鐵數據只係參考。每次建議可能唔同，請以營運商為準。";
 
 const HISTORY_TURNS = 12;
 
@@ -146,7 +146,7 @@ export function AiTripAdvisor() {
         {
           id: newId(),
           role: "assistant",
-          text: `${msg}\n\n可以再試問天氣，或「東涌去何文田」「荃灣去中環」。`,
+          text: `${msg}\n\n可以再試問天氣，或「逸東邨去瑪嘉烈醫院」「東涌去何文田」。`,
         },
       ]);
     } finally {
@@ -180,7 +180,7 @@ export function AiTripAdvisor() {
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">HK LIVE CHAT</div>
           <h2 className="mt-0.5 text-lg">出行助手</h2>
           <p className="mt-1 max-w-xl text-xs text-muted">
-            像 Gemini 咁傾；問點去會用固定格式列出本站計算方案。可接龍講「改去旺角」。
+            像 Gemini 咁傾；任意地點都可問。按天氣／路況自行建議，本站港鐵只作參考。可接龍講「改去旺角」。
           </p>
         </div>
       </div>
@@ -301,7 +301,7 @@ export function AiTripAdvisor() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="問天氣，或：東涌去何文田…"
+          placeholder="逸東邨去瑪嘉烈醫院…"
           disabled={loading}
           className="min-w-0 flex-1 rounded-xl border border-line bg-elev px-3 py-2.5 text-ink outline-none focus:border-teal disabled:opacity-60"
         />
