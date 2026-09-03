@@ -129,6 +129,18 @@ export function MtrTripDialog({
 
           {plan ? (
             <div className="space-y-4">
+              {plan.inService === false ? (
+                <div
+                  className="rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-ink"
+                  role="status"
+                >
+                  <p className="font-medium">非服務時段</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted">
+                    現時約為尾班車後或未開出時段，港鐵大致暫停載客。以下車程與車費仍可供參考，但唔會顯示車廂空位。實際班次以港鐵公布為準。
+                  </p>
+                </div>
+              ) : null}
+
               {/* Summary */}
               <div className="rounded-2xl border border-line bg-elev px-4 py-3">
                 <div className="flex items-end justify-between gap-3">
@@ -198,7 +210,9 @@ export function MtrTripDialog({
                 </ol>
                 {railLegs.length > 1 ? (
                   <p className="mt-2 text-[11px] text-muted">
-                    每段路線可展開睇沿途車站同建議車廂；轉乘時間為月台估計。
+                    {plan.inService === false
+                      ? "每段路線可展開睇沿途車站；轉乘時間為月台估計。"
+                      : "每段路線可展開睇沿途車站同建議車廂；轉乘時間為月台估計。"}
                   </p>
                 ) : null}
               </section>

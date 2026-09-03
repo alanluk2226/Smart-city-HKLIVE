@@ -1,5 +1,24 @@
 import { getLocationEnabled } from "@/lib/location-pref";
 
+export class ApiError extends Error {
+  status: number;
+  retryAfter?: number;
+
+  constructor(message: string, status: number, retryAfter?: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.retryAfter = retryAfter;
+  }
+}
+
+function retryAfterSeconds(res: Response): number | undefined {
+  const raw = res.headers.get("Retry-After");
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 async function readApiJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   let json: { ok?: boolean; error?: string; data?: T };
@@ -9,9 +28,15 @@ async function readApiJson<T>(res: Response): Promise<T> {
     if (res.status === 504 || /timeout|timed out|An error/i.test(text)) {
       throw new Error("伺服器回應逾時，請再試一次。");
     }
-    throw new Error(res.ok ? "伺服器回傳格式錯誤" : `伺服器錯誤（${res.status}）`);
+    throw new ApiError(
+      res.ok ? "伺服器回傳格式錯誤" : `伺服器錯誤（${res.status}）`,
+      res.status,
+      retryAfterSeconds(res),
+    );
   }
-  if (!json.ok) throw new Error(json.error || "載入失敗");
+  if (!json.ok) {
+    throw new ApiError(json.error || "載入失敗", res.status, retryAfterSeconds(res));
+  }
   return json.data as T;
 }
 

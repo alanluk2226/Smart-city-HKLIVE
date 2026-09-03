@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { FavoriteStarButton } from "@/components/transit/FavoriteStarButton";
 import { GmbEtaExtras, GmbRoutePlate } from "@/components/transit/GmbBadges";
 import { MinibusRouteKeypad } from "@/components/transit/MinibusRouteKeypad";
 import { RouteInfoBanner, etaArriveLabel } from "@/components/transit/RouteInfoBanner";
@@ -9,6 +10,9 @@ import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import { pickInitialRouteStop } from "@/lib/nearest-stop";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
+import { favoriteFromRouteHit } from "@/lib/transit-favorites-store";
+import { useFillViewportHeight } from "@/lib/use-fill-viewport-height";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
 const MINIBUS_ROUTE_MAX_LEN = 4;
@@ -57,6 +61,7 @@ export function MinibusApp() {
   const [selected, setSelected] = useState<StopHit | null>(null);
   const [error, setError] = useState("");
   const [showEtaDetails, setShowEtaDetails] = useState(true);
+  const favBoot = useRef(false);
   const { etas, loading, error: etaError } = useEta(selected);
   const { info: routeInfo, loading: routeInfoLoading } = useRouteInfo(
     picked,
@@ -143,6 +148,43 @@ export function MinibusApp() {
     }
   }
 
+  // Deep link from favorites: /transit/minibus?op=gmb&route=&bound=&rid=&region=
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const routeNo = sp.get("route")?.trim();
+    const rid = sp.get("rid")?.trim() || "";
+    if (!routeNo) return;
+    const bound = sp.get("bound")?.trim() || "1";
+    const region = sp.get("region")?.trim() || "";
+    let alive = true;
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ q: routeNo, mode: "minibus" });
+        if (region) params.set("region", region);
+        const data = await apiGet<{ routes: RouteHit[] }>(`/api/search?${params}`);
+        if (!alive || favBoot.current) return;
+        const match =
+          data.routes.find(
+            (r) =>
+              r.route.toUpperCase() === routeNo.toUpperCase() &&
+              (!rid || r.routeId === rid) &&
+              (r.bound ?? "1") === bound &&
+              (!region || r.region === region),
+          ) ?? data.routes.find((r) => r.route.toUpperCase() === routeNo.toUpperCase());
+        if (!match) return;
+        favBoot.current = true;
+        await pickRoute(match);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter") && suggestions.length) {
       setOpen(true);
@@ -178,6 +220,8 @@ export function MinibusApp() {
     [stops],
   );
 
+  useSyncActiveTrip(picked ? favoriteFromRouteHit("minibus", picked) : null);
+
   useEffect(() => {
     if (!selected) return;
     document.getElementById(`gmb-stop-${selected.stopId}-${selected.seq}`)?.scrollIntoView({ block: "nearest" });
@@ -198,15 +242,18 @@ export function MinibusApp() {
     });
   }
 
+  const fillRef = useRef<HTMLDivElement | null>(null);
+  const fillH = useFillViewportHeight(fillRef);
+
   const routePickButtons = suggestions.map((route, i) => (
     <button
       key={`${route.region}-${route.route}-${route.routeId}-${route.bound}-${i}`}
       type="button"
       onClick={() => void pickRoute(route)}
-      className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 active:bg-white/10"
+      className="flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-ink/5 active:bg-ink/10"
     >
-      <GmbRoutePlate route={route.route} region={route.region} />
-      <span className="min-w-0 pt-0.5 text-sm">
+      <GmbRoutePlate route={route.route} region={route.region} size="sm" />
+      <span className="min-w-0 flex-1 pt-0.5 text-sm leading-snug text-ink">
         {route.orig} → {route.dest}
       </span>
     </button>
@@ -257,6 +304,8 @@ export function MinibusApp() {
                   {picked.orig} → {picked.dest}
                 </span>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <FavoriteStarButton favorite={favoriteFromRouteHit("minibus", picked)} />
               <div
                 className="flex shrink-0 rounded-full border border-line p-0.5 text-[11px]"
                 role="group"
@@ -280,6 +329,7 @@ export function MinibusApp() {
                 >
                   精簡
                 </button>
+              </div>
               </div>
             </div>
             {selected ? (
@@ -409,11 +459,24 @@ export function MinibusApp() {
 
   return (
     <>
-      <div className="flex max-lg:-mx-4 max-lg:h-[calc(100dvh-11rem)] max-lg:max-h-[calc(100dvh-11rem)] max-lg:flex-col max-lg:overflow-hidden lg:hidden">
-        <div className="shrink-0 border-b border-line bg-card px-4 py-3 text-center">
-          <p className="text-xs text-muted">路線編號</p>
-          <div className="mt-1 min-h-[2.5rem] font-mono text-3xl tracking-[0.12em] text-ink">
-            {q || <span className="text-base tracking-normal text-muted">輸入路線號碼</span>}
+      <div
+        ref={fillRef}
+        className="flex max-lg:-mx-4 max-lg:flex-col max-lg:overflow-hidden lg:hidden"
+        style={
+          fillH
+            ? { height: fillH, maxHeight: fillH }
+            : {
+                height:
+                  "calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-safe-bottom) - 5.5rem)",
+                maxHeight:
+                  "calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-safe-bottom) - 5.5rem)",
+              }
+        }
+      >
+        <div className="shrink-0 border-b border-line bg-card px-4 py-2 text-center">
+          <p className="text-[11px] text-muted">路線編號</p>
+          <div className="mt-0.5 min-h-9 font-mono text-2xl tracking-[0.12em] text-ink">
+            {q || <span className="text-sm tracking-normal text-muted">輸入路線號碼</span>}
           </div>
         </div>
 
@@ -421,14 +484,14 @@ export function MinibusApp() {
           {error ? <p className="px-4 py-2 text-center text-sm text-rose">{error}</p> : null}
           {searching && q.trim() ? <p className="px-4 py-2 text-center text-sm text-muted">搜尋中…</p> : null}
           {!q.trim() ? (
-            <p className="px-4 py-6 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關小巴</p>
+            <p className="px-4 py-5 text-center text-sm text-muted">用下面鍵盤輸入路線號碼，會即時顯示相關小巴</p>
           ) : !searching && !suggestions.length ? (
-            <p className="px-4 py-6 text-center text-sm text-muted">搵唔到呢個編號。試下 10、48M、N27 等。</p>
+            <p className="px-4 py-5 text-center text-sm text-muted">搵唔到呢個編號。試下 10、48M、N27 等。</p>
           ) : (
             <div className="divide-y divide-line">{routePickButtons}</div>
           )}
-          <p className="px-4 py-3 text-center text-xs text-muted">
-            專線小巴（綠Van）唔使先揀港島／九龍／新界；紅色小巴冇官方到站資料。
+          <p className="px-4 py-2.5 text-center text-[11px] text-muted">
+            專線小巴（綠Van）唔使先揀區域；紅色小巴冇官方到站資料。
           </p>
         </div>
 

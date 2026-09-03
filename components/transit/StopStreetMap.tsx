@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
 import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
@@ -119,7 +120,11 @@ function FitStops({
   useEffect(() => {
     if (!walkPoints?.length) return;
     const t = window.setTimeout(() => {
-      map.fitBounds(L.latLngBounds(walkPoints), { padding: [48, 48], maxZoom: 17 });
+      try {
+        map.fitBounds(L.latLngBounds(walkPoints), { padding: [48, 48], maxZoom: 17 });
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     }, 0);
     return () => window.clearTimeout(t);
   }, [map, walkKey, walkPoints]);
@@ -132,8 +137,12 @@ function FitStops({
     const bounds = L.latLngBounds(points);
     if (here) bounds.extend(here);
     const t = window.setTimeout(() => {
-      map.fitBounds(bounds, { padding: [36, 36], maxZoom: 17 });
-      map.invalidateSize();
+      try {
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 17 });
+        map.invalidateSize();
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     }, 0);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -147,12 +156,20 @@ function FitStops({
     const lat = selected[0];
     const lng = selected[1];
     const t = window.setTimeout(() => {
-      const z = Math.max(map.getZoom(), focusZoom);
-      map.flyTo([lat, lng], z, { duration: 0.45 });
+      try {
+        const z = Math.max(map.getZoom(), focusZoom);
+        map.flyTo([lat, lng], z, { duration: 0.45 });
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     }, 0);
     return () => {
       window.clearTimeout(t);
-      map.stop();
+      try {
+        map.stop();
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, selKey, walkKey, walkPoints, focusZoom]);
@@ -165,10 +182,14 @@ function FitStops({
     const dist = map.distance(selected, here);
     if (dist >= 1400) return;
     const t = window.setTimeout(() => {
-      map.fitBounds(L.latLngBounds([selected, here]), {
-        padding: [56, 56],
-        maxZoom: focusZoom,
-      });
+      try {
+        map.fitBounds(L.latLngBounds([selected, here]), {
+          padding: [56, 56],
+          maxZoom: focusZoom,
+        });
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     }, 80);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

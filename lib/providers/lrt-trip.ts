@@ -53,8 +53,9 @@ function num(value: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-async function fares(): Promise<Map<string, FareRow>> {
-  return cached("lrt:fares", TTL.route, async () => {
+/** Plain records: `cached` + `unstable_cache` JSON cannot revive Map. */
+async function fares(): Promise<Record<string, FareRow>> {
+  return cached("lrt:fares:v2", TTL.route, async () => {
     const rows = parseCsv(await fetchText(FARES_CSV, 20_000));
     const header = (rows[0] ?? []).map((h) => h.replace(/"/g, "").trim());
     const fromI = header.findIndex((h) => h.includes("from_station"));
@@ -62,16 +63,16 @@ async function fares(): Promise<Map<string, FareRow>> {
     const adultI = header.findIndex((h) => h === "fare_octo_adult");
     const studentI = header.findIndex((h) => h === "fare_octo_student");
     const elderlyI = header.findIndex((h) => h === "fare_octo_elderly");
-    const map = new Map<string, FareRow>();
+    const map: Record<string, FareRow> = {};
     for (const row of rows.slice(1)) {
       const from = row[fromI]?.replace(/"/g, "").trim();
       const to = row[toI]?.replace(/"/g, "").trim();
       if (!from || !to) continue;
-      map.set(`${from}-${to}`, {
+      map[`${from}-${to}`] = {
         adult: num(row[adultI]?.replace(/"/g, "")),
         student: num(row[studentI]?.replace(/"/g, "")),
         elderly: num(row[elderlyI]?.replace(/"/g, "")),
-      });
+      };
     }
     return map;
   });
@@ -96,7 +97,7 @@ export async function lrtTrip(from: string, to: string): Promise<MtrTripPlan> {
   const route = planLrtRoute(from, to);
   if (!route) throw new Error("未能規劃此行程，請另選車站");
   const table = await fares();
-  const fare = table.get(`${from}-${to}`) ?? table.get(`${to}-${from}`) ?? null;
+  const fare = table[`${from}-${to}`] ?? table[`${to}-${from}`] ?? null;
 
   const crowd = crowding();
   const legs = route.legs.map((leg) => ({

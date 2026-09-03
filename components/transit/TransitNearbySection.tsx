@@ -92,19 +92,38 @@ export function TransitNearbySection() {
     let cancelled = false;
     setLoadingStops(true);
     setError("");
-    apiGet<NearbyPayload>(`/api/nearby?lat=${center.lat}&lng=${center.lng}`)
+    const base = `/api/nearby?lat=${center.lat}&lng=${center.lng}`;
+
+    // Layer 1: buses + MTR/LRT (fast). Layer 2: GMB merge when ready.
+    apiGet<NearbyPayload>(`${base}&phase=fast`)
       .then((data) => {
         if (cancelled) return;
         setPayload(data);
         const ranked = data.all.map((s, i) => ({ ...s, seq: i + 1 }));
         setSelectedKey(ranked[0] ? stopKey(ranked[0]) : null);
+        setLoadingStops(false);
+        return apiGet<{ gmb: StopHit[] }>(`${base}&phase=gmb`).then((gmbData) => {
+          if (cancelled) return;
+          setPayload((prev) => {
+            if (!prev) return prev;
+            const gmb = gmbData.gmb ?? [];
+            const busTop = [...prev.kmb, ...prev.ctb, ...prev.nlb, ...prev.mtrb]
+              .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0))
+              .slice(0, 5);
+            const merged = [...busTop, ...gmb, ...prev.mtr, ...prev.lrt]
+              .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0))
+              .slice(0, 24);
+            return { ...prev, gmb, all: merged };
+          });
+        });
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "無法載入附近車站");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingStops(false);
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "無法載入附近車站");
+          setLoadingStops(false);
+        }
       });
+
     return () => {
       cancelled = true;
     };

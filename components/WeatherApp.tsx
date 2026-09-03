@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { useWeather } from "@/components/WeatherProvider";
 import { WeatherSpatialMaps } from "@/components/WeatherSpatialMaps";
-import { apiGet } from "@/lib/client";
 import type {
   AqhiSummary,
   NineDayForecast,
@@ -271,12 +271,17 @@ function NineDayCard({
 }
 
 export function WeatherApp() {
-  const [data, setData] = useState<WeatherSnapshot | null>(null);
-  const [error, setError] = useState("");
+  const { weather, refresh } = useWeather();
+  const [data, setData] = useState<WeatherSnapshot | null>(weather);
 
   useEffect(() => {
-    apiGet<WeatherSnapshot>("/api/weather").then(setData).catch((e) => setError(e.message));
-  }, []);
+    if (weather) setData(weather);
+  }, [weather]);
+
+  useEffect(() => {
+    // Prefer shared cache; force one refresh when opening the weather page.
+    refresh();
+  }, [refresh]);
 
   const tempRange = useMemo(() => {
     if (!data?.nineDay.length) return { min: 0, max: 1 };
@@ -290,7 +295,6 @@ export function WeatherApp() {
 
   return (
     <AppShell>
-      {error ? <p className="text-rose">{error}</p> : null}
       {!data ? (
         <p className="text-muted">載入天氣…</p>
       ) : (

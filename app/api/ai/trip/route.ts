@@ -1,4 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/api";
+import { clientIp, pruneRateLimits, rateLimit } from "@/lib/rate-limit";
 import { runAssistant } from "@/lib/providers/ai-assistant";
 import type { AiAssistantChatTurn } from "@/lib/types";
 
@@ -6,6 +7,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 45;
 /** Gemini API blocks many HK origins; run this function in US East. */
 export const preferredRegion = "iad1";
+
+/** Soft per-IP caps so free Gemini quota is not burned by scrape/abuse. */
+const AI_LIMIT_PER_MIN = 8;
+const AI_LIMIT_PER_HOUR = 40;
 
 function asTurns(raw: unknown): AiAssistantChatTurn[] {
   if (!Array.isArray(raw)) return [];
@@ -22,6 +27,33 @@ function asTurns(raw: unknown): AiAssistantChatTurn[] {
 }
 
 export async function POST(request: Request) {
+  pruneRateLimits();
+  const ip = clientIp(request);
+  const perMin = rateLimit({
+    key: `ai:min:${ip}`,
+    limit: AI_LIMIT_PER_MIN,
+    windowMs: 60_000,
+  });
+  if (!perMin.ok) {
+    return jsonError(
+      `AI 請求過於頻繁，請約 ${Math.ceil(perMin.retryAfterSec / 60) || 1} 分鐘後再試。`,
+      429,
+      { retryAfter: perMin.retryAfterSec },
+    );
+  }
+  const perHour = rateLimit({
+    key: `ai:hour:${ip}`,
+    limit: AI_LIMIT_PER_HOUR,
+    windowMs: 60 * 60_000,
+  });
+  if (!perHour.ok) {
+    return jsonError(
+      `AI 今日／本小時用量已達上限，請約 ${Math.ceil(perHour.retryAfterSec / 60)} 分鐘後再試。`,
+      429,
+      { retryAfter: perHour.retryAfterSec },
+    );
+  }
+
   let body: {
     from?: unknown;
     to?: unknown;
@@ -63,6 +95,10 @@ export async function POST(request: Request) {
     });
     return jsonOk(result);
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "無法回應", 502);
+    const msg = error instanceof Error ? error.message : "無法回應";
+    if (/GEMINI_PAUSED|quota|RESOURCE_EXHAUSTED|429|rate.?limit/i.test(msg)) {
+      return jsonError(msg.replace(/^GEMINI_PAUSED:\s*/i, ""), 503, { retryAfter: 900 });
+    }
+    return jsonError(msg, 502);
   }
 }

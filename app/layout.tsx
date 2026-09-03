@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { JetBrains_Mono, Noto_Sans_TC } from "next/font/google";
 import { LocationPrefProvider } from "@/components/LocationPrefProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { WeatherProvider } from "@/components/WeatherProvider";
 import "./globals.css";
 
 const noto = Noto_Sans_TC({
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className={`${noto.className} min-h-full flex flex-col`}>
         <ThemeProvider>
-          <LocationPrefProvider>{children}</LocationPrefProvider>
+          <LocationPrefProvider>
+            <WeatherProvider>{children}</WeatherProvider>
+          </LocationPrefProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

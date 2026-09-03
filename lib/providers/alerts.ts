@@ -1,8 +1,13 @@
 import { cached, TTL } from "@/lib/cache";
 import { fetchJson, fetchText } from "@/lib/http";
+import {
+  asMtrTrafficAlert,
+  isMtrTrafficText,
+  loadMtrServiceAlerts,
+} from "@/lib/providers/mtr-alerts";
 import { getWeather } from "@/lib/providers/weather";
 
-export type AlertKind = "weather" | "traffic";
+export type AlertKind = "weather" | "traffic" | "transit";
 export type AlertSeverity = "critical" | "high" | "medium";
 
 export type CityAlert = {
@@ -243,11 +248,12 @@ function weatherAlertsFromSnapshot(
 }
 
 export async function getCityAlerts(): Promise<AlertsSnapshot> {
-  return cached("alerts:all:v2", TTL.alerts, async () => {
-    const [weather, swt, traffic] = await Promise.all([
+  return cached("alerts:all:v3", TTL.alerts, async () => {
+    const [weather, swt, trafficRaw, mtr] = await Promise.all([
       getWeather().catch(() => null),
       loadSpecialWeatherTips(),
       loadTrafficNews(),
+      loadMtrServiceAlerts().catch(() => [] as CityAlert[]),
     ]);
 
     const official = weather
@@ -258,7 +264,14 @@ export async function getCityAlerts(): Promise<AlertsSnapshot> {
       ? swt.filter((tip) => !official.some((w) => tip.headline.includes(w.headline.slice(0, 8))))
       : swt;
 
-    const alerts = [...official, ...tips, ...traffic].sort(
+    // Promote TD items that are really MTR signal / station incidents
+    const traffic = trafficRaw.map((row) =>
+      isMtrTrafficText(`${row.headline} ${row.detail} ${row.label}`)
+        ? asMtrTrafficAlert(row)
+        : row,
+    );
+
+    const alerts = [...official, ...tips, ...mtr, ...traffic].sort(
       (a, b) => RANK[a.severity] - RANK[b.severity],
     );
 

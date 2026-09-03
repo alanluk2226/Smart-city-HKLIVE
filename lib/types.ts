@@ -125,8 +125,10 @@ export type MtrTripPlan = {
     elderlyLabel: string;
     note?: string;
   };
-  /** @deprecated Prefer per-leg crowding; kept for first rail leg summary. */
-  crowding: MtrCarCrowding;
+  /** First rail leg summary; omitted outside approximate service hours. */
+  crowding?: MtrCarCrowding;
+  /** False roughly after last train / before first train (HKT heuristic). */
+  inService?: boolean;
 };
 
 export type HsrTrain = {

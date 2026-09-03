@@ -1,7 +1,7 @@
 import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { formatEtaClock, haversineMeters } from "@/lib/geo";
-import { fetchText } from "@/lib/http";
+import { CATALOG_REVALIDATE_SECONDS, fetchText } from "@/lib/http";
 import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
@@ -68,7 +68,9 @@ function parseCsv(text: string): string[][] {
 
 async function mtrBusRoutes(): Promise<MtrBusRouteRow[]> {
   return cached("mtrb:routes", TTL.route, async () => {
-    const text = await fetchText(ROUTES_URL, 20_000);
+    const text = await fetchText(ROUTES_URL, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     const rows = parseCsv(text)
       .filter((row) => row.length >= 7)
       .map((row) => ({
@@ -90,7 +92,9 @@ async function mtrBusRoutes(): Promise<MtrBusRouteRow[]> {
 
 async function mtrBusStopRows(): Promise<MtrBusStopRow[]> {
   return cached("mtrb:stop-rows", TTL.stop, async () => {
-    const text = await fetchText(STOPS_URL, 20_000);
+    const text = await fetchText(STOPS_URL, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     return parseCsv(text)
       .filter((row) => row.length >= 9)
       .map((row) => ({
@@ -123,8 +127,7 @@ function splitRouteName(nameZh: string): { orig: string; dest: string } {
 export async function searchMtrBusRoutes(q: string): Promise<RouteHit[]> {
   const needle = q.trim().toUpperCase();
   if (!needle) return [];
-  const routes = await mtrBusRoutes();
-  const stops = await mtrBusStopRows();
+  const [routes, stops] = await Promise.all([mtrBusRoutes(), mtrBusStopRows()]);
   const matched = routes
     .filter(
       (r) =>

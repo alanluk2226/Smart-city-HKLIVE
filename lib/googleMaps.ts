@@ -1,4 +1,7 @@
+import { isGoogleMapsPaused } from "@/lib/google-maps-pause";
+
 function getGoogleMapsApiKey() {
+  if (typeof window !== "undefined" && isGoogleMapsPaused()) return "";
   const key = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "").trim();
   if (!key) return "";
   // Local/dev: keep free OSM unless explicitly opted in

@@ -1,32 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { apiGet } from "@/lib/client";
-import type { WeatherSnapshot } from "@/lib/providers/weather";
+import { useWeather } from "@/components/WeatherProvider";
 
 export function WeatherNavChip() {
   const pathname = usePathname();
-  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const { weather } = useWeather();
   const active = pathname === "/weather" || pathname.startsWith("/weather/");
-
-  useEffect(() => {
-    let cancelled = false;
-    function load() {
-      apiGet<WeatherSnapshot>("/api/weather")
-        .then((data) => {
-          if (!cancelled) setWeather(data);
-        })
-        .catch(() => {});
-    }
-    load();
-    const id = window.setInterval(load, 5 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
 
   const warning = weather?.warnings[0]?.name;
   const hasAlert = Boolean(warning || weather?.warningMessage || weather?.tropicalMessage);
@@ -42,7 +23,7 @@ export function WeatherNavChip() {
           : "查看天氣詳情"
       }
       title={warning ? `${warning} · 查看天氣詳情` : "查看天氣詳情"}
-      className={`shrink-0 flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 transition ${
+      className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 transition ${
         active
           ? "border-sky/50 bg-sky/15"
           : hasAlert

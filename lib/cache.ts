@@ -1,7 +1,12 @@
+import { unstable_cache } from "next/cache";
+
 type Entry<T> = { value: T; expires: number };
 
 const store = new Map<string, Entry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
+
+/** Persist across Vercel cold starts; skip for short-lived ETA-style data. */
+const DATA_CACHE_MIN_TTL_MS = 60_000;
 
 export async function cached<T>(
   key: string,
@@ -15,14 +20,19 @@ export async function cached<T>(
   const pending = inflight.get(key);
   if (pending) return pending as Promise<T>;
 
-  const task = loader()
-    .then((value) => {
-      store.set(key, { value, expires: Date.now() + ttlMs });
-      return value;
-    })
-    .finally(() => {
-      inflight.delete(key);
-    });
+  const task = (async () => {
+    const value =
+      ttlMs >= DATA_CACHE_MIN_TTL_MS
+        ? await unstable_cache(loader, [key], {
+            revalidate: Math.max(1, Math.ceil(ttlMs / 1000)),
+            tags: [key],
+          })()
+        : await loader();
+    store.set(key, { value, expires: Date.now() + ttlMs });
+    return value;
+  })().finally(() => {
+    inflight.delete(key);
+  });
 
   inflight.set(key, task);
   return task;

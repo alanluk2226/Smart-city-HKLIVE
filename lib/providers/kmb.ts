@@ -1,7 +1,7 @@
 import { cached, TTL } from "@/lib/cache";
 import { inferDistanceToStop } from "@/lib/bus-distance";
 import { etaMinutesFromIso, formatEtaClock, haversineMeters } from "@/lib/geo";
-import { fetchJson } from "@/lib/http";
+import { CATALOG_REVALIDATE_SECONDS, fetchJson } from "@/lib/http";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
 const BASE = "https://data.etabus.gov.hk/v1/transport/kmb";
@@ -51,7 +51,9 @@ function boundLabel(bound: string) {
 
 export async function kmbRoutes(): Promise<KmbRoute[]> {
   return cached("kmb:routes", TTL.route, async () => {
-    const json = await fetchJson<KmbList<KmbRoute>>(`${BASE}/route`, 20_000);
+    const json = await fetchJson<KmbList<KmbRoute>>(`${BASE}/route`, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     const rows = json.data;
     if (!Array.isArray(rows) || rows.length < 50) {
       throw new Error("九巴路線名單無效或空白");
@@ -62,7 +64,9 @@ export async function kmbRoutes(): Promise<KmbRoute[]> {
 
 export async function kmbStops(): Promise<KmbStop[]> {
   return cached("kmb:stops", TTL.stop, async () => {
-    const json = await fetchJson<KmbList<KmbStop>>(`${BASE}/stop`, 20_000);
+    const json = await fetchJson<KmbList<KmbStop>>(`${BASE}/stop`, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     return json.data;
   });
 }

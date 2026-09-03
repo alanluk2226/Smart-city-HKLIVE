@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FareHint } from "@/components/transit/FareHint";
+import { FavoriteStarButton } from "@/components/transit/FavoriteStarButton";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import {
   tramEtaForStop,
@@ -11,6 +12,8 @@ import {
   type TramStop,
 } from "@/lib/providers/tram";
 import { formatTramFareLine, TRAM_FARES } from "@/lib/static/tram-fares";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
+import type { TransitFavorite } from "@/lib/transit-favorites-store";
 import type { StopHit } from "@/lib/types";
 
 function centerTimelineStop(scroller: HTMLDivElement, key: string, smooth: boolean) {
@@ -24,9 +27,17 @@ function centerTimelineStop(scroller: HTMLDivElement, key: string, smooth: boole
 }
 
 export function TramApp() {
-  const [direction, setDirection] = useState<TramDirection>("east");
   const stops = TRAM_LINE.stops;
+  const [direction, setDirection] = useState<TramDirection>(() => {
+    if (typeof window === "undefined") return "east";
+    const dir = new URLSearchParams(window.location.search).get("dir");
+    return dir === "west" ? "west" : "east";
+  });
   const [selectedKey, setSelectedKey] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const stop = new URLSearchParams(window.location.search).get("stop")?.trim();
+      if (stop && stops.some((s) => s.key === stop)) return stop;
+    }
     const mid = stops.find((s) => s.name.includes("灣仔")) ?? stops[Math.floor(stops.length / 2)];
     return mid?.key ?? null;
   });
@@ -101,6 +112,18 @@ export function TramApp() {
       ? selected.destinationsEast
       : selected.destinationsWest
     : [];
+
+  const tramTrip: TransitFavorite | null = selected
+    ? {
+        kind: "tram",
+        stopKey: selected.key,
+        direction,
+        stopName: selected.name,
+        label: `電車 ${selected.name}（${dirShort}）`,
+        savedAt: Date.now(),
+      }
+    : null;
+  useSyncActiveTrip(tramTrip);
 
   return (
     <div className="space-y-3">
@@ -213,9 +236,23 @@ export function TramApp() {
 
       {selected ? (
         <section className="rounded-2xl border border-amber/30 bg-amber/5 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h3 className="text-xl text-ink">{selected.name}</h3>
-            <span className="text-xs text-muted">{dirShort}</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <div className="min-w-0 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 className="text-xl text-ink">{selected.name}</h3>
+              <span className="text-xs text-muted">{dirShort}</span>
+            </div>
+            <FavoriteStarButton
+              favorite={
+                {
+                  kind: "tram",
+                  stopKey: selected.key,
+                  direction,
+                  stopName: selected.name,
+                  label: `電車 ${selected.name}（${dirShort}）`,
+                  savedAt: Date.now(),
+                } satisfies TransitFavorite
+              }
+            />
           </div>
           {selectedDests.length ? (
             <div className="mt-2 flex flex-wrap gap-1.5">

@@ -60,24 +60,28 @@ function col(header: string[], name: string) {
   return header.findIndex((h) => h.replace(/"/g, "").trim() === name);
 }
 
-async function stationIds(): Promise<Map<string, number>> {
-  return cached("mtr:station-ids", TTL.route, async () => {
+/**
+ * Use plain records (not Map): `cached` may persist via `unstable_cache`,
+ * which JSON-serializes values and strips Map methods → `ids.get is not a function`.
+ */
+async function stationIds(): Promise<Record<string, number>> {
+  return cached("mtr:station-ids:v2", TTL.route, async () => {
     const rows = parseCsv(await fetchText(STATIONS_CSV, 20_000));
     const header = rows[0] ?? [];
     const codeI = col(header, "Station Code");
     const idI = col(header, "Station ID");
-    const map = new Map<string, number>();
+    const map: Record<string, number> = {};
     for (const row of rows.slice(1)) {
       const code = row[codeI]?.trim();
       const id = num(row[idI]);
-      if (code && id != null) map.set(code, id);
+      if (code && id != null) map[code] = id;
     }
     return map;
   });
 }
 
-async function heavyFares(): Promise<Map<string, FareRow>> {
-  return cached("mtr:fares", TTL.route, async () => {
+async function heavyFares(): Promise<Record<string, FareRow>> {
+  return cached("mtr:fares:v2", TTL.route, async () => {
     const rows = parseCsv(await fetchText(FARES_CSV, 20_000));
     const header = rows[0] ?? [];
     const src = col(header, "SRC_STATION_ID");
@@ -85,39 +89,39 @@ async function heavyFares(): Promise<Map<string, FareRow>> {
     const adult = col(header, "OCT_ADT_FARE");
     const student = col(header, "OCT_STD_FARE");
     const elderly = col(header, "OCT_CON_ELDERLY_FARE");
-    const map = new Map<string, FareRow>();
+    const map: Record<string, FareRow> = {};
     for (const row of rows.slice(1)) {
       const a = num(row[src]);
       const b = num(row[dest]);
       if (a == null || b == null) continue;
-      map.set(`${a}-${b}`, {
+      map[`${a}-${b}`] = {
         adult: num(row[adult]),
         student: num(row[student]),
         elderly: num(row[elderly]),
-      });
+      };
     }
     return map;
   });
 }
 
-async function aelFares(): Promise<Map<string, FareRow>> {
-  return cached("mtr:ael-fares", TTL.route, async () => {
+async function aelFares(): Promise<Record<string, FareRow>> {
+  return cached("mtr:ael-fares:v2", TTL.route, async () => {
     const rows = parseCsv(await fetchText(AEL_FARES_CSV, 20_000));
     const header = rows[0] ?? [];
     const src = col(header, "ST_FROM_ID");
     const dest = col(header, "ST_TO_ID");
     const adult = col(header, "OCT_ADT_FARE");
     const child = col(header, "OCT_CHD_FARE");
-    const map = new Map<string, FareRow>();
+    const map: Record<string, FareRow> = {};
     for (const row of rows.slice(1)) {
       const a = num(row[src]);
       const b = num(row[dest]);
       if (a == null || b == null) continue;
-      map.set(`${a}-${b}`, {
+      map[`${a}-${b}`] = {
         adult: num(row[adult]),
         student: num(row[child]),
         elderly: null,
-      });
+      };
     }
     return map;
   });
@@ -134,11 +138,16 @@ function addFares(a: FareRow | null, b: FareRow | null): FareRow | null {
   };
 }
 
-function lookup(table: Map<string, FareRow>, ids: Map<string, number>, from: string, to: string) {
-  const a = ids.get(from);
-  const b = ids.get(to);
+function lookup(
+  table: Record<string, FareRow>,
+  ids: Record<string, number>,
+  from: string,
+  to: string,
+) {
+  const a = ids[from];
+  const b = ids[to];
   if (a == null || b == null) return null;
-  return table.get(`${a}-${b}`) ?? null;
+  return table[`${a}-${b}`] ?? null;
 }
 
 function hongKongNow() {
@@ -151,6 +160,16 @@ function isPeakHour(now = hongKongNow()) {
   if (day === 0) return false;
   if (day === 6) return hour >= 17 && hour < 20;
   return (hour >= 7.5 && hour < 9.5) || (hour >= 17.5 && hour < 19.5);
+}
+
+/**
+ * Approximate heavy-rail service window in HKT.
+ * First trains ~05:30–06:00; last trains typically wind down by ~01:00–01:20.
+ * Not line-specific — used only to hide misleading car-crowding outside service.
+ */
+export function isMtrServiceHours(now = hongKongNow()) {
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  return minutes >= 5 * 60 + 30 || minutes < 1 * 60 + 20;
 }
 
 function carCount(line: string) {
@@ -249,6 +268,13 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
     fareNote = fareNote ? `${fareNote} ${racNote}` : racNote;
   }
 
+  const inService = isMtrServiceHours();
+  if (!inService) {
+    const offNote =
+      "現時約為尾班車後或未開出時段，港鐵大致暫停載客；車廂空位參考暫不顯示。實際班次以港鐵公布為準。";
+    fareNote = fareNote ? `${fareNote} ${offNote}` : offNote;
+  }
+
   const peak = isPeakHour();
   const legs = route.legs.map((leg) =>
     leg.line === "WALK"
@@ -260,7 +286,7 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
             leg.interchangeBeforeMin != null
               ? Math.max(1, Math.round(leg.interchangeBeforeMin))
               : undefined,
-          crowding: crowdingFor(leg.line, peak),
+          ...(inService ? { crowding: crowdingFor(leg.line, peak) } : {}),
         },
   );
   const board = legs.find((l) => l.line !== "WALK") ?? legs[0];
@@ -284,6 +310,9 @@ export async function mtrTrip(from: string, to: string): Promise<MtrTripPlan> {
       elderlyLabel,
       note: fareNote,
     },
-    crowding: board.crowding ?? crowdingFor(board.line === "WALK" ? "TML" : board.line, peak),
+    inService,
+    crowding: inService
+      ? (board.crowding ?? crowdingFor(board.line === "WALK" ? "TML" : board.line, peak))
+      : undefined,
   };
 }

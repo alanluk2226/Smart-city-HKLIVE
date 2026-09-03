@@ -1,7 +1,7 @@
 import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
-import { fetchJson } from "@/lib/http";
+import { CATALOG_REVALIDATE_SECONDS, fetchJson } from "@/lib/http";
 import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
@@ -41,7 +41,9 @@ type CtbEta = {
 
 export async function ctbRoutes(): Promise<CtbRoute[]> {
   return cached("ctb:routes", TTL.route, async () => {
-    const json = await fetchJson<CtbList<CtbRoute>>(`${BASE}/route/ctb`, 20_000);
+    const json = await fetchJson<CtbList<CtbRoute>>(`${BASE}/route/ctb`, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     const rows = json.data;
     // 拒絕快取空／殘缺名單，避免 Vercel 實例長時間搜唔到城巴
     if (!Array.isArray(rows) || rows.length < 50) {
@@ -150,7 +152,9 @@ export async function ctbStopEta(
 
 export async function ctbStops(): Promise<CtbStop[]> {
   return cached("ctb:stops", TTL.stop, async () => {
-    const json = await fetchJson<CtbList<CtbStop>>(`${BASE}/stop/ctb`, 20_000);
+    const json = await fetchJson<CtbList<CtbStop>>(`${BASE}/stop/ctb`, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     return json.data;
   });
 }

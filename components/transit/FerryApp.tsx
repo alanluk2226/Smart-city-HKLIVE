@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FavoriteStarButton } from "@/components/transit/FavoriteStarButton";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
@@ -12,6 +13,8 @@ import {
 } from "@/lib/static/ferry-fares";
 import { FERRY_HUBS } from "@/lib/static/ferry-hubs";
 import { DUAL_VESSEL_LEG_IDS } from "@/lib/static/ferry-schedules";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
+import type { TransitFavorite } from "@/lib/transit-favorites-store";
 import type { StopHit } from "@/lib/types";
 
 type FerryDeparture = {
@@ -166,10 +169,18 @@ function FerryTicketFares({ fare }: { fare: FerryFareHint }) {
 }
 
 export function FerryApp() {
-  const [hubId, setHubId] = useState("central");
+  const [hubId, setHubId] = useState(() => {
+    if (typeof window === "undefined") return "central";
+    const hub = new URLSearchParams(window.location.search).get("hub")?.trim();
+    if (hub && FERRY_HUBS.some((h) => h.id === hub)) return hub;
+    return "central";
+  });
   const [dataHubId, setDataHubId] = useState<string | null>(null);
   const [hubPickerOpen, setHubPickerOpen] = useState(false);
-  const [destFilter, setDestFilter] = useState<string | null>(null);
+  const [destFilter, setDestFilter] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("dest")?.trim() || null;
+  });
   const [expandedLegId, setExpandedLegId] = useState<string | null>(null);
   const [departures, setDepartures] = useState<FerryDeparture[]>([]);
   const [routeLinks, setRouteLinks] = useState<Array<{ fromHubId: string; toHubId: string }>>([]);
@@ -180,12 +191,33 @@ export function FerryApp() {
   const [error, setError] = useState("");
   const mapSectionRef = useRef<HTMLDivElement>(null);
   const locatedOnce = useRef(false);
-  const userPickedHub = useRef(false);
+  const userPickedHub = useRef(
+    typeof window !== "undefined" && Boolean(new URLSearchParams(window.location.search).get("hub")),
+  );
+  const [sessionPinned, setSessionPinned] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      Boolean(new URLSearchParams(window.location.search).get("hub")),
+  );
   const dataHubIdRef = useRef<string | null>(null);
+  const skipDestReset = useRef(Boolean(destFilter));
 
   const hub = FERRY_HUBS.find((h) => h.id === hubId) ?? FERRY_HUBS[0]!;
   const showSkeleton = loading && dataHubId !== hubId;
   const showSoftRefresh = refreshing && dataHubId === hubId;
+
+  useSyncActiveTrip(
+    sessionPinned || destFilter
+      ? {
+          kind: "ferry",
+          hubId: hub.id,
+          hubName: hub.name,
+          dest: destFilter ?? undefined,
+          label: destFilter ? `渡輪 ${hub.name}→${destFilter}` : `渡輪 ${hub.name}`,
+          savedAt: Date.now(),
+        }
+      : null,
+  );
 
   useEffect(() => {
     if (locatedOnce.current || !navigator.geolocation || !getLocationEnabled()) return;
@@ -201,6 +233,11 @@ export function FerryApp() {
   }, []);
 
   useEffect(() => {
+    if (skipDestReset.current) {
+      skipDestReset.current = false;
+      setExpandedLegId(null);
+      return;
+    }
     setDestFilter(null);
     setExpandedLegId(null);
   }, [hubId]);
@@ -335,6 +372,7 @@ export function FerryApp() {
 
   function pickHub(id: string) {
     userPickedHub.current = true;
+    setSessionPinned(true);
     setHubId(id);
     setHubPickerOpen(false);
   }
@@ -388,18 +426,34 @@ export function FerryApp() {
               {hubPickerOpen ? "收起" : "← 改碼頭"}
             </button>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                 <h2 className="text-xl text-ink">{hub.name}</h2>
-                {updatedAt && dataHubId === hubId ? (
-                  <p className="text-xs text-muted">
-                    {showSoftRefresh ? "更新中 · " : null}
-                    更新{" "}
-                    {new Date(updatedAt).toLocaleTimeString("zh-HK", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-2">
+                  <FavoriteStarButton
+                    favorite={
+                      {
+                        kind: "ferry",
+                        hubId: hub.id,
+                        hubName: hub.name,
+                        dest: destFilter ?? undefined,
+                        label: destFilter
+                          ? `渡輪 ${hub.name}→${destFilter}`
+                          : `渡輪 ${hub.name}`,
+                        savedAt: Date.now(),
+                      } satisfies TransitFavorite
+                    }
+                  />
+                  {updatedAt && dataHubId === hubId ? (
+                    <p className="text-xs text-muted">
+                      {showSoftRefresh ? "更新中 · " : null}
+                      更新{" "}
+                      {new Date(updatedAt).toLocaleTimeString("zh-HK", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               {hasEstimate ? (
                 <p className="mt-1 text-[11px] text-amber">

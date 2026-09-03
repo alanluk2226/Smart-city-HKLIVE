@@ -12,7 +12,7 @@ export function SettingsNavButton() {
       href="/settings"
       aria-label="設定"
       title="設定"
-      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
+      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
         active
           ? "border-teal/50 bg-teal/15 text-teal"
           : "border-line bg-card text-ink hover:border-teal/40 hover:text-teal"

@@ -1,5 +1,10 @@
 import { adviseTrip } from "@/lib/providers/ai-trip";
-import { geminiApiKey, geminiChat, geminiJson } from "@/lib/providers/gemini";
+import {
+  geminiApiKey,
+  geminiChat,
+  geminiJson,
+  getGeminiPauseState,
+} from "@/lib/providers/gemini";
 import { getWeather } from "@/lib/providers/weather";
 import {
   canResolveTripPair,
@@ -163,7 +168,36 @@ async function weatherContextLine() {
   }
 }
 
+function pausedAssistantReply(extra?: string): AiAssistantResponse {
+  const pause = getGeminiPauseState();
+  const reason = pause.reason || "Gemini 配額已用盡，已暫時暫停 AI";
+  const mins = Math.max(1, Math.ceil((pause.retryAfterSec || 1800) / 60));
+  return {
+    mode: "chat",
+    reply: [
+      reason,
+      `約 ${mins} 分鐘後會自動恢復。期間可用「交通」頁搜尋巴士／港鐵／小巴。`,
+      extra,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    usedAi: false,
+    aiError: reason,
+    advice: null,
+  };
+}
+
+function formatAiError(raw: string) {
+  const cleaned = raw.replace(/^GEMINI_PAUSED:\s*/i, "").trim();
+  if (/location is not supported/i.test(cleaned)) {
+    return "Gemini API 不支援目前所在地區（本機香港網絡常見）。部署到 Vercel 通常可正常呼叫。";
+  }
+  return cleaned;
+}
+
 async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantResponse> {
+  if (getGeminiPauseState().paused) return pausedAssistantReply();
+
   if (!geminiApiKey()) {
     return {
       mode: "chat",
@@ -199,9 +233,10 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
     return { mode: "chat", reply: reply.trim(), usedAi: true, aiError: null, advice: null };
   } catch (err) {
     const raw = err instanceof Error ? err.message : "Gemini 失敗";
-    const aiError = /location is not supported/i.test(raw)
-      ? "Gemini API 不支援目前所在地區（本機香港網絡常見）。部署到 Vercel 通常可正常呼叫。"
-      : raw;
+    if (/GEMINI_PAUSED/i.test(raw) || getGeminiPauseState().paused) {
+      return pausedAssistantReply();
+    }
+    const aiError = formatAiError(raw);
     return {
       mode: "chat",
       reply: `暫時未能回應：${aiError}`,
@@ -249,6 +284,21 @@ async function geminiFreeRoute(
     from: grounded?.fromName || from,
     to: grounded?.toName || to,
   };
+
+  if (getGeminiPauseState().paused) {
+    if (grounded) {
+      const pause = pausedAssistantReply();
+      return {
+        mode: "route",
+        reply: `${grounded.reply}\n\n（${pause.aiError}）`,
+        usedAi: grounded.usedAi,
+        aiError: pause.aiError,
+        advice: grounded,
+        trip,
+      };
+    }
+    return { ...pausedAssistantReply(), trip: null };
+  }
 
   if (!geminiApiKey()) {
     if (grounded) {
@@ -325,9 +375,21 @@ ${groundedBusLines(grounded)}
     };
   } catch (err) {
     const raw = err instanceof Error ? err.message : "Gemini 失敗";
-    const aiError = /location is not supported/i.test(raw)
-      ? "Gemini API 不支援目前所在地區（本機香港網絡常見）。部署到 Vercel 通常可正常呼叫。"
-      : raw;
+    if (/GEMINI_PAUSED/i.test(raw) || getGeminiPauseState().paused) {
+      const pause = pausedAssistantReply();
+      if (grounded) {
+        return {
+          mode: "route",
+          reply: `${grounded.reply}\n\n（${pause.aiError}）`,
+          usedAi: grounded.usedAi,
+          aiError: pause.aiError,
+          advice: grounded,
+          trip,
+        };
+      }
+      return { ...pause, trip: null };
+    }
+    const aiError = formatAiError(raw);
     if (grounded) {
       return {
         mode: "route",
@@ -409,7 +471,7 @@ export async function runAssistant(input: {
     return routeAdvice(ruled.from, ruled.to, userText);
   }
 
-  if (geminiApiKey()) {
+  if (geminiApiKey() && !getGeminiPauseState().paused) {
     try {
       const intent = await classifyIntent(messages, input.lastTrip);
       if (intent.intent === "route") {
@@ -429,7 +491,10 @@ export async function runAssistant(input: {
           return { mode: "chat", reply: q, usedAi: true, aiError: null, advice: null };
         }
       }
-    } catch {
+    } catch (err) {
+      if (/GEMINI_PAUSED/i.test(err instanceof Error ? err.message : "") || getGeminiPauseState().paused) {
+        return pausedAssistantReply();
+      }
       // Fall through to free chat.
     }
   }

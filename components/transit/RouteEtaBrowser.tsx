@@ -3,13 +3,17 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BusOperatorIcon } from "@/components/transit/BusOperatorIcon";
 import { BusRouteKeypad } from "@/components/transit/BusRouteKeypad";
+import { FavoriteStarButton } from "@/components/transit/FavoriteStarButton";
 import { apiGet, openWalkingDirections } from "@/lib/client";
 import { formatBusDistance } from "@/lib/bus-distance";
 import { RouteInfoBanner, etaArriveLabel } from "@/components/transit/RouteInfoBanner";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { useEta } from "@/components/transit/useEta";
 import { useRouteInfo } from "@/components/transit/useRouteInfo";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
 import { pickInitialRouteStop } from "@/lib/nearest-stop";
+import { favoriteFromRouteHit } from "@/lib/transit-favorites-store";
+import { useFillViewportHeight } from "@/lib/use-fill-viewport-height";
 import type { RouteHit, StopHit } from "@/lib/types";
 
 const BUS_ROUTE_MAX_LEN = 5;
@@ -84,6 +88,7 @@ export function RouteEtaBrowser({
   const [showEtaDetails, setShowEtaDetails] = useState(true);
   /** 忽略過期搜尋回應，避免手機逐字輸入時舊請求覆蓋 E21A 結果 */
   const searchSeq = useRef(0);
+  const favBoot = useRef(false);
   const { etas, loading, error: etaError } = useEta(selected);
   const { info: routeInfo, loading: routeInfoLoading } = useRouteInfo(
     pickedRoute,
@@ -175,6 +180,7 @@ export function RouteEtaBrowser({
     setError("");
     setSelected(null);
     setPickedRoute(route);
+    setQ(route.route);
     setLoadingStops(true);
     setSearching(false);
     try {
@@ -206,6 +212,48 @@ export function RouteEtaBrowser({
     }
   }
 
+  // Deep link from transit favorites: /transit/bus?op=&route=&bound=&st=&rid=
+  useEffect(() => {
+    if (mode !== "bus") return;
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const routeNo = sp.get("route")?.trim();
+    const op = sp.get("op")?.trim();
+    if (!routeNo || !op) return;
+    const bound = sp.get("bound")?.trim() || "O";
+    const st = sp.get("st")?.trim() || "1";
+    const rid = sp.get("rid")?.trim() || "";
+    let alive = true;
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ q: routeNo, mode: "bus", operator: op });
+        const data = await apiGet<{ routes: RouteHit[] }>(`/api/search?${params}`);
+        if (!alive || favBoot.current) return;
+        const match =
+          data.routes.find(
+            (r) =>
+              r.route.toUpperCase() === routeNo.toUpperCase() &&
+              r.operator === op &&
+              (r.bound ?? "O") === bound &&
+              (r.serviceType ?? "1") === st &&
+              (!rid || r.routeId === rid),
+          ) ??
+          data.routes.find(
+            (r) => r.route.toUpperCase() === routeNo.toUpperCase() && r.operator === op,
+          );
+        if (!match) return;
+        favBoot.current = true;
+        await pickRoute(match);
+      } catch {
+        // ignore — user can search manually
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
   function pickStop(stop: StopHit, route = pickedRoute) {
     setSelected({
       ...stop,
@@ -225,10 +273,17 @@ export function RouteEtaBrowser({
   }
 
   const inStopsView = Boolean(pickedRoute);
+  useSyncActiveTrip(pickedRoute ? favoriteFromRouteHit(mode, pickedRoute) : null);
+  const fillRef = useRef<HTMLDivElement | null>(null);
+  const fillH = useFillViewportHeight(fillRef);
 
   if (inStopsView && pickedRoute) {
     return (
-      <div className="flex flex-col max-md:-mx-4 max-md:h-[calc(100dvh-11rem)] max-md:min-h-[32rem]">
+      <div
+        ref={fillRef}
+        className="flex flex-col max-md:-mx-4 max-md:min-h-[32rem]"
+        style={fillH ? { height: fillH } : { height: "calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-safe-bottom) - 5.5rem)" }}
+      >
         <div className="flex shrink-0 items-center gap-2 px-3 py-2 md:px-0">
           <button
             type="button"
@@ -270,6 +325,8 @@ export function RouteEtaBrowser({
                 <span className="font-mono text-xl text-teal">{pickedRoute.route}</span>
                 <span className="text-sm text-ink">{pickedRoute.subtitle}</span>
               </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <FavoriteStarButton favorite={favoriteFromRouteHit(mode, pickedRoute)} />
               <div
                 className="flex shrink-0 rounded-full border border-line p-0.5 text-[11px]"
                 role="group"
@@ -293,6 +350,7 @@ export function RouteEtaBrowser({
                 >
                   精簡
                 </button>
+              </div>
               </div>
             </div>
             {selected && showEtaDetails ? (
@@ -449,7 +507,20 @@ export function RouteEtaBrowser({
   return (
     <div className={mode === "bus" ? "" : "space-y-5"}>
       {mode === "bus" ? (
-        <div className="flex max-lg:-mx-4 max-lg:h-[calc(100dvh-11rem)] max-lg:max-h-[calc(100dvh-11rem)] max-lg:flex-col max-lg:overflow-hidden lg:hidden">
+        <div
+          ref={fillRef}
+          className="flex max-lg:-mx-4 max-lg:flex-col max-lg:overflow-hidden lg:hidden"
+          style={
+            fillH
+              ? { height: fillH, maxHeight: fillH }
+              : {
+                  height:
+                    "calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-safe-bottom) - 5.5rem)",
+                  maxHeight:
+                    "calc(100dvh - var(--app-header-h) - var(--app-bottom-nav-h) - var(--app-safe-bottom) - 5.5rem)",
+                }
+          }
+        >
           <div className="shrink-0 border-b border-line bg-card px-4 py-3 text-center">
             <p className="text-xs text-muted">路線編號</p>
             <div className="mt-1 min-h-[2.5rem] font-mono text-3xl tracking-[0.12em] text-ink">

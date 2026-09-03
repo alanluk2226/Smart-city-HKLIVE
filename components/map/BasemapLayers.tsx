@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useTheme } from "@/components/ThemeProvider";
+import { pauseGoogleMaps } from "@/lib/google-maps-pause";
 import { getGoogleMapsApiKey, loadGoogleMapsApi } from "@/lib/googleMaps";
 import {
   GOOGLE_DARK_STYLES,
@@ -109,7 +110,21 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
     const fail = (hint: string, err?: unknown) => {
       if (cancelled) return;
       console.warn("Google 地圖載入失敗，改用 OpenStreetMap", hint, err);
+      pauseGoogleMaps(
+        "Google 地圖配額／金鑰暫時不可用，已改用免費 OpenStreetMap 底圖。",
+      );
       setFailed(true);
+    };
+
+    const previousAuthFailure = (window as unknown as { gm_authFailure?: () => void })
+      .gm_authFailure;
+    (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () => {
+      try {
+        previousAuthFailure?.();
+      } catch {
+        /* ignore */
+      }
+      fail("gm_authFailure（配額或金鑰被拒）");
     };
 
     void (async () => {
@@ -128,7 +143,11 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
           if (cancelled) return;
           const errNode = document.querySelector(".gm-err-container");
           if (errNode) {
-            if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+            try {
+              if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+            } catch {
+              /* map already torn down */
+            }
             fail(
               "Google 拒絕載入地圖。請確認已啟用 Maps JavaScript API、帳單已開，以及 API key 網址限制包含 http://localhost:3000/* 同 https://hk-city-live.vercel.app/*",
             );
@@ -137,14 +156,23 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
 
         observer = new MutationObserver(() => {
           if (document.querySelector(".gm-err-container")) {
-            if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+            try {
+              if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+            } catch {
+              /* map already torn down */
+            }
             fail(
               "Google 拒絕載入地圖。請確認已啟用 Maps JavaScript API、帳單已開，以及 API key 網址限制正確",
             );
             observer?.disconnect();
           }
         });
-        observer.observe(map.getContainer(), { childList: true, subtree: true });
+        try {
+          observer.observe(map.getContainer(), { childList: true, subtree: true });
+        } catch {
+          observer.disconnect();
+          observer = null;
+        }
       } catch (err) {
         fail("載入 Google Maps 腳本或外掛失敗", err);
       }
@@ -154,7 +182,16 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
       observer?.disconnect();
-      if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+      const g = window as unknown as { gm_authFailure?: () => void };
+      if (g.gm_authFailure) {
+        if (previousAuthFailure) g.gm_authFailure = previousAuthFailure;
+        else delete g.gm_authFailure;
+      }
+      try {
+        if (layer && map.hasLayer(layer)) map.removeLayer(layer);
+      } catch {
+        /* map already torn down during rapid route swaps */
+      }
     };
   }, [map, theme]);
 

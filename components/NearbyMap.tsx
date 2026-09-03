@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, Polyline, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { apiGet, formatDistance, openWalkingDirections } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";

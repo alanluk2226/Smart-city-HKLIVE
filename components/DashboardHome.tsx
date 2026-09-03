@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AiTripAdvisor } from "@/components/AiTripAdvisor";
 import { AppShell } from "@/components/AppShell";
+import { HomeFavoritesPanel } from "@/components/HomeFavoritesPanel";
+import { useWeather } from "@/components/WeatherProvider";
 import { MODULES } from "@/lib/modules";
 import { apiGet } from "@/lib/client";
 import type { HospitalWait } from "@/lib/providers/hospitals";
-import type { WeatherSnapshot } from "@/lib/providers/weather";
 
 const accent: Record<string, string> = {
   teal: "border-teal/40 hover:border-teal bg-teal/5",
@@ -27,11 +28,10 @@ function aqhiTone(risk: string | undefined) {
 }
 
 export function DashboardHome() {
-  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
+  const { weather } = useWeather();
   const [hospitals, setHospitals] = useState<HospitalWait[]>([]);
 
   useEffect(() => {
-    apiGet<WeatherSnapshot>("/api/weather").then(setWeather).catch(() => {});
     apiGet<HospitalWait[]>("/api/hospitals").then(setHospitals).catch(() => {});
   }, []);
 
@@ -42,15 +42,13 @@ export function DashboardHome() {
     <AppShell>
       <div className="mb-5">
         <div className="font-mono text-[11px] tracking-[0.28em] text-teal">主控台</div>
-        <h1 className="text-3xl mt-1">HK LIVE</h1>
-        <p className="text-muted mt-2 max-w-2xl">
-          以公開資料組成的主控台。出行AI可問天氣或「東涌去何文田」；再進入交通工具、天氣、醫療、路況、停車場、康文署場地與公共廁所。
+        <h1 className="mt-1 text-3xl">HK LIVE</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          香港公開資料主控台：即時天氣、交通到站、醫療輪候與路況。
         </p>
       </div>
 
       <div className="space-y-6">
-        <AiTripAdvisor />
-
         <section aria-label="全港即時關鍵數據">
           <div className="mb-2 flex items-baseline justify-between gap-2">
             <h2 className="text-xs font-medium tracking-wide text-muted">全港即時摘要</h2>
@@ -103,9 +101,7 @@ export function DashboardHome() {
                 <div className={`font-mono text-3xl leading-none ${aqhiTone(aqhi?.risk)}`}>
                   {aqhi?.value ?? "—"}
                 </div>
-                <div className="mt-1 text-sm text-ink">
-                  健康風險 {aqhi?.riskTc ?? "—"}
-                </div>
+                <div className="mt-1 text-sm text-ink">健康風險 {aqhi?.riskTc ?? "—"}</div>
                 <div className="mt-1 truncate text-xs text-muted">
                   {aqhi?.scopeLabel ?? "一般監測站"}
                 </div>
@@ -113,6 +109,10 @@ export function DashboardHome() {
             </Link>
           </div>
         </section>
+
+        <HomeFavoritesPanel />
+
+        <AiTripAdvisor defaultCollapsed hideStarChips />
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MODULES.map((m) => (
@@ -122,8 +122,8 @@ export function DashboardHome() {
               className={`rounded-2xl border p-5 transition ${accent[m.accent]}`}
             >
               <div className="text-[11px] tracking-wide text-muted">{m.chip}</div>
-              <div className="text-xl mt-2">{m.title}</div>
-              <p className="text-sm text-muted mt-2">{m.blurb}</p>
+              <div className="mt-2 text-xl">{m.title}</div>
+              <p className="mt-2 text-sm text-muted">{m.blurb}</p>
               <div className="mt-4 text-sm">進入模組 →</div>
             </Link>
           ))}

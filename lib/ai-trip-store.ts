@@ -23,9 +23,11 @@ const STARS_KEY = "hk-live:ai-trip:stars";
 const CHAT_KEY = "hk-live:ai-trip:chat";
 /** 設定頁／其他分頁清除對話時廣播。 */
 export const AI_CHAT_CLEARED_EVENT = "hk-live:ai-chat-cleared";
-/** 標題下方收藏列最多顯示／保存幾個（用戶選擇 5）。 */
-export const STAR_LIMIT = 5;
-export const TRIP_CHIP_LIMIT = STAR_LIMIT;
+/** 出行AI 收藏變更（收藏頁／主頁同步）。 */
+export const AI_STARS_CHANGED_EVENT = "hk-live:ai-stars-changed";
+/** 出行AI 收藏上限（本機；滿則擠掉最舊）。 */
+export const STAR_LIMIT = 30;
+export const TRIP_CHIP_LIMIT = 8;
 const HISTORY_LIMIT = 10;
 /** 對話最多保留幾則（不含歡迎訊息）。 */
 export const AI_CHAT_LIMIT = 60;
@@ -88,6 +90,14 @@ export function getStarredTrip(from: string, to: string, stars = loadTripStars()
  * 收藏／取消收藏。新收藏置頂；已滿 STAR_LIMIT 時擠掉最舊一筆。
  * 若同一對起終點再收藏，會更新 reply 與時間。
  */
+function emitStarsChanged() {
+  try {
+    window.dispatchEvent(new Event(AI_STARS_CHANGED_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function toggleTripStar(trip: SavedTrip): { starred: boolean; stars: SavedTrip[] } {
   const key = tripPairKey(trip.from, trip.to);
   const current = loadTripStars();
@@ -96,6 +106,7 @@ export function toggleTripStar(trip: SavedTrip): { starred: boolean; stars: Save
     ? current.filter((t) => tripPairKey(t.from, t.to) !== key)
     : [{ ...trip, savedAt: Date.now() }, ...current].slice(0, STAR_LIMIT);
   writeList(STARS_KEY, stars);
+  emitStarsChanged();
   return { starred: !exists, stars };
 }
 
@@ -109,6 +120,7 @@ export function updateStarredReply(trip: SavedTrip): SavedTrip[] {
     ...current.filter((t) => tripPairKey(t.from, t.to) !== key),
   ].slice(0, STAR_LIMIT);
   writeList(STARS_KEY, stars);
+  emitStarsChanged();
   return stars;
 }
 

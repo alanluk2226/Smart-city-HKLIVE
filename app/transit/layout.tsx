@@ -1,11 +1,10 @@
 import { AppShell } from "@/components/AppShell";
-import { TransitSubnav } from "@/components/transit/TransitSubnav";
+import { TransitChrome } from "@/components/transit/TransitChrome";
 
 export default function TransitLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell title="交通工具" subtitle="巴士、小巴、電車、渡輪、的士、輕鐵、港鐵">
-      <TransitSubnav />
-      {children}
+    <AppShell title="交通工具" subtitle="">
+      <TransitChrome>{children}</TransitChrome>
     </AppShell>
   );
 }

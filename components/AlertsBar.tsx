@@ -155,7 +155,7 @@ export function AlertsBar() {
           <span
             className={`mt-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide ${styles.chip}`}
           >
-            {current.kind === "weather" ? "天氣" : "交通"}
+            {current.kind === "weather" ? "天氣" : current.kind === "transit" ? "港鐵" : "交通"}
           </span>
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-baseline gap-x-2 text-sm leading-snug">
@@ -174,7 +174,11 @@ export function AlertsBar() {
               <div className="mt-1 space-y-1">
                 <p className="text-xs leading-relaxed text-muted">{current.detail}</p>
                 <Link href={current.href} className="inline-block text-[11px] text-teal hover:underline">
-                  {current.kind === "weather" ? "前往天氣" : "前往路況 CCTV"}
+                  {current.kind === "weather"
+                    ? "前往天氣"
+                    : current.kind === "transit"
+                      ? "前往港鐵"
+                      : "前往路況 CCTV"}
                 </Link>
               </div>
             ) : null}
@@ -186,7 +190,7 @@ export function AlertsBar() {
                   type="button"
                   aria-label="上一則提示"
                   onClick={goPrev}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-ink/5 hover:text-ink"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-ink/5 hover:text-ink"
                 >
                   <ChevronLeftIcon />
                 </button>
@@ -194,7 +198,7 @@ export function AlertsBar() {
                   type="button"
                   aria-label="下一則提示"
                   onClick={goNext}
-                  className="inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-lg px-2 text-xs text-muted hover:bg-ink/5 hover:text-ink"
+                  className="inline-flex h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-2 text-xs text-muted hover:bg-ink/5 hover:text-ink"
                 >
                   <span className="hidden sm:inline">下一則</span>
                   <ChevronRightIcon />
@@ -205,7 +209,7 @@ export function AlertsBar() {
               type="button"
               aria-expanded={expanded}
               onClick={() => setExpanded((v) => !v)}
-              className="inline-flex h-9 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
+              className="inline-flex h-11 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
             >
               {expanded ? "收起" : "詳情"}
             </button>
@@ -217,7 +221,7 @@ export function AlertsBar() {
                 setHidden(true);
                 setExpanded(false);
               }}
-              className="inline-flex h-9 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
+              className="inline-flex h-11 items-center justify-center rounded-lg px-2.5 text-xs text-muted hover:bg-ink/5 hover:text-ink"
             >
               隱藏
             </button>

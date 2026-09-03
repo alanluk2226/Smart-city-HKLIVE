@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { EtaDialog } from "@/components/transit/EtaDialog";
 import { HsrDialog } from "@/components/transit/HsrDialog";
-import { MtrSchematicMap } from "@/components/transit/MtrSchematicMap";
+import { MtrSchematicMapDynamic } from "@/components/transit/MtrSchematicMapDynamic";
 import { MtrTripDialog } from "@/components/transit/MtrTripDialog";
 import { RacecourseDialog } from "@/components/transit/RacecourseDialog";
 import { StationActionDialog } from "@/components/transit/StationActionDialog";
 import { useEta } from "@/components/transit/useEta";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
 import { apiGet } from "@/lib/client";
 import {
   MTR_LINE_NAMES,
@@ -16,6 +17,7 @@ import {
   isRacecourseStation,
   mtrStation,
 } from "@/lib/static/mtr-stations";
+import type { TransitFavorite } from "@/lib/transit-favorites-store";
 import type { RacecourseStatus, StopHit } from "@/lib/types";
 
 function stopFor(code: string): StopHit | null {
@@ -108,6 +110,7 @@ export function MtrApp() {
       setTripOpen(true);
       return;
     }
+    // Open action sheet: 資訊（到站）／起點終點 — clearer for first-time users
     setActionCode(code);
   }
 
@@ -133,9 +136,24 @@ export function MtrApp() {
     ? `已選起點：${mtrStation(origin ?? "")?.name ?? ""}，搜尋或點地圖選終點`
     : "搜尋車站，或直接在路綫圖上點選";
 
+  const tripFavorite: TransitFavorite | null =
+    origin && dest
+      ? {
+          kind: "trip",
+          mode: "mtr",
+          from: origin,
+          to: dest,
+          fromName: mtrStation(origin)?.name ?? origin,
+          toName: mtrStation(dest)?.name ?? dest,
+          label: `港鐵 ${mtrStation(origin)?.name ?? origin}→${mtrStation(dest)?.name ?? dest}`,
+          savedAt: Date.now(),
+        }
+      : null;
+  useSyncActiveTrip(tripFavorite);
+
   return (
     <div>
-      <MtrSchematicMap
+      <MtrSchematicMapDynamic
         selectedCode={actionCode ?? etaCode ?? dest ?? origin ?? undefined}
         originCode={origin ?? undefined}
         destCode={dest ?? undefined}

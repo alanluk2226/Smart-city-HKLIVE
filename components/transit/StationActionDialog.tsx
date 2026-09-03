@@ -90,7 +90,7 @@ export function StationActionDialog({
             className="rounded-2xl border border-line bg-elev px-3 py-5 text-left hover:border-teal"
           >
             <div className="text-base">起點／終點</div>
-            <div className="mt-1 text-xs text-muted">{tripHint ?? "規劃行程、車費與空位"}</div>
+            <div className="mt-1 text-xs text-muted">{tripHint ?? "設為起點，再選終點規劃行程"}</div>
           </button>
         </div>
       </div>

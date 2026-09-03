@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { TransitFavoritesSection } from "@/components/transit/TransitFavoritesSection";
 import { TransitNearbySection } from "@/components/transit/TransitNearbySection";
 import { TRANSIT_MODES } from "@/lib/transit-modes";
 
@@ -17,6 +18,7 @@ const accent = [
 export function TransitHub() {
   return (
     <div className="space-y-6">
+      <TransitFavoritesSection />
       <TransitNearbySection />
       <section className="grid gap-4 sm:grid-cols-2">
         {TRANSIT_MODES.map((m, i) => (

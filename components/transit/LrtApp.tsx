@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EtaDialog } from "@/components/transit/EtaDialog";
 import { LrtSchematicMap } from "@/components/transit/LrtSchematicMap";
 import { LrtTripDialog } from "@/components/transit/LrtTripDialog";
 import { StationActionDialog } from "@/components/transit/StationActionDialog";
 import { useEta } from "@/components/transit/useEta";
+import { useSyncActiveTrip } from "@/components/transit/useSyncActiveTrip";
 import { LRT_STATIONS, lrtStation } from "@/lib/static/lrt-stations";
+import type { TransitFavorite } from "@/lib/transit-favorites-store";
 import type { StopHit } from "@/lib/types";
 
 function stopFor(id: string): StopHit | null {
@@ -32,6 +34,18 @@ export function LrtApp() {
   const selected = etaCode ? stopFor(etaCode) : null;
   const { etas, loading, error } = useEta(selected);
   const actionStation = actionCode ? lrtStation(actionCode) : null;
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const from = sp.get("from")?.trim() ?? "";
+    const to = sp.get("to")?.trim() ?? "";
+    if (!from || !to || from === to) return;
+    if (!lrtStation(from) || !lrtStation(to)) return;
+    setOrigin(from);
+    setDest(to);
+    setPickingDest(false);
+    setTripOpen(true);
+  }, []);
 
   const matches = useMemo(() => {
     const n = q.trim().toLowerCase();
@@ -76,6 +90,21 @@ export function LrtApp() {
   const searchPlaceholder = pickingDest
     ? `已選起點：${lrtStation(origin ?? "")?.name ?? ""}，搜尋或點地圖選終點`
     : "搜尋輕鐵站，或直接在路綫圖上點選";
+
+  const tripFavorite: TransitFavorite | null =
+    origin && dest
+      ? {
+          kind: "trip",
+          mode: "lrt",
+          from: origin,
+          to: dest,
+          fromName: lrtStation(origin)?.name ?? origin,
+          toName: lrtStation(dest)?.name ?? dest,
+          label: `輕鐵 ${lrtStation(origin)?.name ?? origin}→${lrtStation(dest)?.name ?? dest}`,
+          savedAt: Date.now(),
+        }
+      : null;
+  useSyncActiveTrip(tripFavorite);
 
   return (
     <div>

@@ -1,8 +1,9 @@
 import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { formatEtaClock } from "@/lib/geo";
-import { fetchJson } from "@/lib/http";
+import { CATALOG_REVALIDATE_SECONDS, fetchJson } from "@/lib/http";
 import { rankNearby } from "@/lib/nearby";
+import gmbStopsSnapshot from "@/lib/static/gmb-stops.json";
 import type { EtaResult, OccupancyLevel, RouteHit, StopHit } from "@/lib/types";
 
 const BASE = "https://data.etagmb.gov.hk";
@@ -298,28 +299,61 @@ async function gmbRouteCodeMap(): Promise<Map<number, string>> {
   });
 }
 
+type GmbStopListResponse = {
+  data: GmbLastUpdateStop[] | { data_timestamp?: GmbLastUpdateStop[] };
+};
+
+function parseGmbStopIdList(json: GmbStopListResponse): number[] {
+  const raw = json.data;
+  const rows = Array.isArray(raw)
+    ? raw
+    : Array.isArray(raw?.data_timestamp)
+      ? raw.data_timestamp
+      : [];
+  return [...new Set(rows.map((r) => r.stop_id).filter((id) => Number.isFinite(id)))];
+}
+
+function catalogFromSnapshot(): GmbStopCatalogRow[] | null {
+  const stops = gmbStopsSnapshot.stops as Array<[string, number, number]> | undefined;
+  if (!Array.isArray(stops) || stops.length < 100) return null;
+  return stops.map(([stopId, lat, lng]) => ({
+    stopId: String(stopId),
+    name: `小巴站 ${stopId}`,
+    lat: Number(lat),
+    lng: Number(lng),
+  }));
+}
+
+async function gmbStopCatalogLive(): Promise<GmbStopCatalogRow[]> {
+  const stopIdsJson = await fetchJson<GmbStopListResponse>(`${BASE}/last-update/stop`, 30_000, {
+    revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+  });
+  const stopIds = parseGmbStopIdList(stopIdsJson);
+  const rows = await mapPool(stopIds, 40, async (stop_id) => {
+    try {
+      const geo = await cached(`gmb:stop:${stop_id}`, TTL.stop, () =>
+        fetchJson<GmbStop>(`${BASE}/stop/${stop_id}`, 12_000, {
+          revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+        }),
+      );
+      return {
+        stopId: String(stop_id),
+        name: `小巴站 ${stop_id}`,
+        lat: geo.data.coordinates.wgs84.latitude,
+        lng: geo.data.coordinates.wgs84.longitude,
+      };
+    } catch {
+      return null;
+    }
+  });
+  return rows.filter((row): row is GmbStopCatalogRow => row != null);
+}
+
 async function gmbStopCatalog(): Promise<GmbStopCatalogRow[]> {
-  return cached("gmb:catalog", TTL.stop, async () => {
-    const stopIdsJson = await fetchJson<{ data: { data_timestamp: GmbLastUpdateStop[] } }>(
-      `${BASE}/last-update/stop`,
-      30_000,
-    );
-    const rows = await mapPool(stopIdsJson.data.data_timestamp, 40, async ({ stop_id }) => {
-      try {
-        const geo = await cached(`gmb:stop:${stop_id}`, TTL.stop, () =>
-          fetchJson<GmbStop>(`${BASE}/stop/${stop_id}`),
-        );
-        return {
-          stopId: String(stop_id),
-          name: `小巴站 ${stop_id}`,
-          lat: geo.data.coordinates.wgs84.latitude,
-          lng: geo.data.coordinates.wgs84.longitude,
-        };
-      } catch {
-        return null;
-      }
-    });
-    return rows.filter((row): row is GmbStopCatalogRow => row != null);
+  return cached("gmb:catalog:v2", TTL.stop, async () => {
+    const snap = catalogFromSnapshot();
+    if (snap?.length) return snap;
+    return gmbStopCatalogLive();
   });
 }
 

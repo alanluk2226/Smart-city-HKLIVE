@@ -1,7 +1,7 @@
 import { inferDistanceToStop } from "@/lib/bus-distance";
 import { cached, TTL } from "@/lib/cache";
 import { etaMinutesFromIso, formatEtaClock } from "@/lib/geo";
-import { fetchJson } from "@/lib/http";
+import { CATALOG_REVALIDATE_SECONDS, fetchJson } from "@/lib/http";
 import { rankNearby } from "@/lib/nearby";
 import type { EtaResult, RouteHit, StopHit } from "@/lib/types";
 
@@ -50,7 +50,11 @@ function nlbEtaIso(raw: string): string {
 
 export async function nlbRoutes(): Promise<NlbRoute[]> {
   return cached("nlb:routes", TTL.route, async () => {
-    const json = await fetchJson<{ routes: NlbRoute[] }>(`${BASE}/route.php?action=list`, 20_000);
+    const json = await fetchJson<{ routes: NlbRoute[] }>(
+      `${BASE}/route.php?action=list`,
+      20_000,
+      { revalidateSeconds: CATALOG_REVALIDATE_SECONDS },
+    );
     const rows = json.routes ?? [];
     if (!Array.isArray(rows) || rows.length < 10) {
       throw new Error("嶼巴路線名單無效或空白");
