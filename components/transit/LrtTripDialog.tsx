@@ -163,6 +163,7 @@ export function LrtTripDialog({
                 {plan.fares.note ? <p className="mt-2 text-[11px] text-muted">{plan.fares.note}</p> : null}
               </section>
 
+              {plan.crowding ? (
               <section>
                 <h3 className="text-sm">
                   車廂空位
@@ -192,6 +193,7 @@ export function LrtTripDialog({
                 </p>
                 <p className="mt-1 text-[11px] text-muted">{plan.crowding.note}</p>
               </section>
+              ) : null}
             </div>
           ) : null}
         </div>
