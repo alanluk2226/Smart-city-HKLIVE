@@ -480,7 +480,7 @@ export function MinibusApp() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="min-h-[30%] flex-1 overflow-y-auto overscroll-contain">
           {error ? <p className="px-4 py-2 text-center text-sm text-rose">{error}</p> : null}
           {searching && q.trim() ? <p className="px-4 py-2 text-center text-sm text-muted">搜尋中…</p> : null}
           {!q.trim() ? (
