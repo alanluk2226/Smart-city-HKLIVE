@@ -179,20 +179,18 @@ function SopRow({
   );
 }
 
-function HospitalDetail({
+function HospitalDetailBody({
   hospital,
   hasLocated,
   sop,
   sopLoading,
   sopError,
-  onClose,
 }: {
   hospital: HospitalWait;
   hasLocated: boolean;
   sop: SopClusterSnapshot | null;
   sopLoading: boolean;
   sopError: string;
-  onClose: () => void;
 }) {
   const t45m = parseWaitMinutes(hospital.t45);
   const t3m = parseWaitMinutes(hospital.t3);
@@ -201,30 +199,8 @@ function HospitalDetail({
   const scaleMax = Math.max(120, t45m ?? 0, t3m ?? 0, 60);
 
   return (
-    <section
-      className="rounded-2xl border border-teal/40 bg-card p-4 shadow-[0_8px_28px_rgba(0,0,0,.2)]"
-      aria-label={`${hospital.name}詳情`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-xl leading-snug text-ink">{hospital.name}</h2>
-          <p className="mt-0.5 text-xs text-muted">
-            {hospital.cluster}醫院聯網
-            {hasLocated && hospital.distanceMeters != null
-              ? ` · ${formatDistance(hospital.distanceMeters)}`
-              : ""}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:text-ink"
-        >
-          關閉
-        </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
+    <div className="space-y-4 border-t border-line px-4 pb-4 pt-3">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => openWalkingDirections(hospital.lat, hospital.lng, hospital.name)}
@@ -240,9 +216,14 @@ function HospitalDetail({
         >
           外部地圖
         </a>
+        {hasLocated && hospital.distanceMeters != null ? (
+          <span className="inline-flex items-center text-[11px] text-muted">
+            距離約 {formatDistance(hospital.distanceMeters)}
+          </span>
+        ) : null}
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h3 className="text-sm font-medium text-ink">急症室輪候</h3>
           <span className="inline-flex items-center gap-1 text-[11px] text-teal">
@@ -292,7 +273,7 @@ function HospitalDetail({
         ) : null}
       </div>
 
-      <div className="mt-5 space-y-2">
+      <div className="space-y-2">
         <h3 className="text-sm font-medium text-ink">專科門診新症輪候</h3>
         <p className="flex gap-1.5 text-[11px] leading-snug text-muted">
           <span className="mt-0.5 shrink-0" aria-hidden>
@@ -308,7 +289,30 @@ function HospitalDetail({
         {sopError ? <p className="text-sm text-rose">{sopError}</p> : null}
         {sop ? <SopTable sop={sop} /> : null}
       </div>
-    </section>
+    </div>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`h-5 w-5 transition-transform ${open ? "rotate-180" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function DownReturnIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M6 13l6 6 6-6" />
+    </svg>
   );
 }
 
@@ -318,12 +322,16 @@ export function HealthApp() {
   const [sort, setSort] = useState<SortMode>("wait");
   const [rows, setRows] = useState<HospitalWait[]>([]);
   const [error, setError] = useState("");
+  /** Hospital focused on the map */
   const [selected, setSelected] = useState<string | null>(null);
+  /** Hospital whose detail accordion is open */
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [sop, setSop] = useState<SopClusterSnapshot | null>(null);
   const [sopLoading, setSopLoading] = useState(false);
   const [sopError, setSopError] = useState("");
   const locatedOnce = useRef(false);
-  const detailRef = useRef<HTMLDivElement>(null);
+  const mapSectionRef = useRef<HTMLDivElement>(null);
+  const listRefs = useRef(new Map<string, HTMLElement>());
 
   const applyLocation = (lat: number, lng: number) => {
     setCenter({ lat, lng });
@@ -349,13 +357,13 @@ export function HealthApp() {
       .catch((e) => setError(e.message));
   }, [center]);
 
-  const active = useMemo(
-    () => (selected ? rows.find((h) => h.name === selected) ?? null : null),
-    [rows, selected],
+  const expandedHospital = useMemo(
+    () => (expanded ? rows.find((h) => h.name === expanded) ?? null : null),
+    [rows, expanded],
   );
 
   useEffect(() => {
-    if (!active) {
+    if (!expandedHospital) {
       setSop(null);
       setSopError("");
       setSopLoading(false);
@@ -365,7 +373,7 @@ export function HealthApp() {
     setSopLoading(true);
     setSopError("");
     apiGet<SopClusterSnapshot>(
-      `/api/hospitals/sop?cluster=${encodeURIComponent(active.cluster)}`,
+      `/api/hospitals/sop?cluster=${encodeURIComponent(expandedHospital.cluster)}`,
     )
       .then((snap) => {
         if (!alive) return;
@@ -381,7 +389,7 @@ export function HealthApp() {
     return () => {
       alive = false;
     };
-  }, [active]);
+  }, [expandedHospital]);
 
   const sorted = useMemo(() => {
     const list = [...rows];
@@ -400,11 +408,22 @@ export function HealthApp() {
       .slice(0, 3);
   }, [rows]);
 
-  function pickHospital(name: string) {
+  function focusHospitalOnMap(name: string) {
     setSelected(name);
     requestAnimationFrame(() => {
-      detailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  function toggleHospitalDetail(name: string) {
+    setExpanded((prev) => (prev === name ? null : name));
+    setSelected(name);
+  }
+
+  function returnToSelectedHospital() {
+    if (!selected) return;
+    const el = listRefs.current.get(selected);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   return (
@@ -414,7 +433,7 @@ export function HealthApp() {
       </div>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-snug text-muted sm:text-sm">
-          地圖標籤＝半緊急／非緊急輪候。點選醫院睇詳情同導航。危急請打 999。
+          點醫院欄位跳去地圖位置；點 ▾ 先展開輪候詳情。危急請打 999。
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <div
@@ -454,25 +473,27 @@ export function HealthApp() {
 
       {error ? <p className="mb-3 text-sm text-rose">{error}</p> : null}
 
-      <NearbyMapDynamic
-        lat={center.lat}
-        lng={center.lng}
-        zoom={11}
-        fitAllPoints
-        selectedId={selected ?? undefined}
-        onSelect={(p) => pickHospital(p.id)}
-        heightClass="h-72 sm:h-80"
-        className="max-md:-mx-4 max-md:rounded-none max-md:border-x-0 md:rounded-xl"
-        points={sorted.map((h) => ({
-          id: h.name,
-          name: h.name,
-          lat: h.lat,
-          lng: h.lng,
-          detail: `半緊急／非緊急 ${h.t45}`,
-          badge: compactWaitLabel(h.t45, h.waitMinutes),
-          badgeLevel: waitBadgeLevel(h.waitMinutes),
-        }))}
-      />
+      <div ref={mapSectionRef}>
+        <NearbyMapDynamic
+          lat={center.lat}
+          lng={center.lng}
+          zoom={11}
+          fitAllPoints
+          selectedId={selected ?? undefined}
+          onSelect={(p) => setSelected(p.id)}
+          heightClass="h-72 sm:h-80"
+          className="max-md:-mx-4 max-md:rounded-none max-md:border-x-0 md:rounded-xl"
+          points={sorted.map((h) => ({
+            id: h.name,
+            name: h.name,
+            lat: h.lat,
+            lng: h.lng,
+            detail: `半緊急／非緊急 ${h.t45}`,
+            badge: compactWaitLabel(h.t45, h.waitMinutes),
+            badgeLevel: waitBadgeLevel(h.waitMinutes),
+          }))}
+        />
+      </div>
 
       {topFastest.length ? (
         <section className="mt-4 rounded-2xl border border-line bg-card p-3" aria-label="全港最短等候">
@@ -485,7 +506,7 @@ export function HealthApp() {
               <li key={h.name}>
                 <button
                   type="button"
-                  onClick={() => pickHospital(h.name)}
+                  onClick={() => focusHospitalOnMap(h.name)}
                   className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition ${
                     selected === h.name
                       ? "border-teal/50 bg-teal/10"
@@ -506,65 +527,89 @@ export function HealthApp() {
         </section>
       ) : null}
 
-      {active ? (
-        <div ref={detailRef} className="mt-4">
-          <HospitalDetail
-            hospital={active}
-            hasLocated={hasLocated}
-            sop={sop}
-            sopLoading={sopLoading}
-            sopError={sopError}
-            onClose={() => setSelected(null)}
-          />
-        </div>
-      ) : null}
-
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {sorted.map((h) => {
-          const on = selected === h.name;
+          const onMap = selected === h.name;
+          const open = expanded === h.name;
           return (
             <article
               key={h.name}
+              ref={(node) => {
+                if (node) listRefs.current.set(h.name, node);
+                else listRefs.current.delete(h.name);
+              }}
               data-hospital={h.name}
-              onClick={() => pickHospital(h.name)}
-              className={`cursor-pointer rounded-2xl border bg-card p-4 transition ${
-                on ? "border-teal/50 ring-1 ring-teal/40" : "border-line hover:border-teal/30"
+              className={`overflow-hidden rounded-2xl border bg-card transition ${
+                onMap ? "border-teal/50 ring-1 ring-teal/40" : "border-line"
               }`}
             >
-              <div className="flex justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-lg leading-snug">{h.name}</h2>
-                  <div className="mt-0.5 text-xs text-muted">
-                    {h.cluster}
-                    {hasLocated && h.distanceMeters != null
-                      ? ` · ${formatDistance(h.distanceMeters)}`
-                      : ""}
+              <div className="flex items-stretch">
+                <button
+                  type="button"
+                  onClick={() => focusHospitalOnMap(h.name)}
+                  className="min-w-0 flex-1 p-4 text-left hover:bg-elev/40"
+                  aria-label={`在地圖顯示 ${h.name}`}
+                >
+                  <div className="flex justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-lg leading-snug">{h.name}</h2>
+                      <div className="mt-0.5 text-xs text-muted">
+                        {h.cluster}
+                        {hasLocated && h.distanceMeters != null
+                          ? ` · ${formatDistance(h.distanceMeters)}`
+                          : ""}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className={`font-mono text-xl leading-none ${waitTone(h.waitMinutes)}`}>
+                        {h.t45}
+                      </div>
+                      <div className="mt-1 text-[10px] text-muted">半緊急／非緊急</div>
+                    </div>
                   </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className={`font-mono text-xl leading-none ${waitTone(h.waitMinutes)}`}>
-                    {h.t45}
+                  <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-line/70">
+                    <div
+                      className={`h-full rounded-full ${
+                        h.waitMinutes == null
+                          ? "bg-line"
+                          : h.waitMinutes <= 60
+                            ? "bg-teal"
+                            : h.waitMinutes <= 180
+                              ? "bg-amber"
+                              : "bg-rose"
+                      }`}
+                      style={{
+                        width: `${Math.min(100, Math.max(8, ((h.waitMinutes ?? 0) / 360) * 100))}%`,
+                      }}
+                    />
                   </div>
-                  <div className="mt-1 text-[10px] text-muted">半緊急／非緊急</div>
-                </div>
-              </div>
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-line/70">
-                <div
-                  className={`h-full rounded-full ${
-                    h.waitMinutes == null
-                      ? "bg-line"
-                      : h.waitMinutes <= 60
-                        ? "bg-teal"
-                        : h.waitMinutes <= 180
-                          ? "bg-amber"
-                          : "bg-rose"
+                  <p className="mt-2 text-[11px] text-muted">
+                    {onMap ? "已喺地圖標示 · 點欄位可再跳去地圖" : "點欄位跳去地圖位置"}
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => toggleHospitalDetail(h.name)}
+                  aria-expanded={open}
+                  aria-label={open ? `收合 ${h.name} 詳情` : `展開 ${h.name} 詳情`}
+                  className={`flex w-12 shrink-0 items-center justify-center border-l border-line text-muted transition hover:bg-elev/50 hover:text-ink ${
+                    open ? "bg-teal/10 text-teal" : ""
                   }`}
-                  style={{
-                    width: `${Math.min(100, Math.max(8, ((h.waitMinutes ?? 0) / 360) * 100))}%`,
-                  }}
-                />
+                >
+                  <ChevronIcon open={open} />
+                </button>
               </div>
-              <p className="mt-2 text-[11px] text-teal">{on ? "詳情見上方" : "點擊睇詳情／導航"}</p>
+
+              {open && expandedHospital?.name === h.name ? (
+                <HospitalDetailBody
+                  hospital={expandedHospital}
+                  hasLocated={hasLocated}
+                  sop={sop}
+                  sopLoading={sopLoading}
+                  sopError={sopError}
+                />
+              ) : null}
             </article>
           );
         })}
@@ -572,6 +617,18 @@ export function HealthApp() {
 
       {sorted[0]?.updateTime ? (
         <p className="mt-4 text-xs text-muted">醫管局急症室更新：{sorted[0].updateTime}</p>
+      ) : null}
+
+      {selected ? (
+        <button
+          type="button"
+          onClick={returnToSelectedHospital}
+          aria-label={`返回列表中的 ${selected}`}
+          title={`返回 ${selected}`}
+          className="fixed bottom-[calc(var(--app-bottom-nav-h)+var(--app-safe-bottom)+1rem)] right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-card text-teal shadow-lg hover:border-teal hover:bg-elev md:bottom-6"
+        >
+          <DownReturnIcon />
+        </button>
       ) : null}
     </AppShell>
   );
