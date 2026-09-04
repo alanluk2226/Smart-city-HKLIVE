@@ -886,8 +886,8 @@ export async function adviseTrip(
       if (/location is not supported/i.test(raw)) {
         const region = process.env.VERCEL_REGION?.trim();
         aiError = process.env.VERCEL
-          ? `Gemini API 不支援目前伺服器地區${region ? `（${region}）` : ""}。請將 vercel.json regions 設為 iad1 後重新部署。路線仍用本站計算。`
-          : "Gemini API 不支援目前所在地區（本機香港網絡常見）。路線仍用本站計算；天氣評語暫用預設。部署到 Vercel（iad1）後通常可正常呼叫。";
+          ? `Gemini API 不支援目前伺服器地區${region ? `（${region}）` : ""}。請將 vercel.json regions 設為 hnd1（東京）後重新部署。路線仍用本站計算。`
+          : "Gemini API 不支援目前所在地區（本機香港網絡常見）。路線仍用本站計算；天氣評語暫用預設。部署到 Vercel（東京 hnd1）後通常可正常呼叫。";
       } else {
         aiError = `AI 天氣建議暫未能使用：${raw}`;
       }
