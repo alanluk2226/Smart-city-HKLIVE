@@ -190,7 +190,14 @@ function pausedAssistantReply(extra?: string): AiAssistantResponse {
 function formatAiError(raw: string) {
   const cleaned = raw.replace(/^GEMINI_PAUSED:\s*/i, "").trim();
   if (/location is not supported/i.test(cleaned)) {
-    return "Gemini API 不支援目前所在地區（本機香港網絡常見）。部署到 Vercel 通常可正常呼叫。";
+    const region = process.env.VERCEL_REGION?.trim();
+    if (region && /^hkg/i.test(region)) {
+      return `Gemini API 不支援伺服器地區（${region}）。請將 Vercel Functions 設為 iad1（美國東部）後重新部署。`;
+    }
+    if (process.env.VERCEL) {
+      return `Gemini API 不支援目前伺服器地區${region ? `（${region}）` : ""}。請確認 vercel.json regions 為 iad1 並重新部署。`;
+    }
+    return "Gemini API 不支援目前所在地區（本機香港網絡常見）。部署到 Vercel（iad1）後通常可正常呼叫。";
   }
   return cleaned;
 }

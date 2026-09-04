@@ -5,8 +5,11 @@ import type { AiAssistantChatTurn } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 45;
-/** Gemini API blocks many HK origins; run this function in US East. */
-export const preferredRegion = "iad1";
+/**
+ * Gemini API blocks Hong Kong origins (hkg1). Keep this route in US East.
+ * Must also match vercel.json `regions` — project-level hkg1 would override this.
+ */
+export const preferredRegion = ["iad1"];
 
 /** Soft per-IP caps so free Gemini quota is not burned by scrape/abuse. */
 const AI_LIMIT_PER_MIN = 8;
