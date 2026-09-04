@@ -60,7 +60,9 @@ export function MinibusApp() {
   const [loadingStops, setLoadingStops] = useState(false);
   const [selected, setSelected] = useState<StopHit | null>(null);
   const [error, setError] = useState("");
-  const [showEtaDetails, setShowEtaDetails] = useState(false);
+  const [showRouteDetails, setShowRouteDetails] = useState(false);
+  const [expandedStopKey, setExpandedStopKey] = useState<string | null>(null);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
   const favBoot = useRef(false);
   const { etas, loading, error: etaError } = useEta(selected);
   const { info: routeInfo, loading: routeInfoLoading } = useRouteInfo(
@@ -231,8 +233,41 @@ export function MinibusApp() {
     setPicked(null);
     setStops([]);
     setSelected(null);
+    setExpandedStopKey(null);
+    setShowRouteDetails(false);
+    setMapCollapsed(false);
     setOpen(Boolean(q.trim()));
     setError("");
+  }
+
+  function stopKey(stop: StopHit) {
+    return `${stop.stopId}-${stop.seq}`;
+  }
+
+  function selectStop(stop: StopHit) {
+    setSelected({
+      ...stop,
+      route: stop.route ?? picked?.route,
+      routeId: stop.routeId ?? picked?.routeId,
+      bound: stop.bound ?? picked?.bound,
+      serviceType: stop.serviceType ?? picked?.serviceType,
+      region: stop.region ?? picked?.region,
+    });
+  }
+
+  function openStop(stop: StopHit) {
+    selectStop(stop);
+    setExpandedStopKey(stopKey(stop));
+  }
+
+  function toggleStopDetails(stop: StopHit) {
+    const key = stopKey(stop);
+    if (expandedStopKey === key) {
+      setExpandedStopKey(null);
+      return;
+    }
+    selectStop(stop);
+    setExpandedStopKey(key);
   }
 
   function appendMinibusQuery(next: string) {
@@ -270,39 +305,53 @@ export function MinibusApp() {
           >
             ← 改路線
           </button>
+          <button
+            type="button"
+            onClick={() => setMapCollapsed((v) => !v)}
+            className="shrink-0 rounded-xl border border-line px-3 py-2 text-sm text-muted hover:border-emerald-400 hover:text-ink"
+            aria-pressed={mapCollapsed}
+          >
+            {mapCollapsed ? "顯示地圖" : "收起地圖"}
+          </button>
           {error || etaError ? <p className="truncate text-sm text-rose">{error || etaError}</p> : null}
           {loadingStops ? <p className="text-sm text-muted">載入車站中…</p> : null}
         </div>
 
-        <div className="relative shrink-0 max-md:h-[48%] max-md:min-h-[15rem] md:h-[22rem]">
-          {mappedStops.length ? (
-            <StopStreetMapDynamic
-              stops={mappedStops}
-              selectedId={selected?.stopId}
-              selectedSeq={selected?.seq}
-              onSelect={setSelected}
-              accent="emerald"
-              compactMarkers
-              labelZoom={16}
-              focusZoom={17}
-              heightClass="h-full"
-              className="h-full max-md:rounded-none max-md:border-x-0"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center border border-line bg-card text-sm text-muted max-md:rounded-none max-md:border-x-0">
-              {loadingStops ? "載入地圖…" : "呢條線暫時冇車站座標。"}
-            </div>
-          )}
-        </div>
+        {!mapCollapsed ? (
+          <div className="relative shrink-0 max-md:h-[42%] max-md:min-h-[12rem] md:h-[22rem]">
+            {mappedStops.length ? (
+              <StopStreetMapDynamic
+                stops={mappedStops}
+                selectedId={selected?.stopId}
+                selectedSeq={selected?.seq}
+                onSelect={openStop}
+                accent="emerald"
+                compactMarkers
+                labelZoom={16}
+                focusZoom={17}
+                heightClass="h-full"
+                className="h-full max-md:rounded-none max-md:border-x-0"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center border border-line bg-card text-sm text-muted max-md:rounded-none max-md:border-x-0">
+                {loadingStops ? "載入地圖…" : "呢條線暫時冇車站座標。"}
+              </div>
+            )}
+          </div>
+        ) : null}
 
-        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-2xl border border-line bg-card shadow-[0_-8px_24px_rgba(0,0,0,.25)] max-md:-mt-3 md:mt-0 md:rounded-2xl">
+        <div
+          className={`relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-2xl border border-line bg-card shadow-[0_-8px_24px_rgba(0,0,0,.25)] md:mt-0 md:rounded-2xl ${
+            mapCollapsed ? "max-md:mt-0" : "max-md:-mt-3"
+          }`}
+        >
           <div className="sticky top-0 z-10 border-b border-line bg-card/95 px-4 py-3 backdrop-blur">
             <div className="flex items-start gap-2">
               <button
                 type="button"
-                aria-expanded={showEtaDetails}
-                aria-label={showEtaDetails ? "收合路線詳細資訊" : "展開路線詳細資訊"}
-                onClick={() => setShowEtaDetails((v) => !v)}
+                aria-expanded={showRouteDetails}
+                aria-label={showRouteDetails ? "收合路線詳細資訊" : "展開路線詳細資訊"}
+                onClick={() => setShowRouteDetails((v) => !v)}
                 className="min-w-0 flex-1 rounded-xl px-1 py-0.5 text-left hover:bg-elev/50"
               >
                 <div className="flex items-start gap-2">
@@ -314,11 +363,11 @@ export function MinibusApp() {
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-muted">
-                      {showEtaDetails ? "點路線收合詳情" : "點路線睇車費／班次詳情"}
+                      {showRouteDetails ? "點路線收合車費詳情" : "點路線睇車費／車程"}
                     </p>
                   </div>
                   <span
-                    className={`mt-1 shrink-0 text-muted transition-transform ${showEtaDetails ? "rotate-180 text-lime" : ""}`}
+                    className={`mt-1 shrink-0 text-muted transition-transform ${showRouteDetails ? "rotate-180 text-lime" : ""}`}
                     aria-hidden
                   >
                     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -329,7 +378,7 @@ export function MinibusApp() {
               </button>
               <FavoriteStarButton favorite={favoriteFromRouteHit("minibus", picked)} />
             </div>
-            {selected && showEtaDetails ? (
+            {showRouteDetails ? (
               <div className="mt-1.5">
                 <RouteInfoBanner
                   compact
@@ -341,64 +390,82 @@ export function MinibusApp() {
             ) : null}
           </div>
 
-          <ol className={`px-3 ${showEtaDetails ? "py-2" : "py-1"}`}>
+          <ol className="px-3 py-1">
             {stops.map((s, i) => {
               const active = selected?.stopId === s.stopId && selected?.seq === s.seq;
+              const expanded = expandedStopKey === stopKey(s);
               const last = i === stops.length - 1;
               return (
-                <li key={`${s.stopId}-${s.seq}`} className="relative flex gap-3">
+                <li key={`${s.stopId}-${s.seq}`} className="relative flex gap-2">
                   <div className="flex w-5 shrink-0 flex-col items-center">
                     <span
-                      className={`${showEtaDetails ? "mt-3" : "mt-2.5"} h-3 w-3 rounded-full border-2 ${
+                      className={`mt-3 h-3 w-3 rounded-full border-2 ${
                         active ? "border-lime bg-lime" : "border-muted bg-card"
                       }`}
                     />
                     {!last ? <span className="w-0.5 flex-1 bg-line" /> : null}
                   </div>
-                  <div className={`min-w-0 flex-1 ${showEtaDetails ? "pb-3" : "pb-0.5"}`}>
-                    <button
-                      id={`gmb-stop-${s.stopId}-${s.seq}`}
-                      type="button"
-                      onClick={() => setSelected(s)}
-                      className={`w-full rounded-xl text-left ${
-                        showEtaDetails ? "px-3 py-2.5" : "px-2.5 py-2"
-                      } ${active ? "bg-lime/10 ring-1 ring-inset ring-lime/55" : "hover:bg-white/5"}`}
+                  <div className={`min-w-0 flex-1 ${expanded ? "pb-3" : "pb-0.5"}`}>
+                    <div
+                      className={`flex overflow-hidden rounded-xl ${
+                        active ? "bg-lime/10 ring-1 ring-inset ring-lime/55" : "hover:bg-elev/40"
+                      }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          {showEtaDetails ? (
-                            <div className="text-[11px] font-mono text-muted">{s.seq}</div>
-                          ) : null}
-                          <div className="truncate text-sm">
-                            {!showEtaDetails ? (
-                              <span className="mr-1.5 font-mono text-[11px] text-muted">{s.seq}</span>
-                            ) : null}
+                      <button
+                        id={`gmb-stop-${s.stopId}-${s.seq}`}
+                        type="button"
+                        onClick={() => openStop(s)}
+                        className="min-w-0 flex-1 px-2.5 py-2 text-left"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 truncate text-sm">
+                            <span className="mr-1.5 font-mono text-[11px] text-muted">{s.seq}</span>
                             {s.name}
                           </div>
-                        </div>
-                        {active ? (
-                          <div className="shrink-0 text-right">
-                            {loading ? (
-                              <div className="text-[10px] text-muted">…</div>
-                            ) : displayEtas[0]?.etaMinutes != null ? (
-                              displayEtas[0].etaMinutes <= 0 ? (
-                                <div className="text-xs text-lime">即將到站</div>
+                          {active ? (
+                            <div className="shrink-0 text-right">
+                              {loading ? (
+                                <div className="text-[10px] text-muted">…</div>
+                              ) : displayEtas[0]?.etaMinutes != null ? (
+                                displayEtas[0].etaMinutes <= 0 ? (
+                                  <div className="text-xs text-lime">即將到站</div>
+                                ) : (
+                                  <>
+                                    <div className="font-mono text-lg leading-none text-lime">
+                                      {displayEtas[0].etaMinutes}
+                                    </div>
+                                    <div className="text-[10px] text-muted">分鐘</div>
+                                  </>
+                                )
                               ) : (
-                                <>
-                                  <div className="font-mono text-lg leading-none text-lime">
-                                    {displayEtas[0].etaMinutes}
-                                  </div>
-                                  <div className="text-[10px] text-muted">分鐘</div>
-                                </>
-                              )
-                            ) : (
-                              <div className="text-[10px] text-muted">—</div>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </button>
-                    {active && showEtaDetails ? (
+                                <div className="text-[10px] text-muted">—</div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleStopDetails(s)}
+                        aria-expanded={expanded}
+                        aria-label={expanded ? `收合 ${s.name} 班次` : `展開 ${s.name} 班次`}
+                        className={`flex w-10 shrink-0 items-center justify-center border-l border-line/60 text-muted hover:text-ink ${
+                          expanded ? "bg-lime/10 text-lime" : ""
+                        }`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          aria-hidden
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                    </div>
+                    {expanded ? (
                       <div className="mt-1 space-y-1 px-1">
                         {loading ? <p className="px-2 text-xs text-muted">載入班次中…</p> : null}
                         {!loading && !displayEtas.length ? (
@@ -410,7 +477,7 @@ export function MinibusApp() {
                             <div
                               key={`${eta.etaTime}-${ei}`}
                               className={`rounded-lg px-3 py-2 text-sm ${
-                                soonest ? "bg-lime/10" : "bg-white/[0.03]"
+                                soonest ? "bg-lime/10" : "bg-elev/40"
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2">
