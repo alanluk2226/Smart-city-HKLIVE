@@ -234,7 +234,6 @@ export function MinibusApp() {
     setStops([]);
     setSelected(null);
     setExpandedStopKey(null);
-    setShowRouteDetails(false);
     setMapCollapsed(false);
     setOpen(Boolean(q.trim()));
     setError("");
@@ -346,39 +345,16 @@ export function MinibusApp() {
           }`}
         >
           <div className="sticky top-0 z-10 border-b border-line bg-card/95 px-4 py-3 backdrop-blur">
-            <div className="flex items-start gap-2">
-              <button
-                type="button"
-                aria-expanded={showRouteDetails}
-                aria-label={showRouteDetails ? "收合路線詳細資訊" : "展開路線詳細資訊"}
-                onClick={() => setShowRouteDetails((v) => !v)}
-                className="min-w-0 flex-1 rounded-xl px-1 py-0.5 text-left hover:bg-elev/50"
-              >
-                <div className="flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <GmbRoutePlate route={picked.route} region={picked.region} />
-                      <span className="text-sm">
-                        {picked.orig} → {picked.dest}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[11px] text-muted">
-                      {showRouteDetails ? "點路線收合車費詳情" : "點路線睇車費／車程"}
-                    </p>
-                  </div>
-                  <span
-                    className={`mt-1 shrink-0 text-muted transition-transform ${showRouteDetails ? "rotate-180 text-lime" : ""}`}
-                    aria-hidden
-                  >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                    </svg>
-                  </span>
-                </div>
-              </button>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex flex-wrap items-center gap-2">
+                <GmbRoutePlate route={picked.route} region={picked.region} />
+                <span className="text-sm">
+                  {picked.orig} → {picked.dest}
+                </span>
+              </div>
               <FavoriteStarButton favorite={favoriteFromRouteHit("minibus", picked)} />
             </div>
-            {showRouteDetails ? (
+            {selected ? (
               <div className="mt-1.5">
                 <RouteInfoBanner
                   compact
