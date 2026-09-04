@@ -84,8 +84,8 @@ export function RouteEtaBrowser({
   const [stops, setStops] = useState<StopHit[]>([]);
   const [selected, setSelected] = useState<StopHit | null>(null);
   const [error, setError] = useState("");
-  /** false = hide expanded ETA cards; only show soonest time on the stop row */
-  const [showEtaDetails, setShowEtaDetails] = useState(true);
+  /** false = compact stop list; true = route info + expanded ETA cards (toggled via route header) */
+  const [showEtaDetails, setShowEtaDetails] = useState(false);
   /** 忽略過期搜尋回應，避免手機逐字輸入時舊請求覆蓋 E21A 結果 */
   const searchSeq = useRef(0);
   const favBoot = useRef(false);
@@ -319,39 +319,36 @@ export function RouteEtaBrowser({
 
         <div className="relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-2xl border border-line bg-card shadow-[0_-8px_24px_rgba(0,0,0,.25)] max-md:-mt-3 md:mt-0 md:rounded-2xl">
           <div className="sticky top-0 z-10 border-b border-line bg-card/95 px-4 py-3 backdrop-blur">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="text-xs text-amber">{pickedRoute.operatorName}</span>
-                <span className="font-mono text-xl text-teal">{pickedRoute.route}</span>
-                <span className="text-sm text-ink">{pickedRoute.subtitle}</span>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <FavoriteStarButton favorite={favoriteFromRouteHit(mode, pickedRoute)} />
-              <div
-                className="flex shrink-0 rounded-full border border-line p-0.5 text-[11px]"
-                role="group"
-                aria-label="班次顯示方式"
+            <div className="flex items-start gap-2">
+              <button
+                type="button"
+                aria-expanded={showEtaDetails}
+                aria-label={showEtaDetails ? "收合路線詳細資訊" : "展開路線詳細資訊"}
+                onClick={() => setShowEtaDetails((v) => !v)}
+                className="min-w-0 flex-1 rounded-xl px-1 py-0.5 text-left hover:bg-elev/50"
               >
-                <button
-                  type="button"
-                  onClick={() => setShowEtaDetails(true)}
-                  className={`rounded-full px-2.5 py-1 ${
-                    showEtaDetails ? "bg-teal/20 text-teal" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  詳細
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEtaDetails(false)}
-                  className={`rounded-full px-2.5 py-1 ${
-                    !showEtaDetails ? "bg-teal/20 text-teal" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  精簡
-                </button>
-              </div>
-              </div>
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="text-xs text-amber">{pickedRoute.operatorName}</span>
+                      <span className="font-mono text-xl text-teal">{pickedRoute.route}</span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-ink">{pickedRoute.subtitle}</p>
+                    <p className="mt-1 text-[11px] text-muted">
+                      {showEtaDetails ? "點路線收合詳情" : "點路線睇車費／班次詳情"}
+                    </p>
+                  </div>
+                  <span
+                    className={`mt-1 shrink-0 text-muted transition-transform ${showEtaDetails ? "rotate-180 text-teal" : ""}`}
+                    aria-hidden
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                </div>
+              </button>
+              <FavoriteStarButton favorite={favoriteFromRouteHit(mode, pickedRoute)} />
             </div>
             {selected && showEtaDetails ? (
               <div className="mt-1.5">
