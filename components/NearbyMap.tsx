@@ -201,6 +201,7 @@ export function NearbyMap({
   zoom = 15,
   fitAllPoints = false,
   focusZoom = 16,
+  focusAnchorY = 0.5,
 }: {
   lat: number;
   lng: number;
@@ -214,6 +215,8 @@ export function NearbyMap({
   fitAllPoints?: boolean;
   /** Minimum zoom when focusing a selected list/map item */
   focusZoom?: number;
+  /** Vertical anchor for focused pin (0=top, 1=bottom). >0.5 leaves room for popups above. */
+  focusAnchorY?: number;
 }) {
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetId, setWalkTargetId] = useState<string | null>(null);
@@ -297,6 +300,7 @@ export function NearbyMap({
           selectedId={selectedId}
           selectedPoint={selectedPoint}
           focusZoom={focusZoom}
+          focusAnchorY={focusAnchorY}
         />
         {walkRoute ? (
           <Polyline

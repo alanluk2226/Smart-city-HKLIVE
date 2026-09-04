@@ -489,6 +489,7 @@ export function HealthApp() {
           lng={center.lng}
           zoom={11}
           fitAllPoints
+          focusAnchorY={0.62}
           selectedId={selected ?? undefined}
           onSelect={(p) => setSelected(p.id)}
           heightClass="h-72 sm:h-80"
