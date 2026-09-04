@@ -411,6 +411,16 @@ export function HealthApp() {
   function focusHospitalOnMap(name: string) {
     setSelected(name);
     requestAnimationFrame(() => {
+      const title = document.querySelector<HTMLElement>("#main-content h1");
+      const headerH =
+        Number.parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue("--app-header-h"),
+        ) || 0;
+      if (title) {
+        const top = title.getBoundingClientRect().top + window.scrollY - headerH - 8;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+        return;
+      }
       mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }

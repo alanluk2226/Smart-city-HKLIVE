@@ -156,10 +156,13 @@ function FocusSelected({
   selectedId,
   selectedPoint,
   focusZoom,
+  /** Shift pin downward in the map so popups above the marker stay visible. */
+  focusAnchorY = 0.5,
 }: {
   selectedId?: string;
   selectedPoint?: { lat: number; lng: number } | null;
   focusZoom: number;
+  focusAnchorY?: number;
 }) {
   const map = useMap();
   const lastId = useRef<string | undefined>(undefined);
@@ -170,7 +173,19 @@ function FocusSelected({
     lastId.current = selectedId;
     const targetZoom = Math.max(map.getZoom(), focusZoom);
     map.flyTo([selectedPoint.lat, selectedPoint.lng], targetZoom, { duration: 0.45 });
-  }, [selectedId, selectedPoint, map, focusZoom]);
+    const onEnd = () => {
+      map.off("moveend", onEnd);
+      const size = map.getSize();
+      const anchorY = Math.min(0.85, Math.max(0.35, focusAnchorY));
+      // Positive y pans the map up, so the pin sits lower and the popup has room.
+      const dy = size.y * (anchorY - 0.5);
+      if (Math.abs(dy) > 1) map.panBy([0, dy], { animate: true, duration: 0.2 });
+    };
+    map.once("moveend", onEnd);
+    return () => {
+      map.off("moveend", onEnd);
+    };
+  }, [selectedId, selectedPoint, map, focusZoom, focusAnchorY]);
 
   return null;
 }
