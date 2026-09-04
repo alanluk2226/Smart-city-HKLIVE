@@ -60,7 +60,6 @@ export function MinibusApp() {
   const [loadingStops, setLoadingStops] = useState(false);
   const [selected, setSelected] = useState<StopHit | null>(null);
   const [error, setError] = useState("");
-  const [showRouteDetails, setShowRouteDetails] = useState(false);
   const [expandedStopKey, setExpandedStopKey] = useState<string | null>(null);
   const [mapCollapsed, setMapCollapsed] = useState(false);
   const favBoot = useRef(false);
