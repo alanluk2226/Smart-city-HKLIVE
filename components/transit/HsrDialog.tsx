@@ -158,16 +158,16 @@ export function HsrDialog({ onClose }: { onClose: () => void }) {
 function DestCard({ group }: { group: HsrDestGroup }) {
   const [hero, next, ...later] = group.trains;
   return (
-    <article className="overflow-hidden rounded-xl border bg-[#070d12]" style={{ borderColor: `${HSR_COLOR}66` }}>
-      <header className="flex bg-black">
+    <article className="overflow-hidden rounded-xl border border-line bg-elev" style={{ borderColor: `${HSR_COLOR}66` }}>
+      <header className="flex bg-bg">
         <span className="w-1.5 shrink-0" style={{ backgroundColor: HSR_COLOR }} aria-hidden />
         <div className="min-w-0 flex-1 px-3 py-2">
-          <div className="text-[11px] tracking-wide text-white/55">高速鐵路 · 香港西九龍開出</div>
-          <div className="mt-0.5 text-base leading-tight">
+          <div className="text-[11px] tracking-wide text-muted">高速鐵路 · 香港西九龍開出</div>
+          <div className="mt-0.5 text-base leading-tight text-ink">
             往 {group.destName}
-            <span className="ml-1 text-white/70">➔</span>
+            <span className="ml-1 text-muted">➔</span>
           </div>
-          <div className="text-[11px] text-white/45">{group.destEn}</div>
+          <div className="text-[11px] text-muted">{group.destEn}</div>
         </div>
       </header>
       {hero ? (
@@ -179,7 +179,7 @@ function DestCard({ group }: { group: HsrDestGroup }) {
           </div>
           <div className="mt-1 flex items-end justify-between gap-3">
             <div className={hero.minutesUntil <= 5 && !hero.tomorrow ? "eta-arriving text-lime" : ""}>
-              <span className="font-mono text-5xl leading-none">{hero.depart}</span>
+              <span className="font-mono text-5xl leading-none text-ink">{hero.depart}</span>
               <span className="ml-1 text-sm text-muted">開出</span>
             </div>
             <div className="pb-1 text-right text-xs text-muted">
@@ -190,9 +190,9 @@ function DestCard({ group }: { group: HsrDestGroup }) {
         </div>
       ) : null}
       {next ? (
-        <div className="flex items-baseline justify-between border-t border-white/10 px-3 py-2">
+        <div className="flex items-baseline justify-between border-t border-line px-3 py-2">
           <span className="text-xs text-muted">下一班 {next.vibrant ? "動感號" : next.id}</span>
-          <span className="font-mono text-lg">
+          <span className="font-mono text-lg text-ink">
             {next.depart}
             <span className="ml-2 text-xs text-muted">
               {next.tomorrow ? "明日" : `${next.minutesUntil} 分`} · 抵 {next.arrive}
@@ -201,17 +201,17 @@ function DestCard({ group }: { group: HsrDestGroup }) {
         </div>
       ) : null}
       {later.length ? (
-        <div className="flex flex-wrap items-center gap-1.5 border-t border-white/10 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-3 py-2">
           <span className="text-[11px] text-muted">之後</span>
           {later.map((t) => (
-            <span key={`${t.id}-${t.depart}`} className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-xs text-muted">
+            <span key={`${t.id}-${t.depart}`} className="rounded-md bg-line/50 px-2 py-0.5 font-mono text-xs text-muted">
               {t.depart}
               {t.tomorrow ? " 明日" : ""} {t.id}
             </span>
           ))}
         </div>
       ) : null}
-      <div className="flex justify-between border-t border-white/10 px-3 py-2 text-xs text-muted">
+      <div className="flex justify-between border-t border-line px-3 py-2 text-xs text-muted">
         <span>二等座參考車費</span>
         <span>
           成人 {formatFare(group.fareAdult)} · 小童 {formatFare(group.fareChild)}

@@ -3,6 +3,7 @@ import { cached, TTL } from "@/lib/cache";
 import { formatEtaClock } from "@/lib/geo";
 import { CATALOG_REVALIDATE_SECONDS, fetchJson } from "@/lib/http";
 import { rankNearby } from "@/lib/nearby";
+import gmbRoutesSnapshot from "@/lib/static/gmb-routes.json";
 import gmbStopsSnapshot from "@/lib/static/gmb-stops.json";
 import type { EtaResult, OccupancyLevel, RouteHit, StopHit } from "@/lib/types";
 
@@ -127,63 +128,107 @@ function extrasFromEta(eta: GmbEtaItem): Pick<EtaResult, "plate" | "occupancy" |
 
 export async function gmbRouteIndex() {
   return cached("gmb:routes", TTL.route, async () => {
-    const json = await fetchJson<GmbRouteList>(`${BASE}/route`);
+    const json = await fetchJson<GmbRouteList>(`${BASE}/route`, 20_000, {
+      revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+    });
     return json.data.routes;
+  });
+}
+
+type GmbRouteSnapshotRow = {
+  region: string;
+  code: string;
+  routeId: string;
+  bound: string;
+  orig: string;
+  dest: string;
+};
+
+function hitsFromSnapshot(): RouteHit[] | null {
+  const rows = (gmbRoutesSnapshot as { routes?: GmbRouteSnapshotRow[] }).routes;
+  if (!Array.isArray(rows) || rows.length < 100) return null;
+  return rows.map((row) => ({
+    operator: "gmb" as const,
+    operatorName: OPERATOR_NAME,
+    route: row.code,
+    orig: row.orig,
+    dest: row.dest,
+    region: row.region,
+    routeId: row.routeId,
+    bound: row.bound,
+    subtitle: `${REGION_NAME[row.region] ?? row.region} · ${row.orig} → ${row.dest}`,
+  }));
+}
+
+async function gmbRouteCatalogLive(): Promise<RouteHit[]> {
+  const index = await gmbRouteIndex();
+  const jobs = Object.entries(index).flatMap(([region, codes]) =>
+    codes.map((code) => ({ region, code })),
+  );
+  const groups = await mapPool(jobs, 16, async ({ region, code }) => {
+    try {
+      const detail = await cached(`gmb:route:${region}:${code}`, TTL.route, () =>
+        fetchJson<GmbRouteDetail>(`${BASE}/route/${region}/${encodeURIComponent(code)}`, 12_000, {
+          revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+        }),
+      );
+      const hits: RouteHit[] = [];
+      for (const item of detail.data) {
+        for (const dir of item.directions) {
+          hits.push({
+            operator: "gmb",
+            operatorName: OPERATOR_NAME,
+            route: code,
+            orig: dir.orig_tc,
+            dest: dir.dest_tc,
+            region,
+            routeId: String(item.route_id),
+            bound: String(dir.route_seq),
+            subtitle: `${REGION_NAME[region] ?? region} · ${dir.orig_tc} → ${dir.dest_tc}`,
+          });
+        }
+      }
+      return hits;
+    } catch {
+      return [] as RouteHit[];
+    }
+  });
+  return groups.flat();
+}
+
+/** Full GMB route+direction catalog (static snapshot first, live fill as fallback). */
+export async function gmbRouteCatalog(): Promise<RouteHit[]> {
+  return cached("gmb:route-hits:v1", TTL.route, async () => {
+    const snap = hitsFromSnapshot();
+    if (snap?.length) return snap;
+    return gmbRouteCatalogLive();
   });
 }
 
 export async function searchGmbRoutes(q: string, regionFilter?: string): Promise<RouteHit[]> {
   const needle = q.trim().toUpperCase();
   if (!needle) return [];
-  const index = await gmbRouteIndex();
-  const scored: { region: string; code: string; rank: number }[] = [];
-  for (const [region, codes] of Object.entries(index)) {
-    if (regionFilter && region !== regionFilter) continue;
-    for (const code of codes) {
-      const u = code.toUpperCase();
-      const rank = u === needle ? 0 : u.startsWith(needle) ? 1 : u.includes(needle) ? 2 : -1;
-      if (rank < 0) continue;
-      scored.push({ region, code, rank });
-    }
-  }
+  const catalog = await gmbRouteCatalog();
+  const scored = catalog
+    .filter((hit) => {
+      if (regionFilter && hit.region !== regionFilter) return false;
+      const u = hit.route.toUpperCase();
+      return u === needle || u.startsWith(needle) || u.includes(needle);
+    })
+    .map((hit) => {
+      const u = hit.route.toUpperCase();
+      const rank = u === needle ? 0 : u.startsWith(needle) ? 1 : 2;
+      return { hit, rank };
+    });
   scored.sort(
     (a, b) =>
       a.rank - b.rank ||
-      a.code.length - b.code.length ||
-      a.code.localeCompare(b.code, "en", { numeric: true }) ||
-      a.region.localeCompare(b.region),
+      a.hit.route.length - b.hit.route.length ||
+      a.hit.route.localeCompare(b.hit.route, "en", { numeric: true }) ||
+      (a.hit.region ?? "").localeCompare(b.hit.region ?? "") ||
+      Number(a.hit.bound ?? 0) - Number(b.hit.bound ?? 0),
   );
-  const codeLimit = needle.length <= 1 ? 28 : needle.length <= 2 ? 20 : 12;
-  const picked = scored.slice(0, codeLimit);
-  const groups = await Promise.all(
-    picked.map(async ({ region, code }) => {
-      try {
-        const detail = await cached(`gmb:route:${region}:${code}`, TTL.route, () =>
-          fetchJson<GmbRouteDetail>(`${BASE}/route/${region}/${encodeURIComponent(code)}`),
-        );
-        const hits: RouteHit[] = [];
-        for (const item of detail.data) {
-          for (const dir of item.directions) {
-            hits.push({
-              operator: "gmb",
-              operatorName: OPERATOR_NAME,
-              route: code,
-              orig: dir.orig_tc,
-              dest: dir.dest_tc,
-              region,
-              routeId: String(item.route_id),
-              bound: String(dir.route_seq),
-              subtitle: `${REGION_NAME[region] ?? region} · ${dir.orig_tc} → ${dir.dest_tc}`,
-            });
-          }
-        }
-        return hits;
-      } catch {
-        return [] as RouteHit[];
-      }
-    }),
-  );
-  return groups.flat().slice(0, needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 24);
+  return scored.slice(0, needle.length <= 1 ? 48 : needle.length <= 2 ? 36 : 24).map((row) => row.hit);
 }
 
 export async function gmbRouteStops(routeId: string, routeSeq: string): Promise<StopHit[]> {
@@ -279,6 +324,15 @@ async function mapPool<T, R>(items: T[], size: number, fn: (item: T) => Promise<
 
 async function gmbRouteCodeMap(): Promise<Map<number, string>> {
   return cached("gmb:route-code-map", TTL.route, async () => {
+    const snap = hitsFromSnapshot();
+    if (snap?.length) {
+      const map = new Map<number, string>();
+      for (const hit of snap) {
+        const id = Number(hit.routeId);
+        if (Number.isFinite(id)) map.set(id, hit.route);
+      }
+      if (map.size > 50) return map;
+    }
     const index = await gmbRouteIndex();
     const map = new Map<number, string>();
     await mapPool(
@@ -287,7 +341,9 @@ async function gmbRouteCodeMap(): Promise<Map<number, string>> {
       async ({ region, code }) => {
         try {
           const detail = await cached(`gmb:route:${region}:${code}`, TTL.route, () =>
-            fetchJson<GmbRouteDetail>(`${BASE}/route/${region}/${encodeURIComponent(code)}`),
+            fetchJson<GmbRouteDetail>(`${BASE}/route/${region}/${encodeURIComponent(code)}`, 12_000, {
+              revalidateSeconds: CATALOG_REVALIDATE_SECONDS,
+            }),
           );
           for (const item of detail.data) map.set(item.route_id, code);
         } catch {

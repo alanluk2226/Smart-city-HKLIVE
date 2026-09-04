@@ -72,23 +72,23 @@ export function MtrPidsBoard({
         return (
           <article
             key={`${group.route}-${group.platform}-${group.dest}`}
-            className="overflow-hidden rounded-xl border border-line bg-[#070d12]"
+            className="overflow-hidden rounded-xl border border-line bg-elev"
             style={{ borderColor: `${color}66` }}
           >
-            <header className="flex bg-black">
+            <header className="flex bg-bg">
               <span className="w-1.5 shrink-0" style={{ backgroundColor: color }} aria-hidden />
               <div className="min-w-0 flex-1 px-3 py-2.5">
-                <div className="text-[11px] font-medium tracking-wide text-white/50">{group.route}</div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <div className="text-[11px] font-medium tracking-wide text-muted">{group.route}</div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-ink">
                   <span className="text-xl font-semibold leading-tight">
                     {group.platform === "—" ? "月台" : `${group.platform}號月台`}
                   </span>
-                  <span className="text-white/30" aria-hidden>
+                  <span className="text-muted" aria-hidden>
                     ·
                   </span>
                   <span className="text-xl font-semibold leading-tight">
                     往 {group.dest}
-                    <span className="ml-1 font-normal text-white/55">➔</span>
+                    <span className="ml-1 font-normal text-muted">➔</span>
                   </span>
                 </div>
               </div>
@@ -96,15 +96,15 @@ export function MtrPidsBoard({
 
             {hero ? <HeroTrain eta={hero} color={color} /> : null}
 
-            <div className="flex min-h-11 items-baseline justify-between border-t border-white/10 px-3 py-2">
+            <div className="flex min-h-11 items-baseline justify-between border-t border-line px-3 py-2">
               <span className="text-xs text-muted">下一班</span>
               {next ? (
-                <span className="font-mono text-lg leading-none">
+                <span className="font-mono text-lg leading-none text-ink">
                   {isArriving(next.etaMinutes) ? "即將到站" : `${next.etaMinutes ?? "—"} 分`}
                   {next.etaTime ? <span className="ml-2 font-sans text-xs text-muted">{next.etaTime}</span> : null}
                 </span>
               ) : (
-                <span className="text-sm text-white/30">暫無</span>
+                <span className="text-sm text-muted">暫無</span>
               )}
             </div>
 
@@ -152,7 +152,7 @@ function HeroTrain({ eta, color }: { eta: EtaResult; color: string }) {
 function LaterTrains({ trains }: { trains: EtaResult[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-t border-white/10">
+    <div className="border-t border-line">
       <button
         type="button"
         aria-expanded={open}
@@ -167,7 +167,7 @@ function LaterTrains({ trains }: { trains: EtaResult[] }) {
           {trains.map((eta, i) => (
             <span
               key={`${eta.etaTime}-${i}`}
-              className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-xs text-muted"
+              className="rounded-md bg-line/50 px-2 py-0.5 font-mono text-xs text-muted"
             >
               {eta.etaMinutes ?? "—"} 分{eta.etaTime ? ` · ${eta.etaTime}` : ""}
             </span>

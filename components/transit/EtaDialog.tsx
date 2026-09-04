@@ -103,7 +103,7 @@ export function EtaDialog({
         aria-labelledby="eta-dialog-title"
         className="relative z-10 flex max-h-[85vh] w-full flex-col rounded-t-2xl border border-line bg-card shadow-2xl sm:max-w-3xl sm:rounded-2xl"
       >
-        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-white/15 sm:hidden" />
+        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line sm:hidden" />
         <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-2">
           <div className="min-w-0">
             <h2 id="eta-dialog-title" className="text-lg leading-tight">
@@ -132,7 +132,7 @@ export function EtaDialog({
                 onClick={() => setFilter(null)}
                 className={`rounded-full px-2.5 py-1 text-xs ${
                   filter === null
-                    ? "bg-white/15 text-ink ring-1 ring-white/45"
+                    ? "bg-elev text-ink ring-1 ring-line"
                     : "text-muted ring-1 ring-inset ring-line hover:text-ink"
                 }`}
               >

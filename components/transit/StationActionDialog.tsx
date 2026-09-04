@@ -59,7 +59,7 @@ export function StationActionDialog({
         className="relative z-10 w-full rounded-t-2xl border border-line bg-card p-4 shadow-2xl sm:max-w-lg sm:rounded-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/15 sm:hidden" />
+        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line sm:hidden" />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id="station-action-title" className="text-lg leading-tight">
