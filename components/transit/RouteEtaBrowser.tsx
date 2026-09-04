@@ -206,7 +206,10 @@ export function RouteEtaBrowser({
       const initial = await pickInitialRouteStop(loaded);
       if (seq !== searchSeq.current) return;
       setStops(loaded);
-      if (initial) pickStop(initial, route);
+      if (initial) {
+        pickStop(initial, route);
+        setExpandedStopKey(`${initial.stopId}-${initial.seq}`);
+      }
     } catch (err) {
       if (seq !== searchSeq.current) return;
       setStops([]);

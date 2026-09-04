@@ -142,6 +142,7 @@ export function MinibusApp() {
         serviceType: initial.serviceType ?? route.serviceType,
         region: initial.region ?? route.region,
       });
+      setExpandedStopKey(`${initial.stopId}-${initial.seq}`);
     } catch (err) {
       setStops([]);
       setError(err instanceof Error ? err.message : "無法載入車站");
