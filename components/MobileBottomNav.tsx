@@ -15,7 +15,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-elev/95 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-[1100] border-t border-line bg-elev/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "var(--app-safe-bottom, 0px)" }}
       aria-label="主要導航"
     >
