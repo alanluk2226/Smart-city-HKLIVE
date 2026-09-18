@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, num } from "@/lib/api";
+import { jsonError, jsonOk, jsonUpstreamError, num } from "@/lib/api";
 import { NEARBY_MAX_METERS, withinNearbyRadius } from "@/lib/nearby";
 import { nearbyCtbStops } from "@/lib/providers/ctb";
 import { nearbyGmbStops } from "@/lib/providers/gmb";
@@ -7,10 +7,14 @@ import { nearbyLrtStations } from "@/lib/providers/lrt";
 import { nearbyMtrStations } from "@/lib/providers/mtr";
 import { nearbyMtrBusStops } from "@/lib/providers/mtr-bus";
 import { nearbyNlbStops } from "@/lib/providers/nlb";
+import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { MTR_STATIONS } from "@/lib/static/mtr-stations";
 import type { StopHit } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const NEARBY_LIMIT_PER_MIN = 30;
+const NEARBY_GMB_LIMIT_PER_MIN = 12;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   return Promise.race([
@@ -43,12 +47,27 @@ function mtrNearby(lat: number, lng: number) {
  * phase=all  — 一次全取（相容舊客戶端）
  */
 export async function GET(request: Request) {
+  pruneRateLimits();
+  const ip = clientIp(request);
   const p = new URL(request.url).searchParams;
   const lat = num(p.get("lat"));
   const lng = num(p.get("lng"));
   if (lat == null || lng == null) return jsonError("需要 lat / lng");
+  if (lat < 22.12 || lat > 22.58 || lng < 113.8 || lng > 114.5) {
+    return jsonError("附近搜尋只支援香港範圍", 400);
+  }
 
   const phase = (p.get("phase") || "all").toLowerCase();
+  const limited = await rateLimitShared({
+    key: `nearby:${phase === "gmb" ? "gmb" : "min"}:${ip}`,
+    limit: phase === "gmb" ? NEARBY_GMB_LIMIT_PER_MIN : NEARBY_LIMIT_PER_MIN,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return jsonError("附近車站請求過於頻繁，請稍後再試。", 429, {
+      retryAfter: limited.retryAfterSec,
+    });
+  }
 
   try {
     if (phase === "gmb") {
@@ -108,6 +127,6 @@ export async function GET(request: Request) {
       phase: "all" as const,
     });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "無法載入附近車站", 502);
+    return jsonUpstreamError("nearby", error, "無法載入附近車站");
   }
 }

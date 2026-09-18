@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ListSkeleton } from "@/components/ListSkeleton";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import { LocationOffBanner } from "@/components/LocationOffBanner";
+import { MapPanel } from "@/components/MapPanel";
 import { apiGet, formatDistance, openWalkingDirections, useGeo, waitTone } from "@/lib/client";
 import { DEFAULT_CENTER, parseWaitMinutes } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
@@ -322,6 +324,7 @@ export function HealthApp() {
   const [sort, setSort] = useState<SortMode>("wait");
   const [rows, setRows] = useState<HospitalWait[]>([]);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   /** Hospital focused on the map */
   const [selected, setSelected] = useState<string | null>(null);
   /** Hospital whose detail accordion is open */
@@ -352,9 +355,24 @@ export function HealthApp() {
   }, []);
 
   useEffect(() => {
+    let alive = true;
+    setLoading(true);
     apiGet<HospitalWait[]>(`/api/hospitals?lat=${center.lat}&lng=${center.lng}`)
-      .then(setRows)
-      .catch((e) => setError(e.message));
+      .then((data) => {
+        if (!alive) return;
+        setRows(data);
+        setError("");
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e.message);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, [center]);
 
   const expandedHospital = useMemo(
@@ -483,27 +501,33 @@ export function HealthApp() {
 
       {error ? <p className="mb-3 text-sm text-rose">{error}</p> : null}
 
+      {loading && !rows.length ? (
+        <ListSkeleton rows={6} map />
+      ) : (
+        <>
       <div ref={mapSectionRef}>
-        <NearbyMapDynamic
-          lat={center.lat}
-          lng={center.lng}
-          zoom={11}
-          fitAllPoints
-          focusAnchorY={0.62}
-          selectedId={selected ?? undefined}
-          onSelect={(p) => setSelected(p.id)}
-          heightClass="h-72 sm:h-80"
-          className="max-md:-mx-4 max-md:rounded-none max-md:border-x-0 md:rounded-xl"
-          points={sorted.map((h) => ({
-            id: h.name,
-            name: h.name,
-            lat: h.lat,
-            lng: h.lng,
-            detail: `半緊急／非緊急 ${h.t45}`,
-            badge: compactWaitLabel(h.t45, h.waitMinutes),
-            badgeLevel: waitBadgeLevel(h.waitMinutes),
-          }))}
-        />
+        <MapPanel>
+          <NearbyMapDynamic
+            lat={center.lat}
+            lng={center.lng}
+            zoom={11}
+            fitAllPoints
+            focusAnchorY={0.62}
+            selectedId={selected ?? undefined}
+            onSelect={(p) => setSelected(p.id)}
+            heightClass="h-72 sm:h-80"
+            className="max-md:-mx-4 max-md:rounded-none max-md:border-x-0 md:rounded-xl"
+            points={sorted.map((h) => ({
+              id: h.name,
+              name: h.name,
+              lat: h.lat,
+              lng: h.lng,
+              detail: `半緊急／非緊急 ${h.t45}`,
+              badge: compactWaitLabel(h.t45, h.waitMinutes),
+              badgeLevel: waitBadgeLevel(h.waitMinutes),
+            }))}
+          />
+        </MapPanel>
       </div>
 
       {topFastest.length ? (
@@ -576,6 +600,11 @@ export function HealthApp() {
                         {h.t45}
                       </div>
                       <div className="mt-1 text-[10px] text-muted">半緊急／非緊急</div>
+                      {(h.waitMinutes ?? 0) > 240 ? (
+                        <span className="alert-urgent-ring mt-1.5 inline-flex rounded-full border border-rose/45 bg-rose/15 px-1.5 py-0.5 text-[10px] font-medium text-rose">
+                          逾4小時
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-line/70">
@@ -629,6 +658,8 @@ export function HealthApp() {
       {sorted[0]?.updateTime ? (
         <p className="mt-4 text-xs text-muted">醫管局急症室更新：{sorted[0].updateTime}</p>
       ) : null}
+        </>
+      )}
 
       {selected ? (
         <button

@@ -242,13 +242,29 @@ body {
   }
 }
 
+/** Soft rose ring for critical weather / extreme A&E wait — not a hard blink. */
+.alert-urgent-ring {
+  animation: alert-urgent-ring 2s ease-out infinite;
+}
+
+@keyframes alert-urgent-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.35);
+  }
+  55% {
+    box-shadow: 0 0 0 5px rgba(244, 63, 94, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .eta-arriving,
   .mtr-glow,
   .mtr-pulse,
   .mtr-pulse-ring,
   .alerts-progress-bar,
-  .stop-pin-pulse {
+  .stop-pin-pulse,
+  .alert-urgent-ring {
     animation: none;
   }
 }

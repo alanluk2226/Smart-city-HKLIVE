@@ -39,7 +39,8 @@ export async function fetchJson<T>(
     }),
   );
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+    // Do not echo the full upstream URL to API clients (recon / open-proxy aid).
+    throw new Error(`Upstream HTTP ${res.status}`);
   }
   return (await res.json()) as T;
 }
@@ -64,7 +65,7 @@ export async function fetchText(
     })(),
   );
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+    throw new Error(`Upstream HTTP ${res.status}`);
   }
   return res.text();
 }
@@ -79,7 +80,7 @@ export async function fetchBuffer(url: string, timeoutMs = 10_000): Promise<{
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+    throw new Error(`Upstream HTTP ${res.status}`);
   }
   return {
     body: await res.arrayBuffer(),

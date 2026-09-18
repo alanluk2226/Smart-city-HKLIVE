@@ -233,12 +233,14 @@ export async function searchGmbRoutes(q: string, regionFilter?: string): Promise
 
 export async function gmbRouteStops(routeId: string, routeSeq: string): Promise<StopHit[]> {
   const json = await cached(`gmb:rs:${routeId}:${routeSeq}`, TTL.stop, () =>
-    fetchJson<GmbRouteStop>(`${BASE}/route-stop/${routeId}/${routeSeq}`),
+    fetchJson<GmbRouteStop>(
+      `${BASE}/route-stop/${encodeURIComponent(routeId)}/${encodeURIComponent(routeSeq)}`,
+    ),
   );
   const stops = await Promise.all(
     json.data.route_stops.map(async (item) => {
       const geo = await cached(`gmb:stop:${item.stop_id}`, TTL.stop, () =>
-        fetchJson<GmbStop>(`${BASE}/stop/${item.stop_id}`),
+        fetchJson<GmbStop>(`${BASE}/stop/${encodeURIComponent(item.stop_id)}`),
       );
       return {
         operator: "gmb" as const,
@@ -262,7 +264,9 @@ export async function gmbStopEta(
   stopName = "",
 ): Promise<EtaResult[]> {
   const json = await cached(`gmb:eta:${routeId}:${stopId}`, TTL.eta, () =>
-    fetchJson<GmbEta>(`${BASE}/eta/route-stop/${routeId}/${stopId}`),
+    fetchJson<GmbEta>(
+      `${BASE}/eta/route-stop/${encodeURIComponent(routeId)}/${encodeURIComponent(stopId)}`,
+    ),
   );
   const rows: EtaResult[] = [];
   for (const group of json.data) {
@@ -432,7 +436,7 @@ export async function nearbyGmbStops(lat: number, lng: number, limit = 8): Promi
 
 export async function gmbStopEtaByStop(stopId: string, stopName = ""): Promise<EtaResult[]> {
   const json = await cached(`gmb:eta-stop:${stopId}`, TTL.eta, () =>
-    fetchJson<GmbStopEtaResponse>(`${BASE}/eta/stop/${stopId}`),
+    fetchJson<GmbStopEtaResponse>(`${BASE}/eta/stop/${encodeURIComponent(stopId)}`),
   );
   const routeCodes = await gmbRouteCodeMap();
   const rows: EtaResult[] = [];

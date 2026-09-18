@@ -59,6 +59,19 @@ export function jsonError(message: string, status = 400, init?: JsonErrorInit) {
   return NextResponse.json({ ok: false, error: message }, { status, headers });
 }
 
+/** Log internal detail; return a fixed public message (no upstream URL leakage). */
+export function jsonUpstreamError(scope: string, error: unknown, publicMessage: string) {
+  console.error(`[${scope}]`, error instanceof Error ? error.message : error);
+  const status =
+    error && typeof error === "object" && "status" in error && typeof (error as { status: unknown }).status === "number"
+      ? (error as { status: number }).status
+      : 502;
+  if (status === 400) {
+    return jsonError(error instanceof Error ? error.message : publicMessage, 400);
+  }
+  return jsonError(publicMessage, 502);
+}
+
 export function num(value: string | null): number | undefined {
   if (value == null || value === "") return undefined;
   const n = Number(value);

@@ -129,7 +129,9 @@ export async function ctbStopEta(
   stopName = "",
 ): Promise<EtaResult[]> {
   const json = await cached(`ctb:eta:${stopId}:${route}`, TTL.eta, () =>
-    fetchJson<CtbList<CtbEta>>(`${BASE}/eta/ctb/${stopId}/${encodeURIComponent(route)}`),
+    fetchJson<CtbList<CtbEta>>(
+      `${BASE}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`,
+    ),
   );
   return json.data.map((row) => {
     const etaMinutes = etaMinutesFromIso(row.eta);

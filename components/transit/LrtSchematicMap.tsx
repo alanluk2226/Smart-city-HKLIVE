@@ -55,7 +55,19 @@ function inLrtServiceArea(lat: number, lng: number) {
 
 type View = { x: number; y: number; w: number; h: number };
 type Hit = { code: string; name: string; nameEn: string; dist: number };
-type MapTarget = { code: string; name: string; nameEn: string; x: number; y: number; r: number; hub: boolean };
+type MapTarget = {
+  code: string;
+  name: string;
+  nameEn: string;
+  x: number;
+  y: number;
+  r: number;
+  rx: number;
+  ry: number;
+  hub: boolean;
+  oval: boolean;
+  ghost: boolean;
+};
 
 const FULL_VIEW: View = { x: 0, y: 0, w: VB_W, h: VB_H };
 
@@ -178,23 +190,44 @@ export function LrtSchematicMap({
     for (const s of LRT_STATIONS) {
       const code = String(s.id);
       const hub = LRT_MAP_HUBS[code];
-      const p = hub ?? LRT_MAP_HITS[code];
+      const hit = LRT_MAP_HITS[code];
+      const p = hub ?? hit;
       if (!p) continue;
+      const rx = hub ? hub.r : hit?.rx ?? TAP_R;
+      const ry = hub ? hub.r : hit?.ry ?? TAP_R;
       out.push({
         code,
         name: s.name,
         nameEn: s.nameEn,
         x: p.x,
         y: p.y,
-        r: hub?.r ?? TAP_R,
+        r: Math.max(rx, ry),
+        rx,
+        ry,
         hub: Boolean(hub),
+        oval: !hub && hit?.rx != null && hit?.ry != null && hit.rx !== hit.ry,
+        ghost: Boolean(hit?.ghost),
       });
     }
     for (const extra of LRT_MAP_EXTRA_HITS) {
       const hub = LRT_MAP_HUBS[extra.code];
       if (hub && Math.hypot(extra.x - hub.x, extra.y - hub.y) <= hub.r) continue;
       const s = byCode.get(extra.code);
-      if (s) out.push({ code: extra.code, name: s.name, nameEn: s.nameEn, x: extra.x, y: extra.y, r: TAP_R, hub: false });
+      if (s) {
+        out.push({
+          code: extra.code,
+          name: s.name,
+          nameEn: s.nameEn,
+          x: extra.x,
+          y: extra.y,
+          r: TAP_R,
+          rx: TAP_R,
+          ry: TAP_R,
+          hub: false,
+          oval: false,
+          ghost: false,
+        });
+      }
     }
     return out;
   }, []);
@@ -224,8 +257,19 @@ export function LrtSchematicMap({
     const hubHits: Hit[] = [];
     const other: Hit[] = [];
     for (const t of targets) {
-      const dist = Math.hypot(t.x - x, t.y - y);
-      if (dist > Math.max(t.r, extraR)) continue;
+      const dx = x - t.x;
+      const dy = y - t.y;
+      // Ovals stay close to the white capsule; only circles use the full tap slack.
+      // (Dense junctions like 河田／蔡意橋／屯門 otherwise steal each other's taps.)
+      const pad = t.oval || t.rx !== t.ry ? Math.min(extraR, 14) : extraR;
+      const hitRx = Math.max(t.rx + (t.oval ? 4 : 0), pad * (t.rx / t.r));
+      const hitRy = Math.max(t.ry + (t.oval ? 4 : 0), pad * (t.ry / t.r));
+      const inside =
+        t.oval || t.rx !== t.ry
+          ? (dx * dx) / (hitRx * hitRx) + (dy * dy) / (hitRy * hitRy) <= 1
+          : Math.hypot(dx, dy) <= Math.max(t.r, pad);
+      if (!inside) continue;
+      const dist = Math.hypot(dx, dy);
       const hit = { code: t.code, name: t.name, nameEn: t.nameEn, dist };
       if (t.hub) hubHits.push(hit);
       else other.push(hit);
@@ -584,6 +628,12 @@ export function LrtSchematicMap({
             const isClosed = closed.has(t.code);
             const ring = isDest ? "#f0b429" : isOrigin ? "#3ee0c5" : isSel ? "#3ee0c5" : "#0f766e";
             const active = isSel || isHov || isOrigin || isDest;
+            const glowRx = t.oval ? t.rx * 1.35 : 14;
+            const glowRy = t.oval ? t.ry * 1.35 : 14;
+            const pulseRx = t.oval ? t.rx * 1.55 : 16;
+            const pulseRy = t.oval ? t.ry * 1.55 : 16;
+            const ringRx = t.oval ? t.rx * 0.95 : 8;
+            const ringRy = t.oval ? t.ry * 0.95 : 8;
             return (
               <g
                 key={`${t.code}-${t.x}-${t.y}`}
@@ -592,7 +642,17 @@ export function LrtSchematicMap({
                 onMouseLeave={() => setHovered(null)}
                 className="cursor-pointer"
               >
-                <circle r={t.r} fill="transparent" />
+                <ellipse rx={t.rx} ry={t.ry} fill="transparent" />
+                {t.ghost ? (
+                  <ellipse
+                    rx={t.rx}
+                    ry={t.ry}
+                    fill="#ffffff"
+                    stroke="#231f20"
+                    strokeWidth="1.4"
+                    opacity={active ? 1 : 0.95}
+                  />
+                ) : null}
                 {t.hub ? (
                   <circle
                     r={t.r}
@@ -605,9 +665,9 @@ export function LrtSchematicMap({
                 ) : null}
                 {isClosed ? (
                   <>
-                    <circle r="12" fill="#6b7280" opacity="0.72" />
+                    <ellipse rx={Math.max(t.rx, 12)} ry={Math.max(t.ry, 12)} fill="#6b7280" opacity="0.72" />
                     <text
-                      y={t.hub ? -t.r - 4 : -14}
+                      y={t.hub ? -t.r - 4 : -Math.max(t.ry, 14) - 2}
                       textAnchor="middle"
                       fill="#9ca3af"
                       stroke="#071018"
@@ -622,25 +682,41 @@ export function LrtSchematicMap({
                 ) : null}
                 {isLocated ? (
                   <>
-                    <circle r={t.hub ? t.r * 0.72 : 16} className="mtr-pulse" fill="#3ee0c5" />
-                    <circle
-                      r={t.hub ? t.r : 8}
-                      className="mtr-pulse-ring"
-                      fill="none"
-                      stroke="#3ee0c5"
-                      strokeWidth="3"
-                    />
+                    {t.hub ? (
+                      <>
+                        <circle r={t.r * 0.72} className="mtr-pulse" fill="#3ee0c5" />
+                        <circle r={t.r} className="mtr-pulse-ring" fill="none" stroke="#3ee0c5" strokeWidth="3" />
+                      </>
+                    ) : (
+                      <>
+                        <ellipse rx={pulseRx} ry={pulseRy} className="mtr-pulse" fill="#3ee0c5" />
+                        <ellipse
+                          rx={pulseRx + 2}
+                          ry={pulseRy + 2}
+                          className="mtr-pulse-ring"
+                          fill="none"
+                          stroke="#3ee0c5"
+                          strokeWidth="3"
+                        />
+                      </>
+                    )}
                   </>
                 ) : null}
                 {!isLocated && (isSel || isOrigin || isDest) && !t.hub ? (
-                  <circle r="14" className="mtr-glow" fill={isDest ? "#f0b429" : "#3ee0c5"} opacity="0.55" />
+                  <ellipse
+                    rx={glowRx}
+                    ry={glowRy}
+                    className="mtr-glow"
+                    fill={isDest ? "#f0b429" : "#3ee0c5"}
+                    opacity="0.55"
+                  />
                 ) : null}
                 {!isLocated && active && !t.hub ? (
-                  <circle r="8" fill="none" stroke={ring} strokeWidth="3" />
+                  <ellipse rx={ringRx} ry={ringRy} fill="none" stroke={ring} strokeWidth="3" />
                 ) : null}
                 {isOrigin || isDest ? (
                   <text
-                    y={t.hub ? -t.r - 4 : -14}
+                    y={t.hub ? -t.r - 4 : -Math.max(t.ry, 14) - 2}
                     textAnchor="middle"
                     fill={isDest ? "#f0b429" : "#3ee0c5"}
                     stroke="#071018"

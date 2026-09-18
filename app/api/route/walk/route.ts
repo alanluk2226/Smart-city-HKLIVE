@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, num } from "@/lib/api";
-import { clientIp, pruneRateLimits, rateLimit } from "@/lib/rate-limit";
+import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { haversineMeters } from "@/lib/geo";
 import { walkRoute } from "@/lib/routing";
 
@@ -31,7 +31,7 @@ function inHongKong(lat: number, lng: number) {
 export async function GET(request: Request) {
   pruneRateLimits();
   const ip = clientIp(request);
-  const perMin = rateLimit({
+  const perMin = await rateLimitShared({
     key: `walk:min:${ip}`,
     limit: WALK_LIMIT_PER_MIN,
     windowMs: 60_000,
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       retryAfter: perMin.retryAfterSec,
     });
   }
-  const perHour = rateLimit({
+  const perHour = await rateLimitShared({
     key: `walk:hour:${ip}`,
     limit: WALK_LIMIT_PER_HOUR,
     windowMs: 60 * 60_000,

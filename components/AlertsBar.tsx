@@ -140,7 +140,7 @@ export function AlertsBar() {
 
   return (
     <div
-      className={`border-t ${styles.bar}`}
+      className={`border-t ${styles.bar}${current.severity === "critical" ? " alert-urgent-ring" : ""}`}
       role="region"
       aria-label="突發提示"
       onMouseEnter={() => setPaused(true)}

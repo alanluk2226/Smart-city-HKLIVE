@@ -199,6 +199,54 @@ const BY_LEG: Record<string, FerryFareHint> = {
     ],
     ticketNote: CONCESSION_NOTE,
   },
+  "dbtsl-ce-db": {
+    label: "訪客成人約 $55.8 · 登記居民約 $38.2",
+    short: "約 $55.8",
+    tickets: [
+      { role: "訪客成人", fare: "約 $55.8（深宵較高）" },
+      { role: "登記居民成人", fare: "約 $38.2" },
+      { role: "小童 1–11 歲", fare: "訪客約 $27.9 · 居民約 $19.1" },
+      { role: "1 歲以下", fare: "免費" },
+    ],
+    ticketNote:
+      "愉景灣航運；居民價須已登記八達通。樂悠咭／殘疾人士優惠以營辦商及政府計劃為準。部分班次經愉景灣北。",
+  },
+  "dbtsl-db-ce": {
+    label: "訪客成人約 $55.8 · 登記居民約 $38.2",
+    short: "約 $55.8",
+    tickets: [
+      { role: "訪客成人", fare: "約 $55.8（深宵較高）" },
+      { role: "登記居民成人", fare: "約 $38.2" },
+      { role: "小童 1–11 歲", fare: "訪客約 $27.9 · 居民約 $19.1" },
+      { role: "1 歲以下", fare: "免費" },
+    ],
+    ticketNote:
+      "愉景灣航運；居民價須已登記八達通。樂悠咭／殘疾人士優惠以營辦商及政府計劃為準。部分班次經愉景灣北。",
+  },
+  "dbtsl-mw-db": {
+    label: "票價以碼頭／運輸署公佈為準",
+    short: "查碼頭",
+    tickets: [{ role: "成人", fare: "以閘機／碼頭公佈為準" }],
+    ticketNote: "愉景灣—梅窩持牌渡輪；班次較疏。",
+  },
+  "dbtsl-db-mw": {
+    label: "票價以碼頭／運輸署公佈為準",
+    short: "查碼頭",
+    tickets: [{ role: "成人", fare: "以閘機／碼頭公佈為準" }],
+    ticketNote: "愉景灣—梅窩持牌渡輪；班次較疏。",
+  },
+  "dbtsl-pc-db": {
+    label: "票價以碼頭／運輸署公佈為準",
+    short: "查碼頭",
+    tickets: [{ role: "成人", fare: "以閘機／碼頭公佈為準" }],
+    ticketNote: "愉景灣—坪洲／聖母神樂院；班次較疏。",
+  },
+  "dbtsl-db-pc": {
+    label: "票價以碼頭／運輸署公佈為準",
+    short: "查碼頭",
+    tickets: [{ role: "成人", fare: "以閘機／碼頭公佈為準" }],
+    ticketNote: "愉景灣—坪洲／聖母神樂院；班次較疏。",
+  },
 };
 
 export function ferryFareHint(legId: string): FerryFareHint | null {

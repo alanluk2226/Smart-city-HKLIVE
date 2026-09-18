@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ListSkeleton } from "@/components/ListSkeleton";
 import { LocationOffBanner } from "@/components/LocationOffBanner";
+import { MapPanel } from "@/components/MapPanel";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
@@ -202,6 +204,9 @@ export function TrafficApp() {
 
       {error ? <p className="mb-3 text-sm text-rose">{error}</p> : null}
 
+      {loading && !cameras.length ? (
+        <ListSkeleton rows={6} map />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-3">
           {active ? (
@@ -224,26 +229,28 @@ export function TrafficApp() {
             </div>
           ) : (
             <div className="rounded-2xl border border-line bg-card p-6 text-sm text-muted">
-              {loading ? "載入鏡頭…" : "呢個範圍暫時冇鏡頭。"}
+              呢個範圍暫時冇鏡頭。
             </div>
           )}
 
-          <NearbyMapDynamic
-            lat={mapCenter.lat}
-            lng={mapCenter.lng}
-            zoom={mode === "district" ? 12 : 13}
-            fitAllPoints={cameras.length > 1}
-            selectedId={active?.key}
-            onSelect={(p) => setActiveKey(p.id)}
-            heightClass="h-64 sm:h-80"
-            points={cameras.map((c) => ({
-              id: c.key,
-              name: c.description,
-              lat: c.lat,
-              lng: c.lng,
-              detail: `${c.district}${c.distanceMeters != null ? ` · ${formatDistance(c.distanceMeters)}` : ""}`,
-            }))}
-          />
+          <MapPanel>
+            <NearbyMapDynamic
+              lat={mapCenter.lat}
+              lng={mapCenter.lng}
+              zoom={mode === "district" ? 12 : 13}
+              fitAllPoints={cameras.length > 1}
+              selectedId={active?.key}
+              onSelect={(p) => setActiveKey(p.id)}
+              heightClass="h-64 sm:h-80"
+              points={cameras.map((c) => ({
+                id: c.key,
+                name: c.description,
+                lat: c.lat,
+                lng: c.lng,
+                detail: `${c.district}${c.distanceMeters != null ? ` · ${formatDistance(c.distanceMeters)}` : ""}`,
+              }))}
+            />
+          </MapPanel>
         </div>
 
         <div className="max-h-[70vh] overflow-auto rounded-2xl border border-line bg-card p-2">
@@ -269,6 +276,7 @@ export function TrafficApp() {
           ))}
         </div>
       </div>
+      )}
     </AppShell>
   );
 }

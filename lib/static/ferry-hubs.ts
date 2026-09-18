@@ -1,4 +1,4 @@
-export type FerryOperator = "sunferry" | "hkkf" | "starferry";
+export type FerryOperator = "sunferry" | "hkkf" | "starferry" | "dbtsl";
 
 export type FerryLeg = {
   id: string;
@@ -24,7 +24,11 @@ export type FerryHub = {
   legs: FerryLeg[];
 };
 
-/** Fixed pier hubs + known open-data legs. Star Ferry has no public live ETA. */
+/**
+ * Fixed pier hubs + known open-data legs.
+ * Live ETA: Sun Ferry + HKKF. Star Ferry / DBTSL use TD timetable estimates
+ * (DBTSL has fare/timetable CSV on data.gov.hk, no public live ETA API).
+ */
 export const FERRY_HUBS: FerryHub[] = [
   {
     id: "central",
@@ -42,6 +46,17 @@ export const FERRY_HUBS: FerryHub[] = [
         from: "中環",
         to: "尖沙咀",
         pier: "中環天星碼頭",
+      },
+      {
+        id: "dbtsl-ce-db",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-CE",
+        title: "中環 → 愉景灣",
+        from: "中環",
+        to: "愉景灣",
+        pier: "中環 3 號碼頭",
+        vesselHint: "fast",
       },
       {
         id: "sun-cecc",
@@ -220,6 +235,59 @@ export const FERRY_HUBS: FerryHub[] = [
         to: "中環",
         pier: "梅窩碼頭",
       },
+      {
+        id: "dbtsl-mw-db",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-MW",
+        title: "梅窩 → 愉景灣",
+        from: "梅窩",
+        to: "愉景灣",
+        pier: "梅窩碼頭",
+        vesselHint: "ordinary",
+      },
+    ],
+  },
+  {
+    id: "discoverybay",
+    name: "愉景灣碼頭",
+    nameEn: "Discovery Bay",
+    lat: 22.2972,
+    lng: 114.0168,
+    legs: [
+      {
+        id: "dbtsl-db-ce",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-CE",
+        title: "愉景灣 → 中環",
+        from: "愉景灣",
+        to: "中環",
+        pier: "愉景灣碼頭",
+        vesselHint: "fast",
+      },
+      {
+        id: "dbtsl-db-mw",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-MW",
+        title: "愉景灣 → 梅窩",
+        from: "愉景灣",
+        to: "梅窩",
+        pier: "愉景灣碼頭",
+        vesselHint: "ordinary",
+      },
+      {
+        id: "dbtsl-db-pc",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-PC",
+        title: "愉景灣 → 坪洲",
+        from: "愉景灣",
+        to: "坪洲",
+        pier: "愉景灣碼頭",
+        vesselHint: "ordinary",
+      },
     ],
   },
   {
@@ -279,6 +347,17 @@ export const FERRY_HUBS: FerryHub[] = [
         from: "坪洲",
         to: "中環",
         pier: "坪洲碼頭",
+      },
+      {
+        id: "dbtsl-pc-db",
+        operator: "dbtsl",
+        operatorName: "愉景灣航運",
+        routeCode: "DB-PC",
+        title: "坪洲 → 愉景灣",
+        from: "坪洲",
+        to: "愉景灣",
+        pier: "坪洲碼頭",
+        vesselHint: "ordinary",
       },
     ],
   },

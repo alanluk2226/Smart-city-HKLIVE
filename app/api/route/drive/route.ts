@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { jsonError, jsonOk } from "@/lib/api";
 import { cached, TTL } from "@/lib/cache";
-import { clientIp, pruneRateLimits, rateLimit } from "@/lib/rate-limit";
+import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { driveRouteThrough } from "@/lib/routing";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,8 @@ const HK_BOUNDS = {
 
 const DRIVE_LIMIT_PER_MIN = 20;
 const DRIVE_LIMIT_PER_HOUR = 80;
-const MAX_POINTS = 120;
+/** Cap OSRM amplification; real bus routes rarely need more waypoints client-side. */
+const MAX_POINTS = 40;
 
 function inHongKong(lat: number, lng: number) {
   return (
@@ -44,7 +45,7 @@ function asPoints(raw: unknown): Array<{ lat: number; lng: number }> {
 export async function POST(request: Request) {
   pruneRateLimits();
   const ip = clientIp(request);
-  const perMin = rateLimit({
+  const perMin = await rateLimitShared({
     key: `drive:min:${ip}`,
     limit: DRIVE_LIMIT_PER_MIN,
     windowMs: 60_000,
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       retryAfter: perMin.retryAfterSec,
     });
   }
-  const perHour = rateLimit({
+  const perHour = await rateLimitShared({
     key: `drive:hour:${ip}`,
     limit: DRIVE_LIMIT_PER_HOUR,
     windowMs: 60 * 60_000,
@@ -90,7 +91,8 @@ export async function POST(request: Request) {
     .slice(0, 16);
 
   try {
-    const route = await cached(`drive:stops:${fingerprint}`, TTL.route, () =>
+    // v2: prefer road detours over stop-to-stop chords (see lib/routing.ts).
+    const route = await cached(`drive:stops:v2:${fingerprint}`, TTL.route, () =>
       driveRouteThrough(points),
     );
     return jsonOk(route);

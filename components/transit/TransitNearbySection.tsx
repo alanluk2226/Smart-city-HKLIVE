@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ListSkeleton } from "@/components/ListSkeleton";
 import { LocationOffBanner } from "@/components/LocationOffBanner";
+import { MapPanel } from "@/components/MapPanel";
 import { apiGet, formatDistance, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
@@ -185,16 +187,19 @@ export function TransitNearbySection() {
       </div>
       {error || etaError ? <p className="text-rose text-sm">{error || etaError}</p> : null}
       {loadingStops && !mappedStops.length ? (
-        <p className="text-sm text-muted">載入附近車站…</p>
+        <ListSkeleton rows={5} map />
       ) : mappedStops.length ? (
-        <StopStreetMapDynamic
-          stops={mappedStops}
-          selectedId={selected ? `${selected.operator}-${selected.stopId}` : undefined}
-          selectedSeq={selected?.seq}
-          onSelect={(stop) => setSelectedKey(stopKey(stop))}
-          accent="teal"
-          mixedOperators
-        />
+        <MapPanel>
+          <StopStreetMapDynamic
+            stops={mappedStops}
+            selectedId={selected ? `${selected.operator}-${selected.stopId}` : undefined}
+            selectedSeq={selected?.seq}
+            onSelect={(stop) => setSelectedKey(stopKey(stop))}
+            accent="teal"
+            mixedOperators
+            showRouteLine={false}
+          />
+        </MapPanel>
       ) : (
         <p className="text-sm text-muted">約 400m 內暫時搵唔到車站，可再更新位置或到各交通頁搜尋。</p>
       )}

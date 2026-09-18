@@ -202,7 +202,10 @@ export async function nearbyNlbStops(lat: number, lng: number, limit = 6): Promi
 }
 
 export async function nlbStopAllEta(stop: StopHit): Promise<EtaResult[]> {
-  const routeIds = stop.routeIds?.length ? stop.routeIds : stop.routeId ? [stop.routeId] : [];
+  const routeIds = (stop.routeIds?.length ? stop.routeIds : stop.routeId ? [stop.routeId] : []).slice(
+    0,
+    8,
+  );
   if (!routeIds.length) return [];
   const batches = await Promise.all(
     routeIds.map((routeId) => nlbStopEta(routeId, stop.stopId, stop.name).catch(() => [] as EtaResult[])),

@@ -1,14 +1,17 @@
-import { jsonError, jsonOk } from "@/lib/api";
+import { jsonError, jsonOk, jsonUpstreamError } from "@/lib/api";
 import { searchCtbRoutes } from "@/lib/providers/ctb";
 import { searchGmbRoutes } from "@/lib/providers/gmb";
 import { searchKmbRoutes } from "@/lib/providers/kmb";
 import { searchMtrBusRoutes } from "@/lib/providers/mtr-bus";
 import { searchNlbRoutes } from "@/lib/providers/nlb";
+import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { MTR_LINE_NAMES, searchMtrStations } from "@/lib/static/mtr-stations";
 import type { RouteHit } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+const SEARCH_LIMIT_PER_MIN = 30;
 
 type OpSearch = { routes: RouteHit[]; warning?: string };
 
@@ -27,6 +30,19 @@ function emptyOp(): OpSearch {
 }
 
 export async function GET(request: Request) {
+  pruneRateLimits();
+  const ip = clientIp(request);
+  const limited = await rateLimitShared({
+    key: `search:min:${ip}`,
+    limit: SEARCH_LIMIT_PER_MIN,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return jsonError("搜尋過於頻繁，請稍後再試。", 429, {
+      retryAfter: limited.retryAfterSec,
+    });
+  }
+
   const p = new URL(request.url).searchParams;
   const q = (p.get("q")?.trim() ?? "").slice(0, 40);
   const mode = p.get("mode") ?? "all";
@@ -91,6 +107,6 @@ export async function GET(request: Request) {
     }
     return jsonOk({ routes: [], stations: [], warnings: [] });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "搜尋失敗", 502);
+    return jsonUpstreamError("search", error, "搜尋失敗");
   }
 }

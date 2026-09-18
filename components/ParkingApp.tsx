@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ListSkeleton } from "@/components/ListSkeleton";
 import { LocationOffBanner } from "@/components/LocationOffBanner";
+import { MapPanel } from "@/components/MapPanel";
 import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { DEFAULT_CENTER } from "@/lib/geo";
@@ -210,6 +212,9 @@ export function ParkingApp() {
 
       {error ? <p className="mb-3 text-sm text-rose">{error}</p> : null}
 
+      {loading && !places.length ? (
+        <ListSkeleton rows={6} map />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-3">
           {active ? (
@@ -247,26 +252,28 @@ export function ParkingApp() {
             </article>
           ) : (
             <div className="rounded-2xl border border-line bg-card p-6 text-sm text-muted">
-              {loading ? "載入停車場…" : "呢個範圍暫時冇停車場。"}
+              呢個範圍暫時冇停車場。
             </div>
           )}
 
-          <NearbyMapDynamic
-            lat={mapCenter.lat}
-            lng={mapCenter.lng}
-            zoom={mode === "district" ? 12 : 14}
-            fitAllPoints={places.length > 1}
-            selectedId={active?.id}
-            onSelect={(p) => setActiveId(p.id)}
-            heightClass="h-64 sm:h-80"
-            points={places.map((p) => ({
-              id: p.id,
-              name: p.name,
-              lat: p.lat,
-              lng: p.lng,
-              detail: `空位 ${p.vacancyLabel}${p.distanceMeters != null ? ` · ${formatDistance(p.distanceMeters)}` : ""}`,
-            }))}
-          />
+          <MapPanel>
+            <NearbyMapDynamic
+              lat={mapCenter.lat}
+              lng={mapCenter.lng}
+              zoom={mode === "district" ? 12 : 14}
+              fitAllPoints={places.length > 1}
+              selectedId={active?.id}
+              onSelect={(p) => setActiveId(p.id)}
+              heightClass="h-64 sm:h-80"
+              points={places.map((p) => ({
+                id: p.id,
+                name: p.name,
+                lat: p.lat,
+                lng: p.lng,
+                detail: `空位 ${p.vacancyLabel}${p.distanceMeters != null ? ` · ${formatDistance(p.distanceMeters)}` : ""}`,
+              }))}
+            />
+          </MapPanel>
         </div>
 
         <div className="max-h-[70vh] overflow-auto rounded-2xl border border-line bg-card p-2">
@@ -298,6 +305,7 @@ export function ParkingApp() {
           ))}
         </div>
       </div>
+      )}
     </AppShell>
   );
 }

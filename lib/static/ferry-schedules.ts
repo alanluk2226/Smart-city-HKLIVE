@@ -136,6 +136,55 @@ export const FERRY_SCHEDULES: Record<string, FerryScheduleRule> = {
       { startMin: hm(6, 20), endMin: hm(22, 30), headwayMin: 45 },
     ],
   },
+  // DBTSL: TD open data has timetable CSV, no live ETA API (like Star Ferry).
+  "dbtsl-ce-db": {
+    note: "愉景灣航運班次估算（繁忙約 15–20 分，非繁忙約 30–40 分；以碼頭公佈為準）",
+    vesselType: "fast",
+    windows: [
+      { startMin: hm(6, 30), endMin: hm(9, 30), headwayMin: 15 },
+      { startMin: hm(9, 30), endMin: hm(16, 30), headwayMin: 30 },
+      { startMin: hm(16, 30), endMin: hm(20, 0), headwayMin: 15 },
+      { startMin: hm(20, 0), endMin: hm(23, 45), headwayMin: 30 },
+    ],
+  },
+  "dbtsl-db-ce": {
+    note: "愉景灣航運班次估算（繁忙約 15–20 分，非繁忙約 30–40 分；以碼頭公佈為準）",
+    vesselType: "fast",
+    windows: [
+      { startMin: hm(6, 0), endMin: hm(9, 0), headwayMin: 15 },
+      { startMin: hm(9, 0), endMin: hm(16, 0), headwayMin: 30 },
+      { startMin: hm(16, 0), endMin: hm(19, 30), headwayMin: 15 },
+      { startMin: hm(19, 30), endMin: hm(23, 30), headwayMin: 30 },
+    ],
+  },
+  "dbtsl-mw-db": {
+    note: "愉景灣—梅窩班次估算（班次較疏，以碼頭公佈為準）",
+    vesselType: "ordinary",
+    windows: [
+      { startMin: hm(7, 0), endMin: hm(20, 0), headwayMin: 90 },
+    ],
+  },
+  "dbtsl-db-mw": {
+    note: "愉景灣—梅窩班次估算（班次較疏，以碼頭公佈為準）",
+    vesselType: "ordinary",
+    windows: [
+      { startMin: hm(7, 30), endMin: hm(20, 30), headwayMin: 90 },
+    ],
+  },
+  "dbtsl-pc-db": {
+    note: "愉景灣—坪洲／聖母神樂院班次估算（以碼頭公佈為準）",
+    vesselType: "ordinary",
+    windows: [
+      { startMin: hm(8, 0), endMin: hm(19, 0), headwayMin: 120 },
+    ],
+  },
+  "dbtsl-db-pc": {
+    note: "愉景灣—坪洲／聖母神樂院班次估算（以碼頭公佈為準）",
+    vesselType: "ordinary",
+    windows: [
+      { startMin: hm(8, 30), endMin: hm(19, 30), headwayMin: 120 },
+    ],
+  },
 };
 
 function formatClock(mins: number) {

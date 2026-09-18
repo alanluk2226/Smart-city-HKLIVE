@@ -200,7 +200,12 @@ async function hkkfDepartures(leg: FerryLeg): Promise<FerryDeparture[]> {
 }
 
 function starFerryDepartures(leg: FerryLeg): FerryDeparture[] {
-  return [scheduledFallback(leg, "ordinary")];
+  return [scheduledFallback(leg, leg.vesselHint ?? "ordinary")];
+}
+
+/** DBTSL has TD fare/timetable open data but no public live ETA API. */
+function dbtslDepartures(leg: FerryLeg): FerryDeparture[] {
+  return [scheduledFallback(leg, leg.vesselHint ?? "fast")];
 }
 
 export async function ferryDeparturesForHub(hubId: string): Promise<FerryDeparture[]> {
@@ -211,6 +216,7 @@ export async function ferryDeparturesForHub(hubId: string): Promise<FerryDepartu
       try {
         if (leg.operator === "sunferry") return await sunFerryDepartures(leg);
         if (leg.operator === "hkkf") return await hkkfDepartures(leg);
+        if (leg.operator === "dbtsl") return dbtslDepartures(leg);
         return starFerryDepartures(leg);
       } catch {
         return [scheduledFallback(leg)];
@@ -246,6 +252,7 @@ const HUB_BY_NAME: Record<string, string> = {
   紅磡: "hunghom",
   長洲: "cheungchau",
   梅窩: "muiwo",
+  愉景灣: "discoverybay",
   榕樹灣: "yungshuewan",
   索罟灣: "sokkwuwan",
   坪洲: "pengchau",

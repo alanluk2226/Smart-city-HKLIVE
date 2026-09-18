@@ -70,7 +70,7 @@ function firstSentence(text: string) {
 }
 
 function weatherSeverity(name: string): AlertSeverity {
-  if (/黑雨|十號|九號|八號/.test(name)) return "critical";
+  if (/黑雨|紅雨|十號|九號|八號/.test(name)) return "critical";
   return "high";
 }
 

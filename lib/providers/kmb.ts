@@ -109,7 +109,7 @@ export async function kmbRouteStops(
     TTL.stop,
     () =>
       fetchJson<KmbList<KmbRouteStop>>(
-        `${BASE}/route-stop/${encodeURIComponent(route)}/${dir}/${serviceType}`,
+        `${BASE}/route-stop/${encodeURIComponent(route)}/${dir}/${encodeURIComponent(serviceType)}`,
       ),
   );
   const stops = await kmbStops().catch(() => [] as KmbStop[]);
@@ -119,7 +119,7 @@ export async function kmbRouteStops(
       let stop = byId.get(item.stop);
       if (!stop) {
         const one = await cached(`kmb:stop:${item.stop}`, TTL.stop, () =>
-          fetchJson<{ data: KmbStop }>(`${BASE}/stop/${item.stop}`),
+          fetchJson<{ data: KmbStop }>(`${BASE}/stop/${encodeURIComponent(item.stop)}`),
         );
         stop = one.data;
       }
@@ -147,7 +147,7 @@ export async function kmbStopEta(
   opts?: { bound?: string; serviceType?: string; seq?: number },
 ): Promise<EtaResult[]> {
   const json = await cached(`kmb:eta:${stopId}`, TTL.eta, () =>
-    fetchJson<KmbList<KmbEta>>(`${BASE}/stop-eta/${stopId}`),
+    fetchJson<KmbList<KmbEta>>(`${BASE}/stop-eta/${encodeURIComponent(stopId)}`),
   );
   const needle = route?.trim().toUpperCase();
   let rows = needle ? json.data.filter((row) => row.route.toUpperCase() === needle) : json.data;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CardSkeleton } from "@/components/ListSkeleton";
 import { FavoriteStarButton } from "@/components/transit/FavoriteStarButton";
 import { StopStreetMapDynamic } from "@/components/transit/StopStreetMapDynamic";
 import { apiGet, openWalkingDirections } from "@/lib/client";
@@ -128,17 +129,7 @@ function nearestHubId(lat: number, lng: number) {
 }
 
 function FerrySkeleton() {
-  return (
-    <div className="space-y-3" aria-hidden>
-      {[0, 1].map((i) => (
-        <div key={i} className="animate-pulse rounded-2xl border border-line bg-elev/40 p-4">
-          <div className="h-6 w-32 rounded bg-line/80" />
-          <div className="mt-2 h-4 w-40 rounded bg-line/60" />
-          <div className="mt-3 h-10 w-24 rounded bg-line/70 ml-auto" />
-        </div>
-      ))}
-    </div>
-  );
+  return <CardSkeleton rows={2} />;
 }
 
 function FerryTicketFares({ fare }: { fare: FerryFareHint }) {

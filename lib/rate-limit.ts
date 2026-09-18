@@ -1,13 +1,17 @@
+import { kvEnabled, kvIncrExpire } from "@/lib/kv";
+
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
+
+export type RateLimitResult = { ok: true } | { ok: false; retryAfterSec: number };
 
 /** Best-effort in-memory limiter (per server instance). */
 export function rateLimit(opts: {
   key: string;
   limit: number;
   windowMs: number;
-}): { ok: true } | { ok: false; retryAfterSec: number } {
+}): RateLimitResult {
   const now = Date.now();
   const hit = buckets.get(opts.key);
   if (!hit || hit.resetAt <= now) {
@@ -19,6 +23,28 @@ export function rateLimit(opts: {
   }
   hit.count += 1;
   return { ok: true };
+}
+
+/**
+ * Prefer shared KV (Upstash / Vercel KV) so serverless instances share one quota.
+ * Falls back to in-memory when KV is unset or unreachable.
+ */
+export async function rateLimitShared(opts: {
+  key: string;
+  limit: number;
+  windowMs: number;
+}): Promise<RateLimitResult> {
+  if (kvEnabled) {
+    const windowSec = Math.max(1, Math.ceil(opts.windowMs / 1000));
+    const count = await kvIncrExpire(`rl:${opts.key}`, windowSec);
+    if (count != null) {
+      if (count > opts.limit) {
+        return { ok: false, retryAfterSec: windowSec };
+      }
+      return { ok: true };
+    }
+  }
+  return rateLimit(opts);
 }
 
 /**

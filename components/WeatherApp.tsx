@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ListSkeleton } from "@/components/ListSkeleton";
 import { useWeather } from "@/components/WeatherProvider";
 import { WeatherSpatialMaps } from "@/components/WeatherSpatialMaps";
 import type {
@@ -13,11 +14,15 @@ import type {
 } from "@/lib/providers/weather";
 
 function warningTone(name: string) {
-  if (/黑雨|十號|九號|八號/.test(name)) return "border-rose/50 bg-rose/15 text-rose";
-  if (/紅雨|黃雨|暴雨|雷暴|酷熱|寒冷|三號|強烈季候風|火災危險/.test(name)) {
+  if (/黑雨|紅雨|十號|九號|八號/.test(name)) return "border-rose/50 bg-rose/15 text-rose";
+  if (/黃雨|暴雨|雷暴|酷熱|寒冷|三號|強烈季候風|火災危險/.test(name)) {
     return "border-amber/50 bg-amber/15 text-amber";
   }
   return "border-amber/40 bg-amber/10 text-amber";
+}
+
+function isCriticalWarning(name: string) {
+  return /黑雨|紅雨|十號|九號|八號/.test(name);
 }
 
 function WarningBanner({
@@ -40,12 +45,22 @@ function WarningBanner({
       </section>
     );
   }
+  const critical =
+    warnings.some((w) => isCriticalWarning(w.name)) ||
+    isCriticalWarning(warningMessage) ||
+    isCriticalWarning(tropicalMessage);
   return (
     <section
       role="alert"
-      className="space-y-2 rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3"
+      className={`space-y-2 rounded-2xl border px-4 py-3 ${
+        critical
+          ? "alert-urgent-ring border-rose/50 bg-rose/12"
+          : "border-amber/40 bg-amber/10"
+      }`}
     >
-      <p className="text-xs font-medium text-amber">生效中天氣警告</p>
+      <p className={`text-xs font-medium ${critical ? "text-rose" : "text-amber"}`}>
+        {critical ? "緊急天氣警告" : "生效中天氣警告"}
+      </p>
       <div className="flex flex-wrap gap-2">
         {warnings.map((w) => (
           <span
@@ -296,7 +311,7 @@ export function WeatherApp() {
   return (
     <AppShell>
       {!data ? (
-        <p className="text-muted">載入天氣…</p>
+        <ListSkeleton rows={4} map />
       ) : (
         <div className="space-y-4">
           <WarningBanner

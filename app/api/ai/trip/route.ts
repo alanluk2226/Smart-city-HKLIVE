@@ -1,5 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/api";
-import { clientIp, pruneRateLimits, rateLimit } from "@/lib/rate-limit";
+import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { runAssistant } from "@/lib/providers/ai-assistant";
 import type { AiAssistantChatTurn } from "@/lib/types";
 
@@ -41,7 +41,7 @@ function asTurns(raw: unknown): AiAssistantChatTurn[] {
 export async function POST(request: Request) {
   pruneRateLimits();
   const ip = clientIp(request);
-  const perMin = rateLimit({
+  const perMin = await rateLimitShared({
     key: `ai:min:${ip}`,
     limit: AI_LIMIT_PER_MIN,
     windowMs: 60_000,
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       { retryAfter: perMin.retryAfterSec },
     );
   }
-  const perHour = rateLimit({
+  const perHour = await rateLimitShared({
     key: `ai:hour:${ip}`,
     limit: AI_LIMIT_PER_HOUR,
     windowMs: 60 * 60_000,
