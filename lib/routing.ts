@@ -57,6 +57,11 @@ const MAX_DETOUR_EXTRA_M = 450;
 const MAX_REPAIRED_LEGS = 10;
 const SNAP_CANDIDATES = 4;
 const REPAIR_BUDGET_MS = 16_000;
+/**
+ * Whole-corridor ceiling, kept under the route handler's `maxDuration` so a
+ * slow OSRM degrades to straight chords instead of a gateway timeout.
+ */
+const TOTAL_BUDGET_MS = 24_000;
 /** Polyline simplification tolerance — keeps cached geometry small. */
 const SIMPLIFY_EPSILON_M = 5;
 
@@ -298,6 +303,7 @@ async function repairLeg(a: Pt, b: Pt, deadline: number): Promise<Segment | null
  * Results are expensive to compute but stable, so callers cache them.
  */
 export async function driveRouteThrough(stops: Pt[]): Promise<DriveRoute> {
+  const startedAt = Date.now();
   const cleaned = dedupeNearPoints(stops);
   if (cleaned.length < 2) {
     return {
@@ -313,7 +319,7 @@ export async function driveRouteThrough(stops: Pt[]): Promise<DriveRoute> {
     (await osrmThroughLegs(cleaned)) ??
     cleaned.slice(1).map((_, i) => ({ ...straightSegment(cleaned[i], cleaned[i + 1]), straight: true }));
 
-  const deadline = Date.now() + REPAIR_BUDGET_MS;
+  const deadline = Math.min(Date.now() + REPAIR_BUDGET_MS, startedAt + TOTAL_BUDGET_MS);
   const broken = segments
     .map((seg, i) => (seg.straight ? i : -1))
     .filter((i) => i >= 0)
