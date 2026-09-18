@@ -227,6 +227,9 @@ export function TramApp() {
         selectedId={selectedKey ?? undefined}
         onSelect={(s) => pick(s.stopId)}
         accent="emerald"
+        // Search results are scattered stops, not a corridor.
+        followRoads={!q.trim()}
+        bidirectionalRoads
         compactMarkers
         labelZoom={16}
         minZoom={11}

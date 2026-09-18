@@ -254,6 +254,7 @@ export function StopStreetMap({
   mixedOperators = false,
   showRouteLine = true,
   followRoads = false,
+  bidirectionalRoads = false,
   compactMarkers = false,
   labelZoom = 16,
   minZoom = 10,
@@ -274,6 +275,8 @@ export function StopStreetMap({
   showRouteLine?: boolean;
   /** Upgrade the stop-order chords to a road-following shape (bus / minibus routes) */
   followRoads?: boolean;
+  /** Vehicle uses the same street both ways, so one-way restrictions don't apply (tram) */
+  bidirectionalRoads?: boolean;
   /** Unselected stops render as small dots until zoomed in / selected */
   compactMarkers?: boolean;
   /** Zoom level at which compact markers expand to numbered pins */
@@ -354,17 +357,22 @@ export function StopStreetMap({
   const corridorRequest = useMemo(() => {
     if (!showRouteLine || !followRoads || line.length < 2) return null;
     const routeKey = corridorRouteKey(mapped);
-    return { routeKey, cacheKey: corridorCacheKey(routeKey, line) };
-  }, [showRouteLine, followRoads, line, mapped]);
+    return {
+      routeKey,
+      bidirectional: bidirectionalRoads,
+      cacheKey: `${corridorCacheKey(routeKey, line)}:${bidirectionalRoads ? "bi" : "uni"}`,
+    };
+  }, [showRouteLine, followRoads, bidirectionalRoads, line, mapped]);
 
   // Lazy road geometry: chords show instantly, the road shape replaces them
   // once the server has it (first viewer computes, later viewers hit the cache).
   useEffect(() => {
     if (!corridorRequest || corridors[corridorRequest.cacheKey] !== undefined) return;
-    const { routeKey, cacheKey } = corridorRequest;
+    const { routeKey, bidirectional, cacheKey } = corridorRequest;
     let alive = true;
     apiPost<DriveRoute>("/api/route/drive", {
       routeKey,
+      bidirectional,
       points: line.map(([lat, lng]) => ({ lat, lng })),
     })
       .then((route) => {
