@@ -13,6 +13,9 @@ const HK_BOUNDS = {
   maxLng: 114.5,
 };
 
+/** Bump when the corridor algorithm changes so stored shapes are recomputed. */
+const CORRIDOR_VERSION = "v3";
+
 // Most requests are served from the corridor cache, so the quota mainly caps
 // how many brand-new routes one client can push through OSRM.
 const DRIVE_LIMIT_PER_MIN = 40;
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
 
   try {
     const { route, source } = await roadCorridor(
-      `roadline:v2:${routeKey || "anon"}:${fingerprint}`,
+      `roadline:${CORRIDOR_VERSION}:${routeKey || "anon"}:${fingerprint}`,
       points,
     );
     return jsonOk({ ...route, source });

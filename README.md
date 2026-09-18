@@ -15,6 +15,8 @@ npm run dev
 
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`（Maps JavaScript API）。有 key 時街圖用 Google；否則用 OpenStreetMap。
 - `GEMINI_API_KEY`（主控台出行助手；伺服器呼叫 Gemini 做多輪對話。問「點去」時路線／車費仍由本站計算，AI 只寫天氣評語）。冇 key 時點去問題仍可顯示港鐵等計算方案。Vercel 部署時 Functions 必須在 `hnd1` 東京（見 `vercel.json`）；香港 `hkg1` 會被 Gemini 拒絕，美國東部則對巴士 API 延遲較高。
+- `OSRM_BASE_URL`（自架 OSRM；預設用公共 demo server）。巴士／小巴地圖的行車線靠佢由站點順序計出。
+- `KV_REST_API_URL` + `KV_REST_API_TOKEN`（或 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`）：行車線算好後長期存落 KV，第二次有人開同一條線即時出圖。冇設定時改用 Next.js data cache。
 
 ## 模組
 
