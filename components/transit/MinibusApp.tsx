@@ -325,6 +325,7 @@ export function MinibusApp() {
                 selectedSeq={selected?.seq}
                 onSelect={openStop}
                 accent="emerald"
+                followRoads
                 compactMarkers
                 labelZoom={16}
                 focusZoom={17}

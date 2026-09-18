@@ -5,10 +5,10 @@ import { CircleMarker, MapContainer, Marker, Polyline, Popup, useMap } from "rea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
-import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
+import { apiGet, apiPost, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
-import type { WalkRoute } from "@/lib/routing";
+import type { DriveRoute, WalkRoute } from "@/lib/routing";
 import type { Operator, StopHit } from "@/lib/types";
 
 const OPERATOR_PIN: Record<Operator, { idle: string; active: string; glow: string }> = {
@@ -202,6 +202,36 @@ function stopMarkerKey(stop: StopHit, index: number) {
   return `${stop.operator}-${stop.stopId}-${stop.seq ?? "x"}-${index}`;
 }
 
+/** Identifies the route for the server-side corridor cache. */
+function corridorRouteKey(stops: StopHit[]) {
+  const first = stops[0];
+  if (!first) return "";
+  return [first.operator, first.route ?? first.routeId ?? "", first.bound ?? "", first.serviceType ?? ""]
+    .join(":")
+    .replace(/[^\w:.-]/g, "");
+}
+
+function corridorCacheKey(routeKey: string, line: [number, number][]) {
+  let hash = 5381;
+  for (const [lat, lng] of line) {
+    const chunk = `${lat.toFixed(5)},${lng.toFixed(5)};`;
+    for (let i = 0; i < chunk.length; i++) hash = ((hash << 5) + hash + chunk.charCodeAt(i)) | 0;
+  }
+  return `roadline:${routeKey}:${(hash >>> 0).toString(36)}:${line.length}`;
+}
+
+/** Keep a few recently viewed corridors per session; drop the rest. */
+function trimCorridors(
+  entries: Record<string, DriveRoute | null>,
+  keep = 8,
+): Record<string, DriveRoute | null> {
+  const keys = Object.keys(entries);
+  if (keys.length <= keep) return entries;
+  const out: Record<string, DriveRoute | null> = {};
+  for (const key of keys.slice(keys.length - keep)) out[key] = entries[key];
+  return out;
+}
+
 function InvalidateOnResize() {
   const map = useMap();
   useEffect(() => {
@@ -223,6 +253,7 @@ export function StopStreetMap({
   accent = "emerald",
   mixedOperators = false,
   showRouteLine = true,
+  followRoads = false,
   compactMarkers = false,
   labelZoom = 16,
   minZoom = 10,
@@ -241,6 +272,8 @@ export function StopStreetMap({
   mixedOperators?: boolean;
   /** Draw corridor polyline between stops (disable for scattered points like taxi) */
   showRouteLine?: boolean;
+  /** Upgrade the stop-order chords to a road-following shape (bus / minibus routes) */
+  followRoads?: boolean;
   /** Unselected stops render as small dots until zoomed in / selected */
   compactMarkers?: boolean;
   /** Zoom level at which compact markers expand to numbered pins */
@@ -265,6 +298,7 @@ export function StopStreetMap({
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetKey, setWalkTargetKey] = useState<string | null>(null);
   const [walkLoading, setWalkLoading] = useState(false);
+  const [corridors, setCorridors] = useState<Record<string, DriveRoute | null>>({});
   const [mapReady, setMapReady] = useState(false);
   const [zoom, setZoom] = useState(15);
   const locate = useGeo((lat, lng) => setHere({ lat, lng }));
@@ -316,6 +350,47 @@ export function StopStreetMap({
     }
     return Math.round(sum);
   }, [line]);
+
+  const corridorRequest = useMemo(() => {
+    if (!showRouteLine || !followRoads || line.length < 2) return null;
+    const routeKey = corridorRouteKey(mapped);
+    return { routeKey, cacheKey: corridorCacheKey(routeKey, line) };
+  }, [showRouteLine, followRoads, line, mapped]);
+
+  // Lazy road geometry: chords show instantly, the road shape replaces them
+  // once the server has it (first viewer computes, later viewers hit the cache).
+  useEffect(() => {
+    if (!corridorRequest || corridors[corridorRequest.cacheKey] !== undefined) return;
+    const { routeKey, cacheKey } = corridorRequest;
+    let alive = true;
+    apiPost<DriveRoute>("/api/route/drive", {
+      routeKey,
+      points: line.map(([lat, lng]) => ({ lat, lng })),
+    })
+      .then((route) => {
+        if (!alive) return;
+        const usable = route.points?.length > 1 && !route.fallback ? route : null;
+        setCorridors((prev) => trimCorridors({ ...prev, [cacheKey]: usable }));
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCorridors((prev) => trimCorridors({ ...prev, [cacheKey]: null }));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [corridorRequest, corridors, line]);
+
+  const corridorEntry = corridorRequest ? corridors[corridorRequest.cacheKey] : null;
+  const roadRoute = corridorEntry ?? null;
+  const roadLoading = corridorRequest != null && corridorEntry === undefined;
+  const corridorLine = roadRoute?.points?.length ? roadRoute.points : line;
+
+  const corridorLabel = roadRoute
+    ? `行車路線約 ${formatDistance(roadRoute.distanceMeters)}${roadRoute.mixed ? "（部分直線）" : ""}`
+    : roadLoading
+      ? `站序連線約 ${formatDistance(corridorMeters)} · 計算行車線…`
+      : `站序連線約 ${formatDistance(corridorMeters)}`;
 
   const linkLines = useMemo(() => {
     const byId = new Map(mapped.map((s) => [s.stopId, s] as const));
@@ -410,16 +485,24 @@ export function StopStreetMap({
           <MapZoom onZoom={setZoom} />
           <InvalidateOnResize />
           <FitStops
-            points={line}
+            points={corridorLine}
             selected={selected ? [selected.lat, selected.lng] : null}
             here={here ? [here.lat, here.lng] : null}
             walkPoints={walkRoute?.points ?? null}
             focusZoom={focusZoom}
           />
-          {showRouteLine && line.length > 1 ? (
+          {showRouteLine && corridorLine.length > 1 ? (
             <>
-              <Polyline positions={line} pathOptions={{ color: active, weight: 7, opacity: 0.18 }} />
-              <Polyline positions={line} pathOptions={{ color: active, weight: 3.5, opacity: 0.9 }} />
+              <Polyline positions={corridorLine} pathOptions={{ color: active, weight: 7, opacity: 0.18 }} />
+              <Polyline
+                positions={corridorLine}
+                pathOptions={{
+                  color: active,
+                  weight: 3.5,
+                  opacity: 0.9,
+                  dashArray: followRoads && !roadRoute ? "10 8" : undefined,
+                }}
+              />
             </>
           ) : null}
           {linkLines.map((positions, i) => (
@@ -529,7 +612,7 @@ export function StopStreetMap({
         </button>
         {showRouteLine && line.length > 1 ? (
           <span className="rounded-lg border border-line bg-card/90 px-2.5 py-1.5 text-xs text-ink backdrop-blur">
-            站序連線約 {formatDistance(corridorMeters)}
+            {corridorLabel}
           </span>
         ) : null}
       </div>

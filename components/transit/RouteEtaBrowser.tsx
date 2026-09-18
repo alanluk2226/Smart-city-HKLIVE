@@ -339,6 +339,7 @@ export function RouteEtaBrowser({
                 selectedSeq={selected?.seq}
                 onSelect={openStop}
                 accent="teal"
+                followRoads
                 compactMarkers
                 labelZoom={16}
                 focusZoom={17}
