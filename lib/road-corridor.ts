@@ -42,6 +42,7 @@ function memorySet(key: string, route: DriveRoute) {
 export async function roadCorridor(
   cacheKey: string,
   points: Array<{ lat: number; lng: number }>,
+  options: { bidirectional?: boolean } = {},
 ): Promise<CorridorResult> {
   const hot = memoryGet(cacheKey);
   if (hot) return { route: hot, source: "memory" };
@@ -56,7 +57,7 @@ export async function roadCorridor(
       return { route: stored, source: "kv" };
     }
 
-    const route = await unstable_cache(() => driveRouteThrough(points), [cacheKey], {
+    const route = await unstable_cache(() => driveRouteThrough(points, options), [cacheKey], {
       revalidate: PERSIST_SECONDS,
       tags: [cacheKey],
     })();

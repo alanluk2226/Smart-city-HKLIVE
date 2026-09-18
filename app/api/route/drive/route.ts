@@ -14,7 +14,7 @@ const HK_BOUNDS = {
 };
 
 /** Bump when the corridor algorithm changes so stored shapes are recomputed. */
-const CORRIDOR_VERSION = "v3";
+const CORRIDOR_VERSION = "v4";
 
 // Most requests are served from the corridor cache, so the quota mainly caps
 // how many brand-new routes one client can push through OSRM.
@@ -69,9 +69,13 @@ export async function POST(request: Request) {
     });
   }
 
-  let body: { points?: unknown; routeKey?: unknown };
+  let body: { points?: unknown; routeKey?: unknown; bidirectional?: unknown };
   try {
-    body = (await request.json()) as { points?: unknown; routeKey?: unknown };
+    body = (await request.json()) as {
+      points?: unknown;
+      routeKey?: unknown;
+      bidirectional?: unknown;
+    };
   } catch {
     return jsonError("請提供站點座標列表");
   }
@@ -95,11 +99,13 @@ export async function POST(request: Request) {
     .digest("hex")
     .slice(0, 16);
   const routeKey = typeof body.routeKey === "string" ? body.routeKey.replace(/[^\w:.-]/g, "").slice(0, 60) : "";
+  const bidirectional = body.bidirectional === true;
 
   try {
     const { route, source } = await roadCorridor(
-      `roadline:${CORRIDOR_VERSION}:${routeKey || "anon"}:${fingerprint}`,
+      `roadline:${CORRIDOR_VERSION}:${bidirectional ? "bi" : "uni"}:${routeKey || "anon"}:${fingerprint}`,
       points,
+      { bidirectional },
     );
     return jsonOk({ ...route, source });
   } catch (error) {

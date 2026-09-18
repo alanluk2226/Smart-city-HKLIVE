@@ -131,7 +131,12 @@ function straightSegment(
  * a generous allowance; the aim is only to catch mis-snapped legs that dive
  * onto a flyover or tunnel and come back kilometres later.
  */
-function isReasonableDetour(driveMeters: number, straightMeters: number) {
+function isReasonableDetour(driveMeters: number, straightMeters: number, strict = false) {
+  // Tracks run straight along the street, so any block-sized car detour is
+  // wrong for a tram even though it would be plausible for a bus.
+  if (strict) {
+    return driveMeters <= Math.max(straightMeters * 1.45, straightMeters + 150);
+  }
   if (straightMeters < 400) {
     return driveMeters <= Math.max(straightMeters * 3, straightMeters + 450);
   }
@@ -190,7 +195,7 @@ function simplifyPath(points: [number, number][], epsilonMeters: number): [numbe
   return [...left, ...right.slice(1)];
 }
 
-async function osrmThroughLegs(points: Pt[]): Promise<Segment[] | null> {
+async function osrmThroughLegs(points: Pt[], strict: boolean): Promise<Segment[] | null> {
   const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
   const url = `${OSRM_DRIVE}/${coords}?overview=false&geometries=geojson&steps=true`;
   try {
@@ -212,7 +217,7 @@ async function osrmThroughLegs(points: Pt[]): Promise<Segment[] | null> {
         points[i + 1].lng,
       );
       const distanceMeters = Math.round(leg.distance);
-      const usable = coordinates.length >= 2 && isReasonableDetour(distanceMeters, straightMeters);
+      const usable = coordinates.length >= 2 && isReasonableDetour(distanceMeters, straightMeters, strict);
       if (!usable) return { ...straightSegment(points[i], points[i + 1]), straight: true };
       return {
         points: toLatLng(coordinates),
@@ -268,21 +273,38 @@ async function osrmPair(a: Pt, b: Pt): Promise<{ points: [number, number][]; dis
   }
 }
 
-/** Retry a looping leg against alternative snap points on both ends. */
-async function repairLeg(a: Pt, b: Pt, deadline: number): Promise<Segment | null> {
+/**
+ * Retry a looping leg: first against the opposite direction (trams share one
+ * pair of tracks, so the return path is the same street), then against
+ * alternative snap points on both ends.
+ */
+async function repairLeg(
+  a: Pt,
+  b: Pt,
+  deadline: number,
+  bidirectional: boolean,
+): Promise<Segment | null> {
   const straightMeters = haversineMeters(a.lat, a.lng, b.lat, b.lng);
+
+  if (bidirectional) {
+    const reverse = await osrmPair(b, a);
+    if (reverse && isReasonableDetour(reverse.distanceMeters, straightMeters, bidirectional)) {
+      return { ...reverse, points: [...reverse.points].reverse(), straight: false };
+    }
+  }
+
   const [fromCandidates, toCandidates] = await Promise.all([snapCandidates(a), snapCandidates(b)]);
-  let best: { points: [number, number][]; distanceMeters: number; durationMinutes: number } | null = null;
   for (const from of fromCandidates) {
     for (const to of toCandidates) {
-      if (Date.now() > deadline) return best && isReasonableDetour(best.distanceMeters, straightMeters)
-        ? { ...best, straight: false }
-        : null;
+      if (Date.now() > deadline) return null;
       const attempt = await osrmPair(from, to);
-      if (!attempt) continue;
-      if (!best || attempt.distanceMeters < best.distanceMeters) best = attempt;
-      if (isReasonableDetour(attempt.distanceMeters, straightMeters)) {
+      if (attempt && isReasonableDetour(attempt.distanceMeters, straightMeters, bidirectional)) {
         return { ...attempt, straight: false };
+      }
+      if (!bidirectional) continue;
+      const reverse = await osrmPair(to, from);
+      if (reverse && isReasonableDetour(reverse.distanceMeters, straightMeters, bidirectional)) {
+        return { ...reverse, points: [...reverse.points].reverse(), straight: false };
       }
     }
   }
@@ -301,8 +323,14 @@ async function repairLeg(a: Pt, b: Pt, deadline: number): Promise<Segment | null
  * - legs that still loop fall back to a straight chord
  *
  * Results are expensive to compute but stable, so callers cache them.
+ *
+ * `bidirectional` suits modes that use the same street both ways (tram), where
+ * a one-way restriction only blocks the car profile, not the vehicle.
  */
-export async function driveRouteThrough(stops: Pt[]): Promise<DriveRoute> {
+export async function driveRouteThrough(
+  stops: Pt[],
+  { bidirectional = false }: { bidirectional?: boolean } = {},
+): Promise<DriveRoute> {
   const startedAt = Date.now();
   const cleaned = dedupeNearPoints(stops);
   if (cleaned.length < 2) {
@@ -316,7 +344,7 @@ export async function driveRouteThrough(stops: Pt[]): Promise<DriveRoute> {
   }
 
   const segments =
-    (await osrmThroughLegs(cleaned)) ??
+    (await osrmThroughLegs(cleaned, bidirectional)) ??
     cleaned.slice(1).map((_, i) => ({ ...straightSegment(cleaned[i], cleaned[i + 1]), straight: true }));
 
   const deadline = Math.min(Date.now() + REPAIR_BUDGET_MS, startedAt + TOTAL_BUDGET_MS);
@@ -327,7 +355,7 @@ export async function driveRouteThrough(stops: Pt[]): Promise<DriveRoute> {
 
   for (const i of broken) {
     if (Date.now() > deadline) break;
-    const repaired = await repairLeg(cleaned[i], cleaned[i + 1], deadline);
+    const repaired = await repairLeg(cleaned[i], cleaned[i + 1], deadline, bidirectional);
     if (repaired) segments[i] = repaired;
   }
 
