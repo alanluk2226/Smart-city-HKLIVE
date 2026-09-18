@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { jsonError, jsonOk } from "@/lib/api";
-import { cached, TTL } from "@/lib/cache";
 import { clientIp, pruneRateLimits, rateLimit } from "@/lib/rate-limit";
-import { driveRouteThrough } from "@/lib/routing";
+import { roadCorridor } from "@/lib/road-corridor";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -14,9 +13,11 @@ const HK_BOUNDS = {
   maxLng: 114.5,
 };
 
-const DRIVE_LIMIT_PER_MIN = 20;
-const DRIVE_LIMIT_PER_HOUR = 80;
-const MAX_POINTS = 120;
+// Most requests are served from the corridor cache, so the quota mainly caps
+// how many brand-new routes one client can push through OSRM.
+const DRIVE_LIMIT_PER_MIN = 40;
+const DRIVE_LIMIT_PER_HOUR = 240;
+const MAX_POINTS = 160;
 
 function inHongKong(lat: number, lng: number) {
   return (
@@ -65,9 +66,9 @@ export async function POST(request: Request) {
     });
   }
 
-  let body: { points?: unknown };
+  let body: { points?: unknown; routeKey?: unknown };
   try {
-    body = (await request.json()) as { points?: unknown };
+    body = (await request.json()) as { points?: unknown; routeKey?: unknown };
   } catch {
     return jsonError("請提供站點座標列表");
   }
@@ -80,6 +81,8 @@ export async function POST(request: Request) {
     return jsonError("行車路線只支援香港範圍內的站點", 400);
   }
 
+  // Stop coordinates are the identity of the shape: a re-routed line gets a new
+  // fingerprint and is recomputed automatically.
   const fingerprint = createHash("sha1")
     .update(
       points
@@ -88,12 +91,14 @@ export async function POST(request: Request) {
     )
     .digest("hex")
     .slice(0, 16);
+  const routeKey = typeof body.routeKey === "string" ? body.routeKey.replace(/[^\w:.-]/g, "").slice(0, 60) : "";
 
   try {
-    const route = await cached(`drive:stops:${fingerprint}`, TTL.route, () =>
-      driveRouteThrough(points),
+    const { route, source } = await roadCorridor(
+      `roadline:v2:${routeKey || "anon"}:${fingerprint}`,
+      points,
     );
-    return jsonOk(route);
+    return jsonOk({ ...route, source });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "無法規劃行車路線", 502);
   }
