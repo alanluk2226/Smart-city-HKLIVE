@@ -575,12 +575,14 @@ export function StopStreetMap({
         {showRouteLine && mapped.length > 1 ? (
           <span className="rounded-lg border border-line bg-card/90 px-2.5 py-1.5 text-xs text-ink backdrop-blur">
             {driveLoading
-              ? "規劃行車路線…"
+              ? "規劃站序路線…"
               : driveRoute
                 ? driveRoute.fallback
-                  ? `站點連線約 ${formatDistance(driveRoute.distanceMeters)}`
-                  : `行車約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
-                : "站點連線"}
+                  ? `站序連線約 ${formatDistance(driveRoute.distanceMeters)}`
+                  : driveRoute.mixed
+                    ? `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
+                    : `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
+                : "站序連線"}
           </span>
         ) : null}
       </div>

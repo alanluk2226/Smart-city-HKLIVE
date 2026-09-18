@@ -13,6 +13,8 @@ export type DriveRoute = {
   distanceMeters: number;
   durationMinutes: number;
   fallback?: boolean;
+  /** True when some/all segments used straight stop-to-stop chords. */
+  mixed?: boolean;
 };
 
 type OsrmResponse = {
@@ -27,8 +29,13 @@ type OsrmResponse = {
 
 const OSRM_FOOT = "https://router.project-osrm.org/route/v1/foot";
 const OSRM_DRIVE = "https://router.project-osrm.org/route/v1/driving";
-/** Public OSRM typically allows ~100 waypoints; keep headroom. */
-const MAX_WAYPOINTS = 80;
+
+/**
+ * Reject OSRM legs that wander far beyond the straight stop-to-stop distance.
+ * HK one-ways / flyovers often produce huge loops between nearby stops.
+ */
+const MAX_DETOUR_RATIO = 1.85;
+const MAX_DETOUR_EXTRA_M = 450;
 
 export async function walkRoute(
   fromLat: number,
@@ -76,70 +83,132 @@ function dedupeNearPoints(stops: Array<{ lat: number; lng: number }>, minMeters 
   return out;
 }
 
-function straightFallback(stops: Array<{ lat: number; lng: number }>): DriveRoute {
-  let distanceMeters = 0;
-  for (let i = 1; i < stops.length; i++) {
-    distanceMeters += haversineMeters(
-      stops[i - 1].lat,
-      stops[i - 1].lng,
-      stops[i].lat,
-      stops[i].lng,
-    );
-  }
-  distanceMeters = Math.round(distanceMeters);
+function straightSegment(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): { points: [number, number][]; distanceMeters: number; durationMinutes: number } {
+  const distanceMeters = Math.round(haversineMeters(a.lat, a.lng, b.lat, b.lng));
   return {
-    points: stops.map((s) => [s.lat, s.lng] as [number, number]),
+    points: [
+      [a.lat, a.lng],
+      [b.lat, b.lng],
+    ],
     distanceMeters,
     durationMinutes: Math.max(1, Math.round(distanceMeters / 350)),
-    fallback: true,
   };
 }
 
-async function osrmDriveChunk(stops: Array<{ lat: number; lng: number }>): Promise<DriveRoute> {
-  const path = stops.map((s) => `${s.lng},${s.lat}`).join(";");
-  const url = `${OSRM_DRIVE}/${path}?overview=full&geometries=geojson&continue_straight=true`;
-  const json = await fetchJson<OsrmResponse>(url, 25_000);
-  const route = json.routes?.[0];
-  const coords = route?.geometry?.coordinates ?? [];
-  if (!route || coords.length < 2) throw new Error(json.message || "no drive route");
-  return {
-    points: coords.map(([lng, lat]) => [lat, lng] as [number, number]),
-    distanceMeters: Math.round(route.distance),
-    durationMinutes: Math.max(1, Math.round(route.duration / 60)),
-  };
+function isReasonableDetour(driveMeters: number, straightMeters: number) {
+  // Nearby stops: never accept a multi-hundred-metre flyover loop.
+  if (straightMeters < 250) {
+    return driveMeters <= Math.max(straightMeters * 1.55, straightMeters + 180);
+  }
+  const limit = Math.max(straightMeters * MAX_DETOUR_RATIO, straightMeters + MAX_DETOUR_EXTRA_M);
+  return driveMeters <= limit;
+}
+
+async function osrmDrivePair(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): Promise<{ points: [number, number][]; distanceMeters: number; durationMinutes: number } | null> {
+  const url = `${OSRM_DRIVE}/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+  try {
+    const json = await fetchJson<OsrmResponse>(url, 10_000);
+    const route = json.routes?.[0];
+    const coords = route?.geometry?.coordinates ?? [];
+    if (!route || coords.length < 2) return null;
+    const distanceMeters = Math.round(route.distance);
+    const straight = haversineMeters(a.lat, a.lng, b.lat, b.lng);
+    if (!isReasonableDetour(distanceMeters, straight)) return null;
+    return {
+      points: coords.map(([lng, lat]) => [lat, lng] as [number, number]),
+      distanceMeters,
+      durationMinutes: Math.max(1, Math.round(route.duration / 60)),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Road-following corridor through ordered bus/minibus stops (OSRM driving).
- * Falls back to straight chords between stops if OSRM fails.
+ * Corridor through ordered bus/minibus stops.
+ *
+ * Transport Department open data publishes stop sequences + coordinates, but
+ * not official road polylines (TD GTFS has no shapes.txt). We therefore:
+ * - try a short OSRM driving leg between consecutive stops
+ * - reject legs that loop wildly (common with HK one-ways / flyovers)
+ * - fall back to a straight chord for that segment
  */
 export async function driveRouteThrough(
   stops: Array<{ lat: number; lng: number }>,
 ): Promise<DriveRoute> {
   const cleaned = dedupeNearPoints(stops);
-  if (cleaned.length < 2) return straightFallback(cleaned.length ? cleaned : stops);
-
-  try {
-    if (cleaned.length <= MAX_WAYPOINTS) {
-      return await osrmDriveChunk(cleaned);
-    }
-
-    // Overlapping chunks share the last waypoint so segments stitch cleanly.
-    const points: [number, number][] = [];
-    let distanceMeters = 0;
-    let durationMinutes = 0;
-    for (let start = 0; start < cleaned.length - 1; start += MAX_WAYPOINTS - 1) {
-      const chunk = cleaned.slice(start, start + MAX_WAYPOINTS);
-      if (chunk.length < 2) break;
-      const part = await osrmDriveChunk(chunk);
-      distanceMeters += part.distanceMeters;
-      durationMinutes += part.durationMinutes;
-      const slice = start === 0 ? part.points : part.points.slice(1);
-      points.push(...slice);
-    }
-    if (points.length < 2) return straightFallback(cleaned);
-    return { points, distanceMeters, durationMinutes: Math.max(1, durationMinutes) };
-  } catch {
-    return straightFallback(cleaned);
+  if (cleaned.length < 2) {
+    return {
+      points: cleaned.map((s) => [s.lat, s.lng] as [number, number]),
+      distanceMeters: 0,
+      durationMinutes: 0,
+      fallback: true,
+    };
   }
+
+  const points: [number, number][] = [];
+  let distanceMeters = 0;
+  let durationMinutes = 0;
+  let usedStraight = false;
+  let usedRoad = false;
+
+  // Limit parallel OSRM calls so we don't hammer the public server.
+  const CONCURRENCY = 6;
+  const segments: Array<{
+    points: [number, number][];
+    distanceMeters: number;
+    durationMinutes: number;
+    straight: boolean;
+  }> = new Array(cleaned.length - 1);
+
+  for (let i = 0; i < cleaned.length - 1; i += CONCURRENCY) {
+    const batch = cleaned.slice(i, i + CONCURRENCY).map((_, j) => i + j);
+    await Promise.all(
+      batch.map(async (idx) => {
+        if (idx >= cleaned.length - 1) return;
+        const a = cleaned[idx];
+        const b = cleaned[idx + 1];
+        const road = await osrmDrivePair(a, b);
+        if (road) {
+          segments[idx] = { ...road, straight: false };
+        } else {
+          segments[idx] = { ...straightSegment(a, b), straight: true };
+        }
+      }),
+    );
+  }
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    if (!seg) continue;
+    if (seg.straight) usedStraight = true;
+    else usedRoad = true;
+    distanceMeters += seg.distanceMeters;
+    durationMinutes += seg.durationMinutes;
+    const slice = i === 0 ? seg.points : seg.points.slice(1);
+    points.push(...slice);
+  }
+
+  if (points.length < 2) {
+    return {
+      points: cleaned.map((s) => [s.lat, s.lng] as [number, number]),
+      distanceMeters,
+      durationMinutes: Math.max(1, durationMinutes),
+      fallback: true,
+    };
+  }
+
+  return {
+    points,
+    distanceMeters,
+    durationMinutes: Math.max(1, durationMinutes),
+    fallback: !usedRoad,
+    mixed: usedRoad && usedStraight,
+  };
 }
