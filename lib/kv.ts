@@ -1,6 +1,6 @@
 /**
  * Optional Redis-over-HTTP store (Vercel KV or Upstash — same REST protocol).
- * Absent env vars simply disable it; callers fall back to in-memory behaviour.
+ * Absent env vars simply disable it; callers fall back to in-memory / Next cache.
  */
 const KV_URL = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "").replace(
   /\/+$/,

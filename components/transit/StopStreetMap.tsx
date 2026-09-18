@@ -202,6 +202,36 @@ function stopMarkerKey(stop: StopHit, index: number) {
   return `${stop.operator}-${stop.stopId}-${stop.seq ?? "x"}-${index}`;
 }
 
+/** Identifies the route for the server-side corridor cache. */
+function corridorRouteKey(stops: StopHit[]) {
+  const first = stops[0];
+  if (!first) return "";
+  return [first.operator, first.route ?? first.routeId ?? "", first.bound ?? "", first.serviceType ?? ""]
+    .join(":")
+    .replace(/[^\w:.-]/g, "");
+}
+
+function corridorCacheKey(routeKey: string, line: [number, number][]) {
+  let hash = 5381;
+  for (const [lat, lng] of line) {
+    const chunk = `${lat.toFixed(5)},${lng.toFixed(5)};`;
+    for (let i = 0; i < chunk.length; i++) hash = ((hash << 5) + hash + chunk.charCodeAt(i)) | 0;
+  }
+  return `roadline:${routeKey}:${(hash >>> 0).toString(36)}:${line.length}`;
+}
+
+/** Keep a few recently viewed corridors per session; drop the rest. */
+function trimCorridors(
+  entries: Record<string, DriveRoute | null>,
+  keep = 8,
+): Record<string, DriveRoute | null> {
+  const keys = Object.keys(entries);
+  if (keys.length <= keep) return entries;
+  const out: Record<string, DriveRoute | null> = {};
+  for (const key of keys.slice(keys.length - keep)) out[key] = entries[key];
+  return out;
+}
+
 function InvalidateOnResize() {
   const map = useMap();
   useEffect(() => {
@@ -223,6 +253,8 @@ export function StopStreetMap({
   accent = "emerald",
   mixedOperators = false,
   showRouteLine = true,
+  followRoads = false,
+  bidirectionalRoads = false,
   compactMarkers = false,
   labelZoom = 16,
   minZoom = 10,
@@ -241,6 +273,10 @@ export function StopStreetMap({
   mixedOperators?: boolean;
   /** Draw corridor polyline between stops (disable for scattered points like taxi) */
   showRouteLine?: boolean;
+  /** Upgrade the stop-order chords to a road-following shape (bus / minibus routes) */
+  followRoads?: boolean;
+  /** Vehicle uses the same street both ways, so one-way restrictions don't apply (tram) */
+  bidirectionalRoads?: boolean;
   /** Unselected stops render as small dots until zoomed in / selected */
   compactMarkers?: boolean;
   /** Zoom level at which compact markers expand to numbered pins */
@@ -265,8 +301,7 @@ export function StopStreetMap({
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetKey, setWalkTargetKey] = useState<string | null>(null);
   const [walkLoading, setWalkLoading] = useState(false);
-  const [driveRoute, setDriveRoute] = useState<DriveRoute | null>(null);
-  const [driveLoading, setDriveLoading] = useState(false);
+  const [corridors, setCorridors] = useState<Record<string, DriveRoute | null>>({});
   const [mapReady, setMapReady] = useState(false);
   const [zoom, setZoom] = useState(15);
   const locate = useGeo((lat, lng) => setHere({ lat, lng }));
@@ -302,6 +337,7 @@ export function StopStreetMap({
     return `${first.operator}-${first.stopId}-${last.stopId}-${mapped.length}`;
   }, [mapped]);
 
+  /** Ordered stop corridor — straight chords by seq. TD open data has no official road shapes. */
   const line = useMemo(() => {
     const hasSeq = mapped.some((s) => s.seq != null);
     const ordered = hasSeq
@@ -310,36 +346,59 @@ export function StopStreetMap({
     return ordered.map((s) => [s.lat, s.lng] as [number, number]);
   }, [mapped]);
 
-  useEffect(() => {
-    if (!showRouteLine || mapped.length < 2) {
-      setDriveRoute(null);
-      setDriveLoading(false);
-      return;
+  const corridorMeters = useMemo(() => {
+    let sum = 0;
+    for (let i = 1; i < line.length; i++) {
+      sum += haversineMeters(line[i - 1][0], line[i - 1][1], line[i][0], line[i][1]);
     }
+    return Math.round(sum);
+  }, [line]);
+
+  const corridorRequest = useMemo(() => {
+    if (!showRouteLine || !followRoads || line.length < 2) return null;
+    const routeKey = corridorRouteKey(mapped);
+    return {
+      routeKey,
+      bidirectional: bidirectionalRoads,
+      cacheKey: `${corridorCacheKey(routeKey, line)}:${bidirectionalRoads ? "bi" : "uni"}`,
+    };
+  }, [showRouteLine, followRoads, bidirectionalRoads, line, mapped]);
+
+  // Lazy road geometry: chords show instantly, the road shape replaces them
+  // once the server has it (first viewer computes, later viewers hit the cache).
+  useEffect(() => {
+    if (!corridorRequest || corridors[corridorRequest.cacheKey] !== undefined) return;
+    const { routeKey, bidirectional, cacheKey } = corridorRequest;
     let alive = true;
-    setDriveLoading(true);
-    const hasSeq = mapped.some((s) => s.seq != null);
-    const ordered = hasSeq
-      ? [...mapped].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.name.localeCompare(b.name, "zh-Hant"))
-      : mapped;
     apiPost<DriveRoute>("/api/route/drive", {
-      points: ordered.map((s) => ({ lat: s.lat, lng: s.lng })),
+      routeKey,
+      bidirectional,
+      points: line.map(([lat, lng]) => ({ lat, lng })),
     })
       .then((route) => {
         if (!alive) return;
-        setDriveRoute(route);
+        const usable = route.points?.length > 1 && !route.fallback ? route : null;
+        setCorridors((prev) => trimCorridors({ ...prev, [cacheKey]: usable }));
       })
       .catch(() => {
         if (!alive) return;
-        setDriveRoute(null);
-      })
-      .finally(() => {
-        if (alive) setDriveLoading(false);
+        setCorridors((prev) => trimCorridors({ ...prev, [cacheKey]: null }));
       });
     return () => {
       alive = false;
     };
-  }, [showRouteLine, mapKey, mapped]);
+  }, [corridorRequest, corridors, line]);
+
+  const corridorEntry = corridorRequest ? corridors[corridorRequest.cacheKey] : null;
+  const roadRoute = corridorEntry ?? null;
+  const roadLoading = corridorRequest != null && corridorEntry === undefined;
+  const corridorLine = roadRoute?.points?.length ? roadRoute.points : line;
+
+  const corridorLabel = roadRoute
+    ? `行車路線約 ${formatDistance(roadRoute.distanceMeters)}${roadRoute.mixed ? "（部分直線）" : ""}`
+    : roadLoading
+      ? `站序連線約 ${formatDistance(corridorMeters)} · 計算行車線…`
+      : `站序連線約 ${formatDistance(corridorMeters)}`;
 
   const linkLines = useMemo(() => {
     const byId = new Map(mapped.map((s) => [s.stopId, s] as const));
@@ -434,38 +493,25 @@ export function StopStreetMap({
           <MapZoom onZoom={setZoom} />
           <InvalidateOnResize />
           <FitStops
-            points={driveRoute && driveRoute.points.length > 1 ? driveRoute.points : line}
+            points={corridorLine}
             selected={selected ? [selected.lat, selected.lng] : null}
             here={here ? [here.lat, here.lng] : null}
             walkPoints={walkRoute?.points ?? null}
             focusZoom={focusZoom}
           />
-          {showRouteLine && (driveRoute?.points.length ?? 0) > 1 ? (
+          {showRouteLine && corridorLine.length > 1 ? (
             <>
+              <Polyline positions={corridorLine} pathOptions={{ color: active, weight: 7, opacity: 0.18 }} />
               <Polyline
-                positions={driveRoute!.points}
-                pathOptions={{ color: active, weight: 8, opacity: 0.2 }}
-              />
-              <Polyline
-                positions={driveRoute!.points}
+                positions={corridorLine}
                 pathOptions={{
                   color: active,
-                  weight: 4,
+                  weight: 3.5,
                   opacity: 0.9,
-                  dashArray: driveRoute?.fallback ? "8 10" : undefined,
+                  dashArray: followRoads && !roadRoute ? "10 8" : undefined,
                 }}
               />
             </>
-          ) : showRouteLine && line.length > 1 ? (
-            <Polyline
-              positions={line}
-              pathOptions={{
-                color: active,
-                weight: 3,
-                opacity: 0.55,
-                dashArray: driveLoading ? "6 8" : undefined,
-              }}
-            />
           ) : null}
           {linkLines.map((positions, i) => (
             <Polyline
@@ -572,17 +618,9 @@ export function StopStreetMap({
         >
           {here ? "更新我的位置" : "顯示我的位置"}
         </button>
-        {showRouteLine && mapped.length > 1 ? (
+        {showRouteLine && line.length > 1 ? (
           <span className="rounded-lg border border-line bg-card/90 px-2.5 py-1.5 text-xs text-ink backdrop-blur">
-            {driveLoading
-              ? "規劃站序路線…"
-              : driveRoute
-                ? driveRoute.fallback
-                  ? `站序連線約 ${formatDistance(driveRoute.distanceMeters)}`
-                  : driveRoute.mixed
-                    ? `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
-                    : `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
-                : "站序連線"}
+            {corridorLabel}
           </span>
         ) : null}
       </div>

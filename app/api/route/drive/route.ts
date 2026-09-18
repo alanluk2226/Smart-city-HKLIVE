@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { jsonError, jsonOk } from "@/lib/api";
-import { cached, TTL } from "@/lib/cache";
 import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
-import { driveRouteThrough } from "@/lib/routing";
+import { roadCorridor } from "@/lib/road-corridor";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,6 +12,9 @@ const HK_BOUNDS = {
   minLng: 113.8,
   maxLng: 114.5,
 };
+
+/** Bump when the corridor algorithm changes so stored shapes are recomputed. */
+const CORRIDOR_VERSION = "v5";
 
 const DRIVE_LIMIT_PER_MIN = 20;
 const DRIVE_LIMIT_PER_HOUR = 80;
@@ -66,9 +68,13 @@ export async function POST(request: Request) {
     });
   }
 
-  let body: { points?: unknown };
+  let body: { points?: unknown; routeKey?: unknown; bidirectional?: unknown };
   try {
-    body = (await request.json()) as { points?: unknown };
+    body = (await request.json()) as {
+      points?: unknown;
+      routeKey?: unknown;
+      bidirectional?: unknown;
+    };
   } catch {
     return jsonError("請提供站點座標列表");
   }
@@ -81,6 +87,8 @@ export async function POST(request: Request) {
     return jsonError("行車路線只支援香港範圍內的站點", 400);
   }
 
+  // Stop coordinates are the identity of the shape: a re-routed line gets a new
+  // fingerprint and is recomputed automatically.
   const fingerprint = createHash("sha1")
     .update(
       points
@@ -89,13 +97,17 @@ export async function POST(request: Request) {
     )
     .digest("hex")
     .slice(0, 16);
+  const routeKey =
+    typeof body.routeKey === "string" ? body.routeKey.replace(/[^\w:.-]/g, "").slice(0, 60) : "";
+  const bidirectional = body.bidirectional === true;
 
   try {
-    // v2: prefer road detours over stop-to-stop chords (see lib/routing.ts).
-    const route = await cached(`drive:stops:v2:${fingerprint}`, TTL.route, () =>
-      driveRouteThrough(points),
+    const { route, source } = await roadCorridor(
+      `roadline:${CORRIDOR_VERSION}:${bidirectional ? "bi" : "uni"}:${routeKey || "anon"}:${fingerprint}`,
+      points,
+      { bidirectional },
     );
-    return jsonOk(route);
+    return jsonOk({ ...route, source });
   } catch (error) {
     console.error("[route/drive]", error instanceof Error ? error.message : error);
     return jsonError("無法規劃行車路線", 502);
