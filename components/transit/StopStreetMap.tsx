@@ -5,10 +5,10 @@ import { CircleMarker, MapContainer, Marker, Polyline, Popup, useMap } from "rea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BasemapLayers, mapMaxZoom } from "@/components/map/BasemapLayers";
-import { apiGet, apiPost, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
+import { apiGet, formatDistance, openWalkingDirections, useGeo } from "@/lib/client";
 import { haversineMeters } from "@/lib/geo";
 import { getLocationEnabled } from "@/lib/location-pref";
-import type { DriveRoute, WalkRoute } from "@/lib/routing";
+import type { WalkRoute } from "@/lib/routing";
 import type { Operator, StopHit } from "@/lib/types";
 
 const OPERATOR_PIN: Record<Operator, { idle: string; active: string; glow: string }> = {
@@ -265,8 +265,6 @@ export function StopStreetMap({
   const [walkRoute, setWalkRoute] = useState<WalkRoute | null>(null);
   const [walkTargetKey, setWalkTargetKey] = useState<string | null>(null);
   const [walkLoading, setWalkLoading] = useState(false);
-  const [driveRoute, setDriveRoute] = useState<DriveRoute | null>(null);
-  const [driveLoading, setDriveLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [zoom, setZoom] = useState(15);
   const locate = useGeo((lat, lng) => setHere({ lat, lng }));
@@ -302,6 +300,7 @@ export function StopStreetMap({
     return `${first.operator}-${first.stopId}-${last.stopId}-${mapped.length}`;
   }, [mapped]);
 
+  /** Ordered stop corridor — straight chords by seq. TD open data has no official road shapes. */
   const line = useMemo(() => {
     const hasSeq = mapped.some((s) => s.seq != null);
     const ordered = hasSeq
@@ -310,36 +309,13 @@ export function StopStreetMap({
     return ordered.map((s) => [s.lat, s.lng] as [number, number]);
   }, [mapped]);
 
-  useEffect(() => {
-    if (!showRouteLine || mapped.length < 2) {
-      setDriveRoute(null);
-      setDriveLoading(false);
-      return;
+  const corridorMeters = useMemo(() => {
+    let sum = 0;
+    for (let i = 1; i < line.length; i++) {
+      sum += haversineMeters(line[i - 1][0], line[i - 1][1], line[i][0], line[i][1]);
     }
-    let alive = true;
-    setDriveLoading(true);
-    const hasSeq = mapped.some((s) => s.seq != null);
-    const ordered = hasSeq
-      ? [...mapped].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0) || a.name.localeCompare(b.name, "zh-Hant"))
-      : mapped;
-    apiPost<DriveRoute>("/api/route/drive", {
-      points: ordered.map((s) => ({ lat: s.lat, lng: s.lng })),
-    })
-      .then((route) => {
-        if (!alive) return;
-        setDriveRoute(route);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setDriveRoute(null);
-      })
-      .finally(() => {
-        if (alive) setDriveLoading(false);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [showRouteLine, mapKey, mapped]);
+    return Math.round(sum);
+  }, [line]);
 
   const linkLines = useMemo(() => {
     const byId = new Map(mapped.map((s) => [s.stopId, s] as const));
@@ -434,38 +410,17 @@ export function StopStreetMap({
           <MapZoom onZoom={setZoom} />
           <InvalidateOnResize />
           <FitStops
-            points={driveRoute && driveRoute.points.length > 1 ? driveRoute.points : line}
+            points={line}
             selected={selected ? [selected.lat, selected.lng] : null}
             here={here ? [here.lat, here.lng] : null}
             walkPoints={walkRoute?.points ?? null}
             focusZoom={focusZoom}
           />
-          {showRouteLine && (driveRoute?.points.length ?? 0) > 1 ? (
+          {showRouteLine && line.length > 1 ? (
             <>
-              <Polyline
-                positions={driveRoute!.points}
-                pathOptions={{ color: active, weight: 8, opacity: 0.2 }}
-              />
-              <Polyline
-                positions={driveRoute!.points}
-                pathOptions={{
-                  color: active,
-                  weight: 4,
-                  opacity: 0.9,
-                  dashArray: driveRoute?.fallback ? "8 10" : undefined,
-                }}
-              />
+              <Polyline positions={line} pathOptions={{ color: active, weight: 7, opacity: 0.18 }} />
+              <Polyline positions={line} pathOptions={{ color: active, weight: 3.5, opacity: 0.9 }} />
             </>
-          ) : showRouteLine && line.length > 1 ? (
-            <Polyline
-              positions={line}
-              pathOptions={{
-                color: active,
-                weight: 3,
-                opacity: 0.55,
-                dashArray: driveLoading ? "6 8" : undefined,
-              }}
-            />
           ) : null}
           {linkLines.map((positions, i) => (
             <Polyline
@@ -572,17 +527,9 @@ export function StopStreetMap({
         >
           {here ? "更新我的位置" : "顯示我的位置"}
         </button>
-        {showRouteLine && mapped.length > 1 ? (
+        {showRouteLine && line.length > 1 ? (
           <span className="rounded-lg border border-line bg-card/90 px-2.5 py-1.5 text-xs text-ink backdrop-blur">
-            {driveLoading
-              ? "規劃站序路線…"
-              : driveRoute
-                ? driveRoute.fallback
-                  ? `站序連線約 ${formatDistance(driveRoute.distanceMeters)}`
-                  : driveRoute.mixed
-                    ? `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
-                    : `站序估算約 ${formatDistance(driveRoute.distanceMeters)} · ${driveRoute.durationMinutes} 分`
-                : "站序連線"}
+            站序連線約 {formatDistance(corridorMeters)}
           </span>
         ) : null}
       </div>
