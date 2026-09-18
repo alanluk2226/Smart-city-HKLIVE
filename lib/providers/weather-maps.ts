@@ -113,6 +113,10 @@ export async function getWeatherMapImage(
   kind: "radar" | "wind",
   file: string,
 ): Promise<{ body: ArrayBuffer; contentType: string }> {
+  // Defense in depth: never allow path escape even if the regex drifts.
+  if (file.includes("..") || file.includes("\\") || file.includes("://") || file.startsWith("/")) {
+    throw new Error("無效圖檔路徑");
+  }
   let upstream: string;
   if (kind === "radar") {
     if (!RADAR_FILE_RE.test(file)) throw new Error("無效雷達圖檔");
@@ -120,6 +124,9 @@ export async function getWeatherMapImage(
   } else {
     if (!WIND_FILE_RE.test(file)) throw new Error("無效風力圖檔");
     upstream = `${WIND_BASE}${file}`;
+  }
+  if (!upstream.startsWith(kind === "radar" ? RADAR_BASE : WIND_BASE)) {
+    throw new Error("無效圖檔路徑");
   }
   return fetchBuffer(upstream, 15_000);
 }

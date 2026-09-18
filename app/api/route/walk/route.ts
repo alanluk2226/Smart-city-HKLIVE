@@ -73,6 +73,7 @@ export async function GET(request: Request) {
   try {
     return jsonOk(await walkRoute(fromLat, fromLng, toLat, toLng));
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "無法規劃導航路線", 502);
+    console.error("[route/walk]", error instanceof Error ? error.message : error);
+    return jsonError("無法規劃導航路線", 502);
   }
 }

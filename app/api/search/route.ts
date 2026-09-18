@@ -28,7 +28,7 @@ function emptyOp(): OpSearch {
 
 export async function GET(request: Request) {
   const p = new URL(request.url).searchParams;
-  const q = p.get("q")?.trim() ?? "";
+  const q = (p.get("q")?.trim() ?? "").slice(0, 40);
   const mode = p.get("mode") ?? "all";
   const operator = p.get("operator");
   const region = p.get("region") ?? undefined;

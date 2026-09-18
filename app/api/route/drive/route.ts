@@ -95,6 +95,7 @@ export async function POST(request: Request) {
     );
     return jsonOk(route);
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "無法規劃行車路線", 502);
+    console.error("[route/drive]", error instanceof Error ? error.message : error);
+    return jsonError("無法規劃行車路線", 502);
   }
 }

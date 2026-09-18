@@ -15,6 +15,14 @@ export const preferredRegion = ["hnd1"];
 /** Soft per-IP caps so free Gemini quota is not burned by scrape/abuse. */
 const AI_LIMIT_PER_MIN = 8;
 const AI_LIMIT_PER_HOUR = 40;
+/** Cap prompt size so a single request cannot dump megabytes into Gemini. */
+const MAX_TURN_CHARS = 1_500;
+const MAX_TURNS = 16;
+const MAX_PLACE_CHARS = 80;
+
+function clip(text: string, max: number) {
+  return text.length <= max ? text : text.slice(0, max);
+}
 
 function asTurns(raw: unknown): AiAssistantChatTurn[] {
   if (!Array.isArray(raw)) return [];
@@ -24,10 +32,10 @@ function asTurns(raw: unknown): AiAssistantChatTurn[] {
     const role = (item as { role?: unknown }).role;
     const text = (item as { text?: unknown }).text;
     if ((role === "user" || role === "assistant") && typeof text === "string" && text.trim()) {
-      out.push({ role, text: text.trim() });
+      out.push({ role, text: clip(text.trim(), MAX_TURN_CHARS) });
     }
   }
-  return out.slice(-16);
+  return out.slice(-MAX_TURNS);
 }
 
 export async function POST(request: Request) {
@@ -71,9 +79,9 @@ export async function POST(request: Request) {
     return jsonError("請提供對話內容，或一句行程問題");
   }
 
-  const from = typeof body.from === "string" ? body.from.trim() : "";
-  const to = typeof body.to === "string" ? body.to.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
+  const from = typeof body.from === "string" ? clip(body.from.trim(), MAX_PLACE_CHARS) : "";
+  const to = typeof body.to === "string" ? clip(body.to.trim(), MAX_PLACE_CHARS) : "";
+  const message = typeof body.message === "string" ? clip(body.message.trim(), MAX_TURN_CHARS) : "";
   const messages = asTurns(body.messages);
 
   let lastTrip: { from: string; to: string } | null = null;
@@ -81,7 +89,10 @@ export async function POST(request: Request) {
     const lf = (body.lastTrip as { from?: unknown }).from;
     const lt = (body.lastTrip as { to?: unknown }).to;
     if (typeof lf === "string" && typeof lt === "string" && lf.trim() && lt.trim()) {
-      lastTrip = { from: lf.trim(), to: lt.trim() };
+      lastTrip = {
+        from: clip(lf.trim(), MAX_PLACE_CHARS),
+        to: clip(lt.trim(), MAX_PLACE_CHARS),
+      };
     }
   }
 
@@ -101,8 +112,14 @@ export async function POST(request: Request) {
   } catch (error) {
     const msg = error instanceof Error ? error.message : "無法回應";
     if (/GEMINI_PAUSED|quota|RESOURCE_EXHAUSTED|429|rate.?limit/i.test(msg)) {
-      return jsonError(msg.replace(/^GEMINI_PAUSED:\s*/i, ""), 503, { retryAfter: 900 });
+      return jsonError(
+        "AI 配額暫時用盡，請稍後再試，或改用交通搜尋頁查路線。",
+        503,
+        { retryAfter: 900 },
+      );
     }
-    return jsonError(msg, 502);
+    // Never echo raw upstream Gemini / network errors to the browser.
+    console.error("[ai/trip]", msg);
+    return jsonError("暫時無法回應，請稍後再試", 502);
   }
 }

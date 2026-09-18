@@ -171,7 +171,7 @@ export async function getCameras(lat?: number, lng?: number, limit = 24): Promis
 }
 
 export async function getCameraImage(key: string) {
-  const safe = key.replace(/[^A-Za-z0-9]/g, "");
+  const safe = key.replace(/[^A-Za-z0-9]/g, "").slice(0, 32);
   if (!safe) throw new Error("invalid camera key");
   return fetchBuffer(`https://tdcctv.data.one.gov.hk/${safe}.JPG`);
 }
