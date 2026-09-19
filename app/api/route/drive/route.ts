@@ -14,12 +14,15 @@ const HK_BOUNDS = {
 };
 
 /** Bump when the corridor algorithm changes so stored shapes are recomputed. */
-const CORRIDOR_VERSION = "v5";
+const CORRIDOR_VERSION = "v7";
 
 const DRIVE_LIMIT_PER_MIN = 20;
 const DRIVE_LIMIT_PER_HOUR = 80;
-/** Cap OSRM amplification; real bus routes rarely need more waypoints client-side. */
-const MAX_POINTS = 40;
+/**
+ * Tram mainline alone has ~74 stops; bus routes are usually shorter.
+ * Chunking inside `driveRouteThrough` keeps each OSRM call tractable.
+ */
+const MAX_POINTS = 90;
 
 function inHongKong(lat: number, lng: number) {
   return (
