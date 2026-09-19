@@ -24,13 +24,13 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function themeFromDom(): ThemeMode {
-  if (typeof document === "undefined") return "dark";
+  if (typeof document === "undefined") return "light";
   const current = document.documentElement.dataset.theme;
   return current === "light" || current === "dark" ? current : readStoredTheme();
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("dark");
+  const [theme, setThemeState] = useState<ThemeMode>("light");
 
   useLayoutEffect(() => {
     const stored = themeFromDom();

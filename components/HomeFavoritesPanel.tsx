@@ -58,6 +58,7 @@ export function HomeFavoritesPanel() {
   return (
     <section
       id="favorites"
+      data-tour="favorites"
       aria-label="我的收藏"
       className="scroll-mt-28 rounded-2xl border border-amber/30 bg-amber/5 p-4"
     >

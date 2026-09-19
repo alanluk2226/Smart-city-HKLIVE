@@ -35,6 +35,13 @@ export function MobileBottomNav() {
             <Link
               key={item.id}
               href={item.href}
+              data-tour={
+                item.id === "transit"
+                  ? "transit"
+                  : item.id === "favorites"
+                    ? "favorites-nav"
+                    : undefined
+              }
               className={`flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 text-[11px] ${
                 active ? "text-teal" : "text-muted hover:text-ink"
               }`}

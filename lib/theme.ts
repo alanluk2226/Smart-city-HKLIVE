@@ -12,12 +12,12 @@ export function applyTheme(theme: ThemeMode) {
 }
 
 export function readStoredTheme(): ThemeMode {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   try {
     const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return isThemeMode(raw) ? raw : "dark";
+    return isThemeMode(raw) ? raw : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 

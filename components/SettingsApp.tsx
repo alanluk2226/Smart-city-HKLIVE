@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useLocationPref } from "@/components/LocationPrefProvider";
+import { openOnboardingTour } from "@/components/OnboardingTour";
 import { useTheme } from "@/components/ThemeProvider";
 import { clearAiChat, hasAiChat } from "@/lib/ai-trip-store";
 import type { ThemeMode } from "@/lib/theme";
@@ -109,6 +110,20 @@ export function SettingsApp() {
           <p className={`mt-3 text-xs ${locationEnabled ? "text-teal" : "text-muted"}`}>
             而家：{locationEnabled ? "已開啟定位" : "已關閉定位"}
           </p>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-card p-4 sm:p-5">
+          <h2 className="text-base font-medium">使用教學</h2>
+          <p className="mt-1 text-sm text-muted">
+            呢部裝置第一次開啟會自動顯示；之後唔會再彈，可以喺呢度重睇。
+          </p>
+          <button
+            type="button"
+            onClick={() => openOnboardingTour()}
+            className="mt-4 w-full rounded-xl border border-teal/40 bg-teal/10 px-4 py-2.5 text-sm text-teal hover:bg-teal/20"
+          >
+            重看初次教學
+          </button>
         </section>
 
         <section className="rounded-2xl border border-line bg-card p-4 sm:p-5">

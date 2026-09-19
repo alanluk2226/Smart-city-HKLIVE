@@ -374,24 +374,28 @@ export function AiTripAdvisor({
   }
 
   return (
-    <section id="ai-trip" className="scroll-mt-28 rounded-2xl border border-teal/30 bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="font-mono text-[11px] tracking-[0.2em] text-teal">HK LIVE AI</div>
-          <h2 className="mt-0.5 text-lg">出行AI</h2>
-          {collapsed ? (
-            <p className="mt-1 text-xs text-muted">問天氣、路況或同我傾下偈</p>
-          ) : null}
+    <section
+      id="ai-trip"
+      className="scroll-mt-28 rounded-2xl border border-teal/30 bg-card p-4"
+    >
+      <div data-tour="ai" className="rounded-xl">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <div className="font-mono text-[11px] tracking-[0.2em] text-teal">HK LIVE AI</div>
+            <h2 className="mt-0.5 text-lg">出行AI</h2>
+            {collapsed ? (
+              <p className="mt-1 text-xs text-muted">問天氣、路況或同我傾下偈</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 text-xs text-muted hover:border-teal hover:text-ink"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((v) => !v)}
+          >
+            {collapsed ? "展開對話" : "收合對話"}
+          </button>
         </div>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 text-xs text-muted hover:border-teal hover:text-ink"
-          aria-expanded={!collapsed}
-          onClick={() => setCollapsed((v) => !v)}
-        >
-          {collapsed ? "展開對話" : "收合對話"}
-        </button>
-      </div>
 
       {!hideStarChips ? (
         <div className="mt-3">
@@ -565,6 +569,7 @@ export function AiTripAdvisor({
           傳送
         </button>
       </form>
+      </div>
     </section>
   );
 }

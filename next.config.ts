@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+const appBuildId =
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.NEXT_PUBLIC_APP_BUILD_ID ||
+  "dev";
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -27,6 +33,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_BUILD_ID: appBuildId,
+  },
   transpilePackages: ["leaflet.gridlayer.googlemutant"],
   async headers() {
     return [

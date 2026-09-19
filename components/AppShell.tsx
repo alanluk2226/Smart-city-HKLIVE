@@ -67,7 +67,12 @@ export function AppShell({
         className="sticky top-0 z-20 border-b border-line bg-elev/80 backdrop-blur"
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="HK LIVE">
+          <Link
+            href="/"
+            data-tour="brand"
+            className="flex shrink-0 items-center gap-2.5"
+            aria-label="HK LIVE"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-square.jpeg"
@@ -88,6 +93,7 @@ export function AppShell({
                 <Link
                   key={m.href}
                   href={m.href}
+                  data-tour={m.key === "transit" ? "transit" : undefined}
                   className={`inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm whitespace-nowrap ${
                     active
                       ? "bg-teal/15 text-teal"

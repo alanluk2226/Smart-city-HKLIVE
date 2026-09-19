@@ -3,6 +3,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { JetBrains_Mono, Noto_Sans_TC } from "next/font/google";
 import { LocationPrefProvider } from "@/components/LocationPrefProvider";
+import { DeployRefresh } from "@/components/DeployRefresh";
+import { OnboardingTour } from "@/components/OnboardingTour";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WeatherProvider } from "@/components/WeatherProvider";
 import "./globals.css";
@@ -30,13 +32,13 @@ export const metadata: Metadata = {
   },
 };
 
-const themeBootScript = `(function(){try{var t=localStorage.getItem("hk-live-theme");document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:"dark";}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+const themeBootScript = `(function(){try{var t=localStorage.getItem("hk-live-theme");document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:"light";}catch(e){document.documentElement.dataset.theme="light";}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="zh-Hant"
-      data-theme="dark"
+      data-theme="light"
       className={`${noto.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
@@ -46,7 +48,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className={`${noto.className} min-h-full flex flex-col`}>
         <ThemeProvider>
           <LocationPrefProvider>
-            <WeatherProvider>{children}</WeatherProvider>
+            <WeatherProvider>
+              {children}
+              <OnboardingTour />
+              <DeployRefresh />
+            </WeatherProvider>
           </LocationPrefProvider>
         </ThemeProvider>
         <Analytics />

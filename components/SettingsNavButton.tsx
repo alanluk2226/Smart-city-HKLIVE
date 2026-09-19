@@ -10,6 +10,7 @@ export function SettingsNavButton() {
   return (
     <Link
       href="/settings"
+      data-tour="settings"
       aria-label="設定"
       title="設定"
       className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition ${
