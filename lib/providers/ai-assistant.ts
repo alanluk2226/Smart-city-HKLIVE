@@ -256,28 +256,35 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
 
 function preferModeInstruction(preferMode: TripPreferMode) {
   if (preferMode === "bus") {
-    return "用戶只要巴士／小巴方案：優先一程直達；必須寫完整編號＋方向＋上落車站。唔好主推港鐵。";
+    return "用戶只要巴士／小巴方案：優先一程直達；必須寫完整編號＋方向＋上落車站。唔好主推港鐵。若本站未提供可用巴士，寧願講未搵到可靠巴士方案，叫用戶用「交通工具」頁或營運商 App 查——絕對唔好虛構轉乘鏈。";
   }
   if (preferMode === "mtr") {
     return "用戶只要港鐵方案：詳細寫綫路同轉車；巴士只可當一句備註。";
   }
   if (preferMode === "mix") {
-    return "用戶要巴士＋港鐵混合：寫清楚喺邊站轉；可同時提純巴士作對照，但主方案必須係混合。";
+    return "用戶要巴士＋港鐵混合：寫清楚喺邊站轉；可同時提純巴士作對照，但主方案必須係混合。混合入面嘅巴士編號亦只可用本站列出嘅，唔好另砌。";
   }
   return "交通方式不限：可同時列港鐵、直達巴士、混合；第一個方案用你認為最方便快捷嘅。";
 }
 
 function groundedBusLines(grounded: AiTripAdvice | null) {
-  if (!grounded) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App）。";
+  if (!grounded) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App 或本站「交通工具」）。";
   const buses = grounded.options.filter((o) => o.mode === "bus" || o.mode === "minibus");
-  if (!buses.length) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App）。";
+  if (!buses.length) return "本站未掃到直達巴士（唔好亂估編號；可叫用戶查城巴／九巴 App 或本站「交通工具」）。";
   return buses
-    .map((o) => `- ${o.title}｜${o.steps.join(" → ")}`)
+    .map((o) => `- ${o.title}｜約 ${o.minutes ?? "?"} 分｜約 $${o.fareHkd ?? "?"}｜${o.steps.join(" → ")}`)
     .join("\n");
 }
 
+function groundedAllowList(grounded: AiTripAdvice | null): string {
+  if (!grounded?.options.length) return "（無）";
+  return grounded.options
+    .map((o) => `${o.mode}:${o.title}`)
+    .join("；");
+}
+
 /**
- * Gemini 主導規劃：接受任意地名；本站港鐵計算只作可選參考。
+ * Gemini 主導規劃：接受任意地名；本站港鐵／巴士掃描作硬約束參考。
  * 天氣／路況建議交畀模型自行決定。
  */
 async function geminiFreeRoute(
@@ -330,9 +337,12 @@ async function geminiFreeRoute(
   }
 
   const weatherLine = await weatherContextLine();
+  const hasGroundedBuses = Boolean(
+    grounded?.options.some((o) => o.mode === "bus" || o.mode === "minibus"),
+  );
   const groundedBlock = grounded
-    ? `本站公開資料可選參考（可引用、可調整，唔使照抄）：\n${grounded.reply}`
-    : "本站站庫未能計算精確路線；請你用香港公共交通常識規劃。";
+    ? `本站公開資料已計算嘅方案（港鐵時間／車費、直達巴士掃描）。你只可以喺呢啲方案上改寫語氣、排序、按天氣揀邊個先講；路線步驟同巴士編號唔可以自行改寫成另一套。\n${grounded.reply}`
+    : "本站站庫未能計算精確路線。你可以講大致方向（例如優先港鐵、或叫用戶去「交通工具」查），但禁止寫出具體巴士／小巴編號同虛構轉乘站。";
 
   const system = `你是香港出行顧問（HK LIVE）。用香港粵語書面語（繁體），語氣像 Gemini，自然對話。
 
@@ -343,25 +353,34 @@ async function geminiFreeRoute(
 
 ${groundedBlock}
 
-本站按公開站距自動掃到嘅直達巴士（有就必須引用完整編號＋方向，禁止改用字母唔同嘅兄弟線，例如有 E21A 就唔好改推 E21）：
+本站掃到嘅直達巴士（有列出＝唯一准用嘅巴士編號來源；冇列出＝唔准自己砌轉乘）：
 ${groundedBusLines(grounded)}
+
+本站已有方案一覽：${groundedAllowList(grounded)}
+本站有直達巴士資料：${hasGroundedBuses ? "有" : "無"}
 
 今次指定交通方式：${preferModeInstruction(preferMode)}
 
+硬性規則（違反即幻覺，絕對禁止）：
+A. 唔好虛構巴士／小巴編號、方向、上落站、轉乘組合。未出現喺「本站掃到嘅直達巴士」或「本站已計算方案」入面嘅編號一律唔准用。
+B. 香港地理要順路：轉乘唔可以先向相反方向越行越遠再轉（例如九龍塘去觀塘，唔好先北上樂富／竹園再轉去觀塘）。不確定就唔好寫。
+C. 唔好假設兩條線喺某站一定轉得到；你對唔熟嘅轉乘站，寧願唔寫，改推港鐵或叫用戶查營運商。
+D. 若用戶要巴士但本站無可靠巴士：老實講未掃到／不確定，建議港鐵或「交通工具」頁；唔好為咗湊夠 2–3 個方案而亂砌。
+E. 巴士編號必須完整（含字母）＋方向＋上落車站。唔好把同一系列當成同一條線（例如有 E21A 就唔好改推 E21）。
+F. 唔好虛構即時到站分鐘；唔好聲稱可控制交通燈。
+
 輸出要求：
-1. 先用 1–2 句按天氣或用戶提到嘅路況／故障，講你建議邊個方案同原因（由你自行決定）。
-2. 然後列 2–3 個方案（跟上面指定方式），每項含路線步驟、約略時間、約略車費（用「約」）。
-3. 例子：落雨→優先港鐵；塞車→避長途巴士改港鐵；港鐵故障→改巴士／小巴。
-4. 巴士編號必須完整（含字母）＋方向＋上落車站。唔好把同一系列當成同一條線。
-5. 唔好虛構即時到站分鐘；唔好聲稱可控制交通燈。
-6. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
+1. 先用 1–2 句按天氣或用戶提到嘅路況，講你建議邊個方案同原因。
+2. 然後列 1–3 個方案（跟上面指定方式）。每個含步驟、約略時間、約略車費（用「約」）。方案數量寧少莫假。
+3. 例子：落雨→優先港鐵；塞車→避長途巴士改港鐵；港鐵故障→只可以引用本站已有巴士或叫用戶查 App。
+4. 結尾提醒：估計僅供參考，請以營運商為準；AI 建議可能因天氣／對話而每次唔同。`;
 
   const userText = [
     `由「${trip.from}」去「${trip.to}」。`,
     userHint && userHint !== `${from}去${to}` && userHint !== `${from}到${to}`
       ? `用戶原話／補充：${userHint}`
       : "",
-    "請給出行方案同建議。",
+    "請給出行方案同建議。記住：唔准虛構巴士轉乘。",
   ]
     .filter(Boolean)
     .join("\n");
