@@ -352,6 +352,16 @@ export async function driveRouteThrough(
     };
   }
 
+  // Trams: prefer OSM rail geometry so we follow tracks instead of car one-ways
+  // (which often collapse to building-cutting chords).
+  if (bidirectional) {
+    const { tramTrackCorridor } = await import("@/lib/tram-tracks");
+    const tracked = tramTrackCorridor(cleaned);
+    if (tracked?.points && tracked.points.length > 2 && !tracked.fallback) {
+      return tracked;
+    }
+  }
+
   if (cleaned.length <= CORRIDOR_CHUNK) {
     return driveRouteChunk(cleaned, bidirectional, startedAt + TOTAL_BUDGET_MS);
   }

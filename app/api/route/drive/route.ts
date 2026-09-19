@@ -14,7 +14,7 @@ const HK_BOUNDS = {
 };
 
 /** Bump when the corridor algorithm changes so stored shapes are recomputed. */
-const CORRIDOR_VERSION = "v6";
+const CORRIDOR_VERSION = "v7";
 
 const DRIVE_LIMIT_PER_MIN = 20;
 const DRIVE_LIMIT_PER_HOUR = 80;
