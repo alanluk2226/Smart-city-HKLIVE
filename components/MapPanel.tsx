@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * On small screens the map often pushes the list below the fold.
  * Desktop always shows the map; mobile gets an explicit collapse control.
+ *
+ * Important: when collapsed on mobile we unmount the map. Keeping Leaflet
+ * at display:none / 0×0 size causes Invalid LatLng (NaN) flyTo errors.
  */
 export function MapPanel({
   children,
@@ -16,6 +19,16 @@ export function MapPanel({
   className?: string;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+
+  // Crossing to desktop should always restore the map.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    function onChange() {
+      if (mq.matches) setCollapsed(false);
+    }
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <div className={className}>
@@ -29,7 +42,7 @@ export function MapPanel({
           {collapsed ? `顯示${label}` : `收起${label}`}
         </button>
       </div>
-      {collapsed ? <div className="hidden md:block">{children}</div> : children}
+      {collapsed ? null : children}
     </div>
   );
 }

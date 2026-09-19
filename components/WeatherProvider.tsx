@@ -53,15 +53,19 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    refresh(false);
-    const id = window.setInterval(() => refresh(true), CLIENT_TTL_MS);
-    return () => clearInterval(id);
+  const refreshForced = useCallback(() => {
+    refresh(true);
   }, [refresh]);
 
+  useEffect(() => {
+    refresh(false);
+    const id = window.setInterval(refreshForced, CLIENT_TTL_MS);
+    return () => clearInterval(id);
+  }, [refresh, refreshForced]);
+
   const value = useMemo(
-    () => ({ weather, loading, refresh: () => refresh(true) }),
-    [weather, loading, refresh],
+    () => ({ weather, loading, refresh: refreshForced }),
+    [weather, loading, refreshForced],
   );
 
   return <WeatherContext.Provider value={value}>{children}</WeatherContext.Provider>;

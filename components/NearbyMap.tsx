@@ -170,15 +170,19 @@ function FocusSelected({
   useEffect(() => {
     if (!selectedId || !selectedPoint) return;
     if (selectedId === lastId.current) return;
+    if (!Number.isFinite(selectedPoint.lat) || !Number.isFinite(selectedPoint.lng)) return;
+    const size = map.getSize();
+    if (size.x < 2 || size.y < 2) return;
     lastId.current = selectedId;
     const targetZoom = Math.max(map.getZoom(), focusZoom);
     map.flyTo([selectedPoint.lat, selectedPoint.lng], targetZoom, { duration: 0.45 });
     const onEnd = () => {
       map.off("moveend", onEnd);
-      const size = map.getSize();
+      const s = map.getSize();
+      if (s.x < 2 || s.y < 2) return;
       const anchorY = Math.min(0.85, Math.max(0.35, focusAnchorY));
       // Positive y pans the map up, so the pin sits lower and the popup has room.
-      const dy = size.y * (anchorY - 0.5);
+      const dy = s.y * (anchorY - 0.5);
       if (Math.abs(dy) > 1) map.panBy([0, dy], { animate: true, duration: 0.2 });
     };
     map.once("moveend", onEnd);
