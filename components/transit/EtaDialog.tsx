@@ -90,7 +90,7 @@ export function EtaDialog({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+    <div className="fixed inset-0 z-[1200] flex items-end sm:items-center justify-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/55"
@@ -101,7 +101,7 @@ export function EtaDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="eta-dialog-title"
-        className="relative z-10 flex max-h-[85vh] w-full flex-col rounded-t-2xl border border-line bg-card shadow-2xl sm:max-w-3xl sm:rounded-2xl"
+        className="relative z-10 flex max-h-[min(90dvh,calc(100dvh-0.5rem))] w-full flex-col rounded-t-2xl border border-line bg-card shadow-2xl sm:max-w-3xl sm:rounded-2xl"
       >
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line sm:hidden" />
         <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-2">
@@ -195,7 +195,7 @@ export function EtaDialog({
           </div>
         ) : null}
         {error ? <p className="px-4 text-sm text-rose">{error}</p> : null}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <MtrPidsBoard
             etas={visible}
             loading={loading}

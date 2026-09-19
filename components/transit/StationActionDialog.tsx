@@ -44,7 +44,7 @@ export function StationActionDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
+    <div className="fixed inset-0 z-[1200] flex items-end sm:items-center justify-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-black/55"
@@ -56,7 +56,7 @@ export function StationActionDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="station-action-title"
-        className="relative z-10 w-full rounded-t-2xl border border-line bg-card p-4 shadow-2xl sm:max-w-lg sm:rounded-2xl pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="relative z-10 max-h-[min(90dvh,calc(100dvh-0.5rem))] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-line bg-card p-4 shadow-2xl sm:max-w-lg sm:rounded-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-line sm:hidden" />

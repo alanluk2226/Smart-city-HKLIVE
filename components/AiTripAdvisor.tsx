@@ -44,6 +44,7 @@ const WELCOME = [
 ].join("\n");
 
 const HISTORY_TURNS = 12;
+const DAILY_LIMIT = 20;
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -107,6 +108,8 @@ export function AiTripAdvisor({
   const [placeholder, setPlaceholder] = useState(DEFAULT_TRIP_PLACEHOLDER);
   /** When Gemini / our AI rate limit trips — show reason and pause sends. */
   const [servicePause, setServicePause] = useState<string | null>(null);
+  /** Remaining free questions today (null until first successful reply). */
+  const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const openedQueryRef = useRef<string | null>(null);
 
@@ -203,6 +206,10 @@ export function AiTripAdvisor({
   async function ask(raw: string) {
     const text = raw.trim();
     if (!text || loading || servicePause) return;
+    if (quotaRemaining === 0) {
+      setServicePause(`每日免費${DAILY_LIMIT}次提問已用完，請明日再試。`);
+      return;
+    }
 
     setCollapsed(false);
     const userMsg: ChatMessage = { id: newId(), role: "user", text };
@@ -229,12 +236,15 @@ export function AiTripAdvisor({
         messages: historyPayload,
         lastTrip,
       });
+      if (data.quota) {
+        setQuotaRemaining(data.quota.remaining);
+      }
       const trip =
         data.trip ??
         (data.advice ? { from: data.advice.fromName, to: data.advice.toName } : null);
       const pauseHint =
         data.aiError &&
-        /配額|速率|暫停|quota|RESOURCE_EXHAUSTED|rate.?limit|過於頻繁|用量已達/i.test(
+        /配額|速率|暫停|quota|RESOURCE_EXHAUSTED|rate.?limit|過於頻繁|用量已達|將盡/i.test(
           data.aiError,
         )
           ? data.aiError
@@ -256,7 +266,8 @@ export function AiTripAdvisor({
       const isPause =
         status === 429 ||
         status === 503 ||
-        /配額|速率|暫停|quota|過於頻繁|用量已達|GEMINI_PAUSED/i.test(msg);
+        /配額|速率|暫停|quota|過於頻繁|用量已達|GEMINI_PAUSED|將盡/i.test(msg);
+      if (status === 429) setQuotaRemaining(0);
       if (isPause) {
         setServicePause(msg);
         setMessages((prev) => [
@@ -369,7 +380,7 @@ export function AiTripAdvisor({
           <div className="font-mono text-[11px] tracking-[0.2em] text-teal">HK LIVE AI</div>
           <h2 className="mt-0.5 text-lg">出行AI</h2>
           {collapsed ? (
-            <p className="mt-1 text-xs text-muted">問天氣、路況或「東涌去何文田」</p>
+            <p className="mt-1 text-xs text-muted">問天氣、路況或同我傾下偈</p>
           ) : null}
         </div>
         <button

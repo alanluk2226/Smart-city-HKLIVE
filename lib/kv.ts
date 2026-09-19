@@ -32,6 +32,18 @@ export async function kvGetJson<T>(key: string): Promise<T | null> {
   }
 }
 
+/** Raw Redis GET (string or number result from INCR keys). */
+export async function kvGetRaw(key: string): Promise<string | null> {
+  if (!kvEnabled) return null;
+  try {
+    const json = await kvFetch(`get/${encodeURIComponent(key)}`);
+    if (json.result == null) return null;
+    return String(json.result);
+  } catch {
+    return null;
+  }
+}
+
 export async function kvSetJson(key: string, value: unknown, ttlSeconds: number): Promise<boolean> {
   if (!kvEnabled) return false;
   try {

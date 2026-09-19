@@ -1,5 +1,10 @@
 import { isGoogleMapsPaused } from "@/lib/google-maps-pause";
 
+/** True when env has a Maps key (ignores pause / dev OSM opt-out). */
+export function hasGoogleMapsApiKeyConfigured() {
+  return Boolean((process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "").trim());
+}
+
 function getGoogleMapsApiKey() {
   if (typeof window !== "undefined" && isGoogleMapsPaused()) return "";
   const key = (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "").trim();

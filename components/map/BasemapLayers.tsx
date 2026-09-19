@@ -4,8 +4,13 @@ import { useEffect, useState } from "react";
 import { TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useTheme } from "@/components/ThemeProvider";
+import { apiGet, apiPost } from "@/lib/client";
 import { pauseGoogleMaps } from "@/lib/google-maps-pause";
-import { getGoogleMapsApiKey, loadGoogleMapsApi } from "@/lib/googleMaps";
+import {
+  getGoogleMapsApiKey,
+  hasGoogleMapsApiKeyConfigured,
+  loadGoogleMapsApi,
+} from "@/lib/googleMaps";
 import {
   GOOGLE_DARK_STYLES,
   OSM_BASEMAP_ATTR,
@@ -16,6 +21,12 @@ import type { ThemeMode } from "@/lib/theme";
 
 const GOOGLE_MUTANT_SCRIPT =
   "https://unpkg.com/leaflet.gridlayer.googlemutant@0.16.0/dist/Leaflet.GoogleMutant.js";
+
+type MapsQuotaStatus = {
+  paused: boolean;
+  reason: string;
+  retryAfterSec: number;
+};
 
 /** Standard OSM — free, detailed; same tiles in light/dark (no API key). */
 function OsmBasemap() {
@@ -93,6 +104,23 @@ async function createGoogleMutant(theme: ThemeMode): Promise<MutantLayer> {
   return new Ctor(options);
 }
 
+function applyQuotaPause(status: MapsQuotaStatus) {
+  if (!status.paused) return;
+  pauseGoogleMaps(
+    status.reason || "本月 Google 地圖免費額度將盡，已改用免費 OpenStreetMap。",
+    Math.max(60_000, (status.retryAfterSec || 86_400) * 1000),
+  );
+}
+
+async function recordSuccessfulGoogleLoad() {
+  try {
+    const status = await apiPost<MapsQuotaStatus>("/api/maps/quota", {});
+    applyQuotaPause(status);
+  } catch {
+    /* counting is best-effort; map already shown */
+  }
+}
+
 function GoogleBasemap({ theme }: { theme: ThemeMode }) {
   const map = useMap();
   const [failed, setFailed] = useState(false);
@@ -106,6 +134,7 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
     let cancelled = false;
     let observer: MutationObserver | null = null;
     let timer: number | undefined;
+    let recorded = false;
 
     const fail = (hint: string, err?: unknown) => {
       if (cancelled) return;
@@ -138,6 +167,11 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
         mutant.addGoogleLayer("TransitLayer");
         mutant.addTo(map);
         layer = mutant;
+
+        if (!recorded) {
+          recorded = true;
+          void recordSuccessfulGoogleLoad();
+        }
 
         timer = window.setTimeout(() => {
           if (cancelled) return;
@@ -200,13 +234,48 @@ function GoogleBasemap({ theme }: { theme: ThemeMode }) {
 }
 
 /**
- * Google roadmap (+ transit, theme-styled) when API key is set;
- * otherwise free OSM (same detailed tiles in light/dark — Carto free dark tiles now need a key).
+ * Google roadmap (+ transit, theme-styled) when API key is set and monthly free
+ * budget is under 98%; otherwise free OSM.
  */
 export function BasemapLayers() {
   const { theme } = useTheme();
-  const key = getGoogleMapsApiKey();
-  if (key) return <GoogleBasemap theme={theme} />;
+  const [mode, setMode] = useState<"pending" | "google" | "osm">(() => {
+    if (!hasGoogleMapsApiKeyConfigured()) return "osm";
+    if (typeof window !== "undefined" && !getGoogleMapsApiKey()) return "osm";
+    return "pending";
+  });
+
+  useEffect(() => {
+    if (mode !== "pending") return;
+    let cancelled = false;
+
+    void (async () => {
+      if (!getGoogleMapsApiKey()) {
+        if (!cancelled) setMode("osm");
+        return;
+      }
+      try {
+        const status = await apiGet<MapsQuotaStatus>("/api/maps/quota");
+        if (cancelled) return;
+        if (status.paused) {
+          applyQuotaPause(status);
+          setMode("osm");
+          return;
+        }
+        setMode("google");
+      } catch {
+        // Quota check failed — still try Google; auth/error path falls back to OSM.
+        if (!cancelled) setMode(getGoogleMapsApiKey() ? "google" : "osm");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  if (mode === "google") return <GoogleBasemap theme={theme} />;
+  if (mode === "osm") return <OsmBasemap />;
   return <OsmBasemap />;
 }
 

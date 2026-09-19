@@ -1,3 +1,5 @@
+import { recordGeminiApiCall, secondsUntilHkMidnight, tripAiGlobalCircuit } from "@/lib/ai-quota";
+
 /** Prefer one strong flash model, then one lite fallback — keep total under Vercel maxDuration. */
 const MODELS = ["gemini-3.7-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"];
 
@@ -47,6 +49,13 @@ export function getGeminiPauseState(): {
 export function pauseGemini(reason: string, ms = DEFAULT_QUOTA_PAUSE_MS) {
   pausedUntil = Date.now() + ms;
   pauseReason = reason;
+}
+
+/** Pause until next Hong Kong midnight (daily free-tier reset). */
+export async function pauseGeminiUntilTomorrow(reason: string) {
+  const ms = secondsUntilHkMidnight() * 1000;
+  pauseGemini(reason, ms);
+  await tripAiGlobalCircuit(reason);
 }
 
 function assertGeminiAvailable() {
@@ -131,14 +140,18 @@ async function generateContent(input: {
     const message = json.error?.message || `Gemini HTTP ${res.status}`;
     if (isQuotaGeminiError(message, res.status)) {
       const reason =
-        "Gemini API 配額或速率已用盡，已暫時暫停 AI 功能。請稍後再試，或改用交通搜尋頁查路線。";
-      pauseGemini(reason);
+        "出行 AI 今日 Gemini 配額已用盡，已暫停至明日香港時間 0:00 再開放。請改用交通搜尋頁查路線。";
+      await pauseGeminiUntilTomorrow(reason);
       throw new Error(`GEMINI_PAUSED: ${reason}`);
     }
     throw new Error(message);
   }
   const text = extractText(json);
   if (!text) throw new Error("Gemini 沒有回傳內容");
+  const recorded = await recordGeminiApiCall();
+  if (recorded.tripped) {
+    pauseGemini(recorded.reason, secondsUntilHkMidnight() * 1000);
+  }
   return text;
 }
 
