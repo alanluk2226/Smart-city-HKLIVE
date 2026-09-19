@@ -168,6 +168,7 @@ export function FerryApp() {
   });
   const [dataHubId, setDataHubId] = useState<string | null>(null);
   const [hubPickerOpen, setHubPickerOpen] = useState(false);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
   const [destFilter, setDestFilter] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("dest")?.trim() || null;
@@ -379,36 +380,55 @@ export function FerryApp() {
         </div>
       ) : null}
 
-      <p className="shrink-0 px-4 py-1.5 text-center text-xs text-muted md:px-0">
-        先揀目的地，再睇下一班同碼頭編號
-      </p>
-
-      <div
-        ref={mapSectionRef}
-        className="relative shrink-0 max-md:h-[42%] max-md:min-h-[13rem] md:h-[20rem]"
-      >
-        <StopStreetMapDynamic
-          stops={mapStops}
-          selectedId={hubId}
-          onSelect={(s) => pickHub(s.stopId)}
-          accent="teal"
-          showRouteLine={false}
-          routeLinks={mapRouteLinks}
-          routeLinkColor="#3ee0c5"
-          heightClass="h-full"
-          className="h-full max-md:rounded-none max-md:border-x-0"
-          popupWalkButton={false}
-        />
+      <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-1.5 md:px-0">
+        <p className="text-xs text-muted">先揀目的地，再睇下一班同碼頭編號</p>
+        <button
+          type="button"
+          onClick={() => setMapCollapsed((v) => !v)}
+          className="shrink-0 rounded-xl border border-line px-3 py-1.5 text-xs text-muted hover:border-teal hover:text-ink"
+          aria-pressed={mapCollapsed}
+        >
+          {mapCollapsed ? "顯示地圖" : "收起地圖"}
+        </button>
       </div>
 
-      <div className="relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-2xl border border-line bg-card shadow-[0_-8px_24px_rgba(0,0,0,.25)] max-md:-mt-3 md:mt-0 md:rounded-2xl">
+      {!mapCollapsed ? (
+        <div
+          ref={mapSectionRef}
+          className="relative shrink-0 max-md:h-[42%] max-md:min-h-[13rem] md:h-[20rem]"
+        >
+          <StopStreetMapDynamic
+            stops={mapStops}
+            selectedId={hubId}
+            onSelect={(s) => pickHub(s.stopId)}
+            accent="teal"
+            showRouteLine={false}
+            routeLinks={mapRouteLinks}
+            routeLinkColor="#3ee0c5"
+            heightClass="h-full"
+            className="h-full max-md:rounded-none max-md:border-x-0"
+            popupWalkButton={false}
+          />
+        </div>
+      ) : (
+        <div ref={mapSectionRef} className="hidden" aria-hidden />
+      )}
+
+      <div
+        className={`relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-2xl border border-line bg-card shadow-[0_-8px_24px_rgba(0,0,0,.25)] md:mt-0 md:rounded-2xl ${
+          mapCollapsed ? "max-md:mt-0 max-md:rounded-none max-md:border-x-0" : "max-md:-mt-3"
+        }`}
+      >
         <div className="sticky top-0 z-10 space-y-2 border-b border-line bg-card/95 px-4 py-3 backdrop-blur">
           <div className="flex items-start gap-2">
             <button
               type="button"
               onClick={() => {
                 if (!hubPickerOpen) {
-                  mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  setMapCollapsed(false);
+                  requestAnimationFrame(() => {
+                    mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
                 }
                 setHubPickerOpen((open) => !open);
               }}
