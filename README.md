@@ -13,8 +13,9 @@ npm run dev
 
 可選：複製 `.env.example` 為 `.env.local`，填入：
 
-- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`（Maps JavaScript API）。有 key 時街圖用 Google；否則用 OpenStreetMap。
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`（Maps JavaScript API）。有 key 時街圖用 Google；否則用 OpenStreetMap。用量接近每月免費額度（預設 10,000 次 Dynamic Maps load 的 98%）會自動改用 OSM，至下個月太平洋時間重置。可設 `GOOGLE_MAPS_MONTHLY_BUDGET` 對齊 Cloud Console。本機預設 OSM，要試 Google 可加 `NEXT_PUBLIC_USE_GOOGLE_MAPS=1`。
 - `GEMINI_API_KEY`（主控台出行助手；伺服器呼叫 Gemini 做多輪對話。問「點去」時路線／車費仍由本站計算，AI 只寫天氣評語）。冇 key 時點去問題仍可顯示港鐵等計算方案。Vercel 部署時 Functions 必須在 `hnd1` 東京（見 `vercel.json`）；香港 `hkg1` 會被 Gemini 拒絕，美國東部則對巴士 API 延遲較高。
+- `GEMINI_DAILY_BUDGET`（可選；預設 `250`）。專案估算嘅 Gemini 免費日配額（RPD）；用量達 98% 會全日暫停出行 AI，至香港時間翌日 0:00。每日另限 20 次免費提問（用盡後提示）。
 - `OSRM_BASE_URL`（自架 OSRM；預設用公共 demo server）。巴士／小巴地圖的行車線靠佢由站點順序計出。
 - `KV_REST_API_URL` + `KV_REST_API_TOKEN`（或 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`）：行車線算好後長期存落 KV，第二次有人開同一條線即時出圖。冇設定時改用 Next.js data cache。
 

@@ -1,4 +1,5 @@
 import { jsonError, jsonOk } from "@/lib/api";
+import { consumeAiQuestion, secondsUntilHkMidnight } from "@/lib/ai-quota";
 import { clientIp, pruneRateLimits, rateLimitShared } from "@/lib/rate-limit";
 import { runAssistant } from "@/lib/providers/ai-assistant";
 import type { AiAssistantChatTurn } from "@/lib/types";
@@ -12,9 +13,8 @@ export const maxDuration = 45;
  */
 export const preferredRegion = ["hnd1"];
 
-/** Soft per-IP caps so free Gemini quota is not burned by scrape/abuse. */
-const AI_LIMIT_PER_MIN = 8;
-const AI_LIMIT_PER_HOUR = 40;
+/** Burst cap only — daily free questions are enforced in `consumeAiQuestion`. */
+const AI_LIMIT_PER_MIN = 6;
 /** Cap prompt size so a single request cannot dump megabytes into Gemini. */
 const MAX_TURN_CHARS = 1_500;
 const MAX_TURNS = 16;
@@ -53,17 +53,12 @@ export async function POST(request: Request) {
       { retryAfter: perMin.retryAfterSec },
     );
   }
-  const perHour = await rateLimitShared({
-    key: `ai:hour:${ip}`,
-    limit: AI_LIMIT_PER_HOUR,
-    windowMs: 60 * 60_000,
-  });
-  if (!perHour.ok) {
-    return jsonError(
-      `AI 今日／本小時用量已達上限，請約 ${Math.ceil(perHour.retryAfterSec / 60)} 分鐘後再試。`,
-      429,
-      { retryAfter: perHour.retryAfterSec },
-    );
+
+  const dayQuota = await consumeAiQuestion(ip);
+  if (!dayQuota.ok) {
+    return jsonError(dayQuota.message, dayQuota.status, {
+      retryAfter: dayQuota.retryAfterSec,
+    });
   }
 
   let body: {
@@ -108,14 +103,21 @@ export async function POST(request: Request) {
       to: to || undefined,
       lastTrip,
     });
-    return jsonOk(result);
+    return jsonOk({
+      ...result,
+      quota: {
+        remaining: dayQuota.remaining,
+        limit: dayQuota.limit,
+      },
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "無法回應";
     if (/GEMINI_PAUSED|quota|RESOURCE_EXHAUSTED|429|rate.?limit/i.test(msg)) {
+      const cleaned = msg.replace(/^GEMINI_PAUSED:\s*/i, "").trim();
       return jsonError(
-        "AI 配額暫時用盡，請稍後再試，或改用交通搜尋頁查路線。",
+        cleaned || "AI 配額暫時用盡，請明日再試，或改用交通搜尋頁查路線。",
         503,
-        { retryAfter: 900 },
+        { retryAfter: secondsUntilHkMidnight() },
       );
     }
     // Never echo raw upstream Gemini / network errors to the browser.

@@ -48,13 +48,13 @@ export function RacecourseDialog({
   const open = data?.open ?? false;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+    <div className="fixed inset-0 z-[1200] flex items-end sm:items-center justify-center sm:p-4">
       <button type="button" className="absolute inset-0 bg-black/55" aria-label="關閉馬場站說明" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="rac-dialog-title"
-        className="relative z-10 flex max-h-[85vh] w-full flex-col overflow-y-auto rounded-t-2xl border border-line bg-card p-4 shadow-2xl sm:max-w-lg sm:rounded-2xl"
+        className="relative z-10 flex max-h-[min(90dvh,calc(100dvh-0.5rem))] w-full flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-line bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-lg sm:rounded-2xl"
       >
         <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/15 sm:hidden" />
         <div className="flex items-start justify-between gap-3">
