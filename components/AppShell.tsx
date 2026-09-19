@@ -127,10 +127,6 @@ export function AppShell({
       </main>
       <footer className="hidden border-t border-line px-4 py-4 text-xs text-muted md:block">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
-          <span>由 Alan Luk 建立與維護</span>
-          <span className="opacity-40" aria-hidden>
-            ·
-          </span>
           <Link href="/settings#sources" className="hover:text-ink hover:underline">
             資料來源
           </Link>

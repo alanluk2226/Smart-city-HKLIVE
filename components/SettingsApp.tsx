@@ -222,6 +222,11 @@ export function SettingsApp() {
             </p>
           </div>
         </section>
+
+        <section id="about" className="scroll-mt-28 rounded-2xl border border-line bg-card p-4 sm:p-5">
+          <h2 className="text-base font-medium">關於</h2>
+          <p className="mt-1 text-sm text-muted">由 Alan Luk 建立與維護。</p>
+        </section>
       </div>
     </AppShell>
   );
