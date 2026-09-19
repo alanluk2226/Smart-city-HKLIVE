@@ -61,9 +61,14 @@ const REPAIR_BUDGET_MS = 16_000;
  * Whole-corridor ceiling, kept under the route handler's `maxDuration` so a
  * slow OSRM degrades to straight chords instead of a gateway timeout.
  */
-const TOTAL_BUDGET_MS = 24_000;
+const TOTAL_BUDGET_MS = 28_000;
 /** Polyline simplification tolerance — keeps cached geometry small. */
 const SIMPLIFY_EPSILON_M = 5;
+/**
+ * Long corridors (tram mainline ~74 stops) are split so each OSRM call stays
+ * under URL / timeout limits. Overlap one stop so chunks stitch cleanly.
+ */
+const CORRIDOR_CHUNK = 28;
 
 export async function walkRoute(
   fromLat: number,
@@ -315,12 +320,13 @@ async function repairLeg(
 }
 
 /**
- * Corridor through ordered bus/minibus stops.
+ * Corridor through ordered bus/minibus/tram stops.
  *
  * Transport Department open data publishes stop sequences + coordinates, but
  * no official road polylines (TD GTFS has no shapes.txt), so the shape is
  * derived from OSRM:
- * - one multi-waypoint driving request covers the whole route
+ * - one multi-waypoint driving request covers a chunk of the route
+ * - long lines (tram) are split into overlapping chunks and stitched
  * - legs that loop far beyond the straight stop-to-stop distance are retried
  *   against alternative snap points (fixes flyover / tunnel mis-snapping)
  * - legs that still loop fall back to a straight chord
@@ -346,11 +352,97 @@ export async function driveRouteThrough(
     };
   }
 
+  if (cleaned.length <= CORRIDOR_CHUNK) {
+    return driveRouteChunk(cleaned, bidirectional, startedAt + TOTAL_BUDGET_MS);
+  }
+
+  // Overlapping windows: [0..27], [27..54], [54..end] — shared stop is the joint.
+  const chunks: Pt[][] = [];
+  for (let start = 0; start < cleaned.length - 1; start += CORRIDOR_CHUNK - 1) {
+    const end = Math.min(cleaned.length, start + CORRIDOR_CHUNK);
+    chunks.push(cleaned.slice(start, end));
+    if (end >= cleaned.length) break;
+  }
+
+  const points: [number, number][] = [];
+  let distanceMeters = 0;
+  let durationMinutes = 0;
+  let roadLegs = 0;
+  let straightLegs = 0;
+
+  for (let c = 0; c < chunks.length; c++) {
+    const budgetLeft = startedAt + TOTAL_BUDGET_MS - Date.now();
+    if (budgetLeft < 2_000) {
+      // Out of time — finish with stop-to-stop chords so the line still reaches the tip.
+      const last = points[points.length - 1];
+      let startIdx = 0;
+      if (last) {
+        const hit = cleaned.findIndex(
+          (s) => Math.abs(s.lat - last[0]) < 1e-5 && Math.abs(s.lng - last[1]) < 1e-5,
+        );
+        if (hit >= 0) startIdx = hit;
+      }
+      for (let i = startIdx + 1; i < cleaned.length; i++) {
+        const seg = straightSegment(cleaned[i - 1], cleaned[i]);
+        straightLegs++;
+        distanceMeters += seg.distanceMeters;
+        durationMinutes += seg.durationMinutes;
+        for (const p of seg.points) {
+          const prev = points[points.length - 1];
+          if (!prev || prev[0] !== p[0] || prev[1] !== p[1]) points.push(p);
+        }
+      }
+      break;
+    }
+
+    const part = await driveRouteChunk(chunks[c], bidirectional, Date.now() + budgetLeft);
+    roadLegs += part.roadLegs ?? 0;
+    straightLegs += part.straightLegs ?? 0;
+    distanceMeters += part.distanceMeters;
+    durationMinutes += part.durationMinutes;
+
+    const partPoints = part.points;
+    for (let i = 0; i < partPoints.length; i++) {
+      // Skip duplicate joint when appending later chunks.
+      if (c > 0 && i === 0) continue;
+      const p = partPoints[i];
+      const last = points[points.length - 1];
+      if (!last || last[0] !== p[0] || last[1] !== p[1]) points.push(p);
+    }
+  }
+
+  if (points.length < 2) {
+    return {
+      points: cleaned.map((s) => [s.lat, s.lng] as [number, number]),
+      distanceMeters,
+      durationMinutes: Math.max(1, durationMinutes),
+      fallback: true,
+      computedAt: Date.now(),
+    };
+  }
+
+  return {
+    points: simplifyPath(points, SIMPLIFY_EPSILON_M),
+    distanceMeters,
+    durationMinutes: Math.max(1, durationMinutes),
+    fallback: roadLegs === 0,
+    mixed: roadLegs > 0 && straightLegs > 0,
+    roadLegs,
+    straightLegs,
+    computedAt: Date.now(),
+  };
+}
+
+async function driveRouteChunk(
+  cleaned: Pt[],
+  bidirectional: boolean,
+  absoluteDeadline: number,
+): Promise<DriveRoute> {
   const segments =
     (await osrmThroughLegs(cleaned, bidirectional)) ??
     cleaned.slice(1).map((_, i) => ({ ...straightSegment(cleaned[i], cleaned[i + 1]), straight: true }));
 
-  const deadline = Math.min(Date.now() + REPAIR_BUDGET_MS, startedAt + TOTAL_BUDGET_MS);
+  const deadline = Math.min(Date.now() + REPAIR_BUDGET_MS, absoluteDeadline);
   const broken = segments
     .map((seg, i) => (seg.straight ? i : -1))
     .filter((i) => i >= 0)
@@ -393,6 +485,8 @@ export async function driveRouteThrough(
       distanceMeters,
       durationMinutes: Math.max(1, durationMinutes),
       fallback: true,
+      roadLegs,
+      straightLegs,
       computedAt: Date.now(),
     };
   }
