@@ -34,8 +34,8 @@ const STEPS: Step[] = [
   },
   {
     title: "我的收藏",
-    body: "巴士、港鐵、出行AI 方案撳星之後會出現喺呢度；完整列表喺底欄「收藏」。",
-    targets: ['[data-tour="favorites"]', '[data-tour="favorites-nav"]'],
+    body: "巴士、港鐵、出行AI 方案撳星之後會出現喺呢度；完整列表喺「收藏」頁。",
+    targets: ['#favorites', '[data-tour="home-favorites"]'],
     prefer: "bottom",
     ensureHome: true,
   },
@@ -82,6 +82,27 @@ function findTarget(selectors: string[]): HTMLElement | null {
   return null;
 }
 
+function stickyHeaderHeight(): number {
+  const header = document.querySelector("header");
+  if (!header) return 0;
+  return header.getBoundingClientRect().height;
+}
+
+/** Instant scroll so getBoundingClientRect is stable (avoids mid-smooth-scroll coords). */
+function scrollTargetIntoView(el: HTMLElement) {
+  const headerH = stickyHeaderHeight();
+  const rect = el.getBoundingClientRect();
+  const margin = 20;
+  const viewTop = headerH + margin;
+  const viewBottom = window.innerHeight - margin;
+  if (rect.top >= viewTop && rect.bottom <= viewBottom) return;
+
+  const absoluteTop = window.scrollY + rect.top;
+  const nextTop = Math.max(0, absoluteTop - headerH - margin);
+  // Classic overload is always instant (avoids mid-smooth-scroll stale rects).
+  window.scrollTo(window.scrollX, nextTop);
+}
+
 function pickPlacement(
   anchor: Anchor,
   prefer: Placement,
@@ -102,7 +123,7 @@ function pickPlacement(
     right: CARD_W + GAP,
   };
   if (space[prefer] >= need[prefer] * 0.7) return prefer;
-  const order: Placement[] = ["bottom", "top", "left", "right"];
+  const order: Placement[] = ["bottom", "top", "right", "left"];
   return order.find((p) => space[p] >= need[p] * 0.55) ?? prefer;
 }
 
@@ -151,11 +172,22 @@ function caretOffset(
     : { top: `${y}px`, left: "-6px" };
 }
 
+function sameAnchor(a: Anchor | null, b: Anchor): boolean {
+  if (!a) return false;
+  return (
+    Math.abs(a.top - b.top) < 1 &&
+    Math.abs(a.left - b.left) < 1 &&
+    Math.abs(a.width - b.width) < 1 &&
+    Math.abs(a.height - b.height) < 1
+  );
+}
+
 export function OnboardingTour() {
   const titleId = useId();
   const router = useRouter();
   const pathname = usePathname();
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const targetRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -188,11 +220,13 @@ export function OnboardingTour() {
 
     let cancelled = false;
     let tries = 0;
-    let timer = 0;
-    let raf = 0;
+    const timers: number[] = [];
+    let ro: ResizeObserver | null = null;
 
     function applyRect(el: HTMLElement) {
+      if (cancelled || !el.isConnected) return;
       const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) return;
       const next: Anchor = {
         top: r.top,
         left: r.left,
@@ -200,7 +234,7 @@ export function OnboardingTour() {
         height: r.height,
       };
       const h = cardRef.current?.offsetHeight || 180;
-      setAnchor(next);
+      setAnchor((prev) => (sameAnchor(prev, next) ? prev : next));
       setPlacement(pickPlacement(next, current.prefer ?? "bottom", h));
       if (cardRef.current) {
         const measured = cardRef.current.offsetHeight;
@@ -208,41 +242,62 @@ export function OnboardingTour() {
       }
     }
 
+    function attach(el: HTMLElement) {
+      targetRef.current = el;
+      scrollTargetIntoView(el);
+      // Forced reflow then measure — scrollTo(instant) is sync in modern browsers.
+      void document.body.offsetHeight;
+      applyRect(el);
+      // Sticky header / fonts / late layout can still shift — recheck shortly.
+      for (const ms of [50, 150, 320]) {
+        timers.push(
+          window.setTimeout(() => {
+            if (cancelled || targetRef.current !== el) return;
+            scrollTargetIntoView(el);
+            applyRect(el);
+          }, ms),
+        );
+      }
+      ro?.disconnect();
+      ro = new ResizeObserver(() => applyRect(el));
+      ro.observe(el);
+      const header = document.querySelector("header");
+      if (header) ro.observe(header);
+    }
+
     function measure() {
       if (cancelled) return;
       const el = findTarget(current.targets);
       if (!el) {
+        targetRef.current = null;
         setAnchor(null);
-        if (tries < 24) {
+        if (tries < 30) {
           tries += 1;
-          timer = window.setTimeout(measure, 80);
+          timers.push(window.setTimeout(measure, 80));
         }
         return;
       }
-      // Scroll first, then measure — otherwise spotlight sticks to stale coords.
-      el.scrollIntoView({ block: "nearest", inline: "nearest" });
-      raf = window.requestAnimationFrame(() => {
-        if (cancelled) return;
-        raf = window.requestAnimationFrame(() => {
-          if (cancelled) return;
-          applyRect(el);
-        });
-      });
+      attach(el);
     }
 
     measure();
-    const onResize = () => {
-      const el = findTarget(current.targets);
-      if (el) applyRect(el);
-    };
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onResize, true);
+
+    function onViewportChange() {
+      const el = targetRef.current ?? findTarget(current.targets);
+      if (!el) return;
+      targetRef.current = el;
+      applyRect(el);
+    }
+
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, true);
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
-      window.cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onResize, true);
+      targetRef.current = null;
+      for (const t of timers) window.clearTimeout(t);
+      ro?.disconnect();
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("scroll", onViewportChange, true);
     };
   }, [open, step, current, pathname]);
 
@@ -275,7 +330,6 @@ export function OnboardingTour() {
 
   return (
     <div className="fixed inset-0 z-[1300]" role="presentation">
-      {/* Four-pane dim so the hole stays clickable / not a dismiss trap */}
       {anchor ? (
         <>
           <div
