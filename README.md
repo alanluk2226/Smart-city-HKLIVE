@@ -2,6 +2,8 @@
 
 A Hong Kong city dashboard built on open government and operator data: live transit ETAs, weather and alerts, hospital A&E waits, Transport Department CCTV, carpark vacancy, and LCSD facilities.
 
+**Live:** [https://hk-city-live.vercel.app/](https://hk-city-live.vercel.app/)
+
 All browser traffic goes through **Next.js Route Handlers** so operators’ APIs are not called from the client (CORS, keys, and rate limits stay on the server).
 
 ---
@@ -24,13 +26,53 @@ Copy [`.env.example`](./.env.example) to `.env.local` and fill in optional keys 
 | Layer | Choice |
 |--------|--------|
 | App | **Next.js 16** (App Router), **React 19**, **TypeScript** |
-| UI | **Tailwind CSS 4** |
+| UI | **Tailwind CSS 4**; **light / dark** theme (`data-theme`, Settings + `localStorage`) |
 | Maps | **Leaflet** + **react-leaflet**; optional **Google Maps** tiles via `leaflet.googlemutant` / JS API loader; **OpenStreetMap** fallback |
 | Road geometry | **OSRM** (self-hosted or public demo) — stop sequences → polylines (operators do not publish shapes) |
 | AI assistant | **Google Gemini** (`generativelanguage.googleapis.com`) |
 | Analytics | Vercel Analytics + Speed Insights |
-| Deploy | **Vercel**, region **`hnd1` (Tokyo)** — see [`vercel.json`](./vercel.json) |
-| Optional cache | **Vercel KV** / **Upstash Redis** REST for long-lived corridor polylines |
+| Deploy | **Vercel** at [hk-city-live.vercel.app](https://hk-city-live.vercel.app/), region **`hnd1` (Tokyo)** — see [`vercel.json`](./vercel.json) |
+| Optional Redis | **Upstash Redis** (Vercel KV REST) — corridor polylines + quota counters; app works without it |
+
+---
+
+## Implementation patterns (worth knowing)
+
+These are real behaviours in the codebase — not a buzzword list.
+
+| Pattern | Where / why |
+|---------|-------------|
+| **Light / dark mode** | `lib/theme.ts` + `ThemeProvider`; preference in `localStorage` (`hk-live-theme`); boot script on `<html data-theme>` avoids flash. Toggle in **Settings**. |
+| **Server proxy APIs** | Every operator / gov call goes through `/api/*` so the browser never hits CORS-blocked endpoints. |
+| **Multi-layer cache** | In-memory TTL (`lib/cache.ts`) → Next.js `unstable_cache` → optional **Upstash/Vercel KV** for long-lived bus/tram **road corridors** and map/AI quota counters. Live ETA stays short-TTL. |
+| **Search** | `/api/search` fans out across KMB / Citybus / NLB / GMB / MTR Bus (+ static MTR stations) and returns normalized route/station hits. |
+| **Nearby** | `/api/nearby` phases (`fast` → `gmb` → `all`) so the map can show quick results before slower catalogs finish. |
+| **Lazy / dynamic maps** | Leaflet map bundles load via `next/dynamic` (`*MapDynamic.tsx`) so the main shell stays light until a map is needed. |
+| **Circuit breakers** | Google Maps monthly free-load budget and Gemini daily RPD can pause those features and fall back (OSM / local trip advice). |
+
+### Upstash / Vercel KV (the “database” on the dashboard)
+
+The Storage entry you see in Vercel (e.g. Upstash Redis / KV) is **not** a primary application database. There is no user account table.
+
+It is an **optional Redis-over-HTTP cache** (`lib/kv.ts`), typically wired with:
+
+- `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Vercel KV naming), or  
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
+
+**Used for:**
+
+1. Caching computed **OSRM corridor polylines** so the second visitor of the same bus/tram route gets an instant map line (~30 day TTL).  
+2. Shared **quota / rate-limit counters** (e.g. Maps monthly loads, AI daily budget) across serverless instances.
+
+If KV env vars are missing, the app still runs: corridors recompute via OSRM + Next cache; quotas fall back to in-process memory (less accurate across instances).
+
+Pull env from Vercel locally (after `vercel link`):
+
+```bash
+vercel env pull .env.development.local
+```
+
+You do **not** need `@upstash/redis` for this project — the code talks to the REST API with `fetch`.
 
 ---
 
@@ -56,6 +98,53 @@ Copy [`.env.example`](./.env.example) to `.env.local` and fill in optional keys 
 | `/settings` | Theme, preferences, credits |
 
 Dashboard chrome also surfaces **HKO warnings / special weather tips** and **TD special traffic news** (accidents, road closures, etc.).
+
+---
+
+## Open data & upstream APIs
+
+Sources are called **only from the server** (`lib/providers/*`). Names below are the organisations / feeds this app uses — URLs can change; the providers are the source of truth.
+
+### City services (hospitals, weather, traffic, venues, toilets, parking)
+
+| Module | Provider(s) | What we use |
+|--------|-------------|-------------|
+| **Weather** `/weather` | Hong Kong Observatory (HKO) open weather API; AQHI from data.gov.hk dashboard | Current conditions (`rhrread`), forecast (`flw` / `fnd`), warning summary (`warnsum`), special weather tips; radar & wind animation JSON/images |
+| **Alerts strip** | HKO + Transport Department (TD) | Warnings / SWT + TD special traffic news XML |
+| **Hospitals** `/health` | Hospital Authority (HA) open data | A&E waiting times; SOP waiting times |
+| **Traffic CCTV** `/traffic` | TD / data.gov.hk | Camera location XML + snapshot JPEGs (`tdcctv.data.one.gov.hk`) |
+| **Parking** `/parking` | data.gov.hk carpark API | Carpark info + live vacancy |
+| **Facilities** `/facilities` | Leisure and Cultural Services Department (LCSD) | Venue JSON (sports centres, courts, pools, beaches, …) |
+| **Toilets** `/facilities` | CSDI / FEHD FeatureServer | Public toilet locations |
+| **Taxi** `/transit/taxi` | TD CSV + CSDI FeatureServer | Call stations / related places |
+
+### Transit operators & transport open data
+
+| Domain | Upstream |
+|--------|----------|
+| **KMB / LWB** | `data.etabus.gov.hk` (routes, stops, ETA) |
+| **Citybus** | `rt.data.gov.hk` Citybus v2 |
+| **NLB** | `rt.data.gov.hk` NLB v2 |
+| **GMB** | `data.etagmb.gov.hk` |
+| **MTR / LRT ETA** | `rt.data.gov.hk` MTR schedule & LRT schedule |
+| **MTR Bus** | MTR opendata CSVs + `rt.data.gov.hk` MTR bus schedule |
+| **MTR fares / lines** | `opendata.mtr.com.hk` CSVs (lines, fares, AEL, light rail fares, bus routes/stops) |
+| **HSR** | `highspeed.mtr.com.hk` timetable / trip-planning JSON |
+| **Ferry** | Sun Ferry ETA + HKKF open ETA (+ static hub data in-repo) |
+| **Tram** | In-repo static line / headway (no live operator ETA API) |
+| **Route fares (extra)** | hkbus crawl JSON; TD `ROUTE_BUS.xml` / `ROUTE_GMB.xml` |
+| **Racecourse days** | HKJC racing fixture page (for Racecourse station service) |
+
+### Non-government helpers
+
+| Service | Role |
+|---------|------|
+| **OSRM** | Walk / drive polylines for map corridors |
+| **Google Maps JS** (optional) | Map tiles when key + quota allow |
+| **OpenStreetMap** | Default / fallback tiles |
+| **Gemini** | Dashboard trip assistant |
+
+Data remains under each publisher’s open-data / terms of use. This app aggregates and displays it; it is not an official government service.
 
 ---
 
