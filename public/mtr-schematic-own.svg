@@ -1,0 +1,588 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3513" height="2416" viewBox="0 0 3513 2416">
+  <title>HK LIVE 港鐵示意路綫圖</title>
+  <desc>Original HK LIVE blocky schematic. Not an official MTR map.</desc>
+  <defs>
+<pattern id="pat-SUN" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#F3982D"/><rect x="46.0" y="0" width="46.0" height="56" fill="#EB6EA5"/></pattern>
+<pattern id="pat-TSY" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00888E"/><rect x="46.0" y="0" width="46.0" height="56" fill="#F3982D"/></pattern>
+<pattern id="pat-LAK" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#F3982D"/><rect x="46.0" y="0" width="46.0" height="56" fill="#E60012"/></pattern>
+<pattern id="pat-NAC" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#F3982D"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+<pattern id="pat-KOW" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00888E"/><rect x="46.0" y="0" width="46.0" height="56" fill="#F3982D"/></pattern>
+<pattern id="pat-HOK" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00888E"/><rect x="46.0" y="0" width="46.0" height="56" fill="#F3982D"/></pattern>
+<pattern id="pat-MEF" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#E60012"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+<pattern id="pat-PRE" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#E60012"/><rect x="46.0" y="0" width="46.0" height="56" fill="#00A040"/></pattern>
+<pattern id="pat-MOK" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#E60012"/><rect x="46.0" y="0" width="46.0" height="56" fill="#00A040"/></pattern>
+<pattern id="pat-YMT" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#E60012"/><rect x="46.0" y="0" width="46.0" height="56" fill="#00A040"/></pattern>
+<pattern id="pat-ADM" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="23.0" height="56" fill="#E60012"/><rect x="23.0" y="0" width="23.0" height="56" fill="#0075C2"/><rect x="46.0" y="0" width="23.0" height="56" fill="#5EB7E8"/><rect x="69.0" y="0" width="23.0" height="56" fill="#CBD300"/></pattern>
+<pattern id="pat-CEN" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#E60012"/><rect x="46.0" y="0" width="46.0" height="56" fill="#0075C2"/></pattern>
+<pattern id="pat-NOP" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#0075C2"/><rect x="46.0" y="0" width="46.0" height="56" fill="#7E3C93"/></pattern>
+<pattern id="pat-QUB" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#0075C2"/><rect x="46.0" y="0" width="46.0" height="56" fill="#7E3C93"/></pattern>
+<pattern id="pat-HOM" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00A040"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+<pattern id="pat-KOT" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00A040"/><rect x="46.0" y="0" width="46.0" height="56" fill="#5EB7E8"/></pattern>
+<pattern id="pat-DIH" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00A040"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+<pattern id="pat-YAT" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00A040"/><rect x="46.0" y="0" width="46.0" height="56" fill="#7E3C93"/></pattern>
+<pattern id="pat-TIK" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#00A040"/><rect x="46.0" y="0" width="46.0" height="56" fill="#7E3C93"/></pattern>
+<pattern id="pat-TAW" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#5EB7E8"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+<pattern id="pat-HUH" patternUnits="userSpaceOnUse" width="92" height="56"><rect x="0.0" y="0" width="46.0" height="56" fill="#5EB7E8"/><rect x="46.0" y="0" width="46.0" height="56" fill="#9C2E00"/></pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="#bde3f2"/>
+<g>
+  <rect x="40" y="40" width="3433" height="1015" rx="48" ry="48" fill="#ffffff" opacity="0.96"/>
+  <text x="1475" y="120" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="42" font-weight="600" fill="#c5d0da">New Territories</text>
+</g>
+<g>
+  <rect x="40" y="676" width="984" height="1015" rx="48" ry="48" fill="#ffffff" opacity="0.96"/>
+  <text x="160" y="1160" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="42" font-weight="600" fill="#c5d0da">Lantau Island</text>
+</g>
+<g>
+  <rect x="913" y="870" width="1932" height="918" rx="48" ry="48" fill="#ffffff" opacity="0.96"/>
+  <text x="1686" y="1256" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="42" font-weight="600" fill="#c5d0da">Kowloon</text>
+</g>
+<g>
+  <rect x="422" y="1643" width="2740" height="676" rx="48" ry="48" fill="#ffffff" opacity="0.96"/>
+  <text x="1581" y="2174" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="42" font-weight="600" fill="#c5d0da">Hong Kong Island</text>
+</g>
+  <g id="lines" opacity="0.95"><polyline points="430,615 529,714 628,813 727,912 826,1011 1024,1011 1156,1011 1272,1011 1371,1011 1407,1143 1407,1275 1407,1407 1407,1523 1407,1638 1407,1737 1407,1843 1143,1843" fill="none" stroke="#E60012" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="397,1843 562,1843 727,1843 892,1843 1143,1843 1407,1843 1605,1843 1803,1843 1981,1843 2150,1843 2331,1843 2529,1843 2719,1843 2884,1843 3041,1843 3189,1981 3189,2133" fill="none" stroke="#0075C2" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1836,1519 1605,1473 1407,1407 1407,1275 1407,1143 1572,1143 1737,1143 1935,1143 2133,1143 2331,1143 2546,1143 2719,1242 2851,1358 2942,1457 2942,1605 3123,1605" fill="none" stroke="#00A040" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="2331,1843 2529,1843 2529,1704 2727,1605 2942,1605 3123,1605 3123,1440 3123,1308 3123,1176" fill="none" stroke="#7E3C93" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="3123,1605 3313,1605 3313,1737" fill="none" stroke="#7E3C93" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="239,945 239,747 239,467 392,467 557,467 698,533 830,665 929,830 1024,830 1024,1011 1024,1288 1259,1523 1259,1605 1341,1605 1341,1580 1605,1580 1605,1638 1605,1585 1737,1585 1605,1473 1902,1407 2100,1308 2232,1226 2331,1143 2034,1061 1737,991 1935,892 2133,810 2331,727 2529,661 2727,595 2900,529 3065,480 3263,430" fill="none" stroke="#9C2E00" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="348,1717 348,1539 536,1427 701,1163 701,1011 826,1011 1024,1011 1024,1288 1024,1440 1024,1605 1024,1770" fill="none" stroke="#F3982D" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="199,1407 199,1552 199,1427 417,1427 536,1308 701,1163 701,1308 912,1519 912,1605 1024,1605 1024,1770" fill="none" stroke="#00888E" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="536,1427 678,1295" fill="none" stroke="#EB6EA5" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1861,199 1737,199 1737,298 1737,397 1737,496 1737,595 1737,694 1737,793 1737,892 1737,991 1737,1143 1737,1275 1737,1585 1737,1754 1605,1754 1407,1843" fill="none" stroke="#5EB7E8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1737,298 1523,298 1523,239" fill="none" stroke="#5EB7E8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1737,694 1919,793 1737,892" fill="none" stroke="#5EB7E8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1407,1843 1407,1935 1556,2014 1407,2150 1193,2216 978,2216" fill="none" stroke="#CBD300" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="walk-links"><line x1="1024" y1="1770" x2="1143" y2="1843" stroke="#64748b" stroke-width="4" stroke-dasharray="10 8" opacity="0.7"/>
+<line x1="1024" y1="1605" x2="1259" y2="1605" stroke="#64748b" stroke-width="4" stroke-dasharray="10 8" opacity="0.7"/>
+<line x1="1605" y1="1638" x2="1407" y2="1638" stroke="#64748b" stroke-width="4" stroke-dasharray="10 8" opacity="0.7"/></g>
+  <g id="stations"><g id="st-AWE" data-code="AWE" transform="translate(153 1379)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00888E" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">博覽館</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">AsiaWorld-Expo</text>
+</g>
+<g id="st-AIR" data-code="AIR" transform="translate(153 1524)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00888E" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">機場</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Airport</text>
+</g>
+<g id="st-TUC" data-code="TUC" transform="translate(302 1689)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#F3982D" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">東涌</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tung Chung</text>
+</g>
+<g id="st-SUN" data-code="SUN" transform="translate(490 1399)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-SUN)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">欣澳</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sunny Bay</text>
+</g>
+<g id="st-DIS" data-code="DIS" transform="translate(632 1267)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#EB6EA5" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">迪士尼</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Disneyland</text>
+</g>
+<g id="st-TSY" data-code="TSY" transform="translate(655 1135)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-TSY)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">青衣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tsing Yi</text>
+</g>
+<g id="st-LAK" data-code="LAK" transform="translate(780 983)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-LAK)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">荔景</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Lai King</text>
+</g>
+<g id="st-NAC" data-code="NAC" transform="translate(978 1260)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-NAC)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">南昌</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Nam Cheong</text>
+</g>
+<g id="st-OLY" data-code="OLY" transform="translate(978 1412)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#F3982D" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">奧運</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Olympic</text>
+</g>
+<g id="st-KOW" data-code="KOW" transform="translate(978 1577)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-KOW)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">九龍</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kowloon</text>
+</g>
+<g id="st-HOK" data-code="HOK" transform="translate(978 1742)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-HOK)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">香港</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Hong Kong</text>
+</g>
+<g id="st-TSW" data-code="TSW" transform="translate(384 587)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">荃灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tsuen Wan</text>
+</g>
+<g id="st-TWH" data-code="TWH" transform="translate(483 686)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">大窩口</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tai Wo Hau</text>
+</g>
+<g id="st-KWH" data-code="KWH" transform="translate(582 785)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">葵興</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kwai Hing</text>
+</g>
+<g id="st-KWF" data-code="KWF" transform="translate(681 884)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">葵芳</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kwai Fong</text>
+</g>
+<g id="st-MEF" data-code="MEF" transform="translate(978 983)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-MEF)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">美孚</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Mei Foo</text>
+</g>
+<g id="st-LCK" data-code="LCK" transform="translate(1110 983)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">荔枝角</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Lai Chi Kok</text>
+</g>
+<g id="st-CSW" data-code="CSW" transform="translate(1226 983)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">長沙灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Cheung Sha Wan</text>
+</g>
+<g id="st-SSP" data-code="SSP" transform="translate(1325 983)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">深水埗</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sham Shui Po</text>
+</g>
+<g id="st-PRE" data-code="PRE" transform="translate(1361 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-PRE)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">太子</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Prince Edward</text>
+</g>
+<g id="st-MOK" data-code="MOK" transform="translate(1361 1247)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-MOK)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">旺角</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Mong Kok</text>
+</g>
+<g id="st-YMT" data-code="YMT" transform="translate(1361 1379)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-YMT)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">油麻地</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Yau Ma Tei</text>
+</g>
+<g id="st-JOR" data-code="JOR" transform="translate(1361 1495)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">佐敦</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Jordan</text>
+</g>
+<g id="st-TST" data-code="TST" transform="translate(1361 1610)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#E60012" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">尖沙咀</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tsim Sha Tsui</text>
+</g>
+<g id="st-ADM" data-code="ADM" transform="translate(1361 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-ADM)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">金鐘</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Admiralty</text>
+</g>
+<g id="st-CEN" data-code="CEN" transform="translate(1097 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-CEN)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">中環</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Central</text>
+</g>
+<g id="st-KET" data-code="KET" transform="translate(351 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" font-weight="700" fill="#ffffff">堅尼地城</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kennedy Town</text>
+</g>
+<g id="st-HKU" data-code="HKU" transform="translate(516 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" font-weight="700" fill="#ffffff">香港大學</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">HKU</text>
+</g>
+<g id="st-SYP" data-code="SYP" transform="translate(681 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">西營盤</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sai Ying Pun</text>
+</g>
+<g id="st-SHW" data-code="SHW" transform="translate(846 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">上環</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sheung Wan</text>
+</g>
+<g id="st-WAC" data-code="WAC" transform="translate(1559 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">灣仔</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Wan Chai</text>
+</g>
+<g id="st-CAB" data-code="CAB" transform="translate(1757 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">銅鑼灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Causeway Bay</text>
+</g>
+<g id="st-TIH" data-code="TIH" transform="translate(1935 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">天后</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tin Hau</text>
+</g>
+<g id="st-FOH" data-code="FOH" transform="translate(2104 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">炮台山</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Fortress Hill</text>
+</g>
+<g id="st-NOP" data-code="NOP" transform="translate(2285 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-NOP)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">北角</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">North Point</text>
+</g>
+<g id="st-QUB" data-code="QUB" transform="translate(2483 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-QUB)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">鰂魚涌</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Quarry Bay</text>
+</g>
+<g id="st-TAK" data-code="TAK" transform="translate(2673 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">太古</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tai Koo</text>
+</g>
+<g id="st-SWH" data-code="SWH" transform="translate(2838 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">西灣河</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sai Wan Ho</text>
+</g>
+<g id="st-SKW" data-code="SKW" transform="translate(2995 1815)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">筲箕灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Shau Kei Wan</text>
+</g>
+<g id="st-HFC" data-code="HFC" transform="translate(3143 1953)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">杏花邨</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Heng Fa Chuen</text>
+</g>
+<g id="st-CHW" data-code="CHW" transform="translate(3143 2105)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#0075C2" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">柴灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Chai Wan</text>
+</g>
+<g id="st-WHA" data-code="WHA" transform="translate(1790 1491)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">黃埔</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Whampoa</text>
+</g>
+<g id="st-HOM" data-code="HOM" transform="translate(1559 1445)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-HOM)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">何文田</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Ho Man Tin</text>
+</g>
+<g id="st-SKM" data-code="SKM" transform="translate(1526 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">石硤尾</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Shek Kip Mei</text>
+</g>
+<g id="st-KOT" data-code="KOT" transform="translate(1691 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-KOT)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">九龍塘</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kowloon Tong</text>
+</g>
+<g id="st-LOF" data-code="LOF" transform="translate(1889 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">樂富</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Lok Fu</text>
+</g>
+<g id="st-WTS" data-code="WTS" transform="translate(2087 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">黃大仙</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Wong Tai Sin</text>
+</g>
+<g id="st-DIH" data-code="DIH" transform="translate(2285 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-DIH)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">鑽石山</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Diamond Hill</text>
+</g>
+<g id="st-CHT" data-code="CHT" transform="translate(2500 1115)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">彩虹</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Choi Hung</text>
+</g>
+<g id="st-LAT" data-code="LAT" transform="translate(2673 1214)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">九龍灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kowloon Bay</text>
+</g>
+<g id="st-KOB" data-code="KOB" transform="translate(2805 1330)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">牛頭角</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Ngau Tau Kok</text>
+</g>
+<g id="st-NTW" data-code="NTW" transform="translate(2896 1429)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#00A040" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">觀塘</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kwun Tong</text>
+</g>
+<g id="st-YAT" data-code="YAT" transform="translate(2896 1577)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-YAT)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">油塘</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Yau Tong</text>
+</g>
+<g id="st-TIK" data-code="TIK" transform="translate(3077 1577)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-TIK)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">調景嶺</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tiu Keng Leng</text>
+</g>
+<g id="st-TKO" data-code="TKO" transform="translate(3077 1412)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#7E3C93" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">將軍澳</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tseung Kwan O</text>
+</g>
+<g id="st-HAH" data-code="HAH" transform="translate(3077 1280)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#7E3C93" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">坑口</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Hang Hau</text>
+</g>
+<g id="st-POA" data-code="POA" transform="translate(3077 1148)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#7E3C93" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">寶琳</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Po Lam</text>
+</g>
+<g id="st-LHP" data-code="LHP" transform="translate(3267 1709)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#7E3C93" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">康城</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">LOHAS Park</text>
+</g>
+<g id="st-LOW" data-code="LOW" transform="translate(1815 171)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">羅湖</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Lo Wu</text>
+</g>
+<g id="st-LMC" data-code="LMC" transform="translate(1477 211)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">落馬洲</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Lok Ma Chau</text>
+</g>
+<g id="st-SHS" data-code="SHS" transform="translate(1691 270)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">上水</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sheung Shui</text>
+</g>
+<g id="st-FAN" data-code="FAN" transform="translate(1691 369)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">粉嶺</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Fanling</text>
+</g>
+<g id="st-TWO" data-code="TWO" transform="translate(1691 468)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">太和</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tai Wo</text>
+</g>
+<g id="st-TAP" data-code="TAP" transform="translate(1691 567)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">大埔墟</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tai Po Market</text>
+</g>
+<g id="st-UNI" data-code="UNI" transform="translate(1691 666)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">大學</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">University</text>
+</g>
+<g id="st-FOT" data-code="FOT" transform="translate(1691 765)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">火炭</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Fo Tan</text>
+</g>
+<g id="st-RAC" data-code="RAC" transform="translate(1873 765)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">馬場</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Racecourse</text>
+</g>
+<g id="st-SHT" data-code="SHT" transform="translate(1691 864)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">沙田</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sha Tin</text>
+</g>
+<g id="st-TAW" data-code="TAW" transform="translate(1691 963)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-TAW)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">大圍</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tai Wai</text>
+</g>
+<g id="st-MKK" data-code="MKK" transform="translate(1691 1247)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">旺角東</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Mong Kok East</text>
+</g>
+<g id="st-HUH" data-code="HUH" transform="translate(1691 1557)">
+  <rect width="92" height="56" rx="10" ry="10" fill="url(#pat-HUH)" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">紅磡</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Hung Hom</text>
+</g>
+<g id="st-EXC" data-code="EXC" transform="translate(1559 1726)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#5EB7E8" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">會展</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Exhibition</text>
+</g>
+<g id="st-TUM" data-code="TUM" transform="translate(193 917)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">屯門</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tuen Mun</text>
+</g>
+<g id="st-SIH" data-code="SIH" transform="translate(193 719)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">兆康</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Siu Hong</text>
+</g>
+<g id="st-TIS" data-code="TIS" transform="translate(346 439)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">天水圍</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Tin Shui Wai</text>
+</g>
+<g id="st-LOP" data-code="LOP" transform="translate(511 439)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">朗屏</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Long Ping</text>
+</g>
+<g id="st-YUL" data-code="YUL" transform="translate(652 505)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">元朗</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Yuen Long</text>
+</g>
+<g id="st-KSR" data-code="KSR" transform="translate(784 637)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">錦上路</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Kam Sheung Road</text>
+</g>
+<g id="st-TWW" data-code="TWW" transform="translate(883 802)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">荃灣西</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tsuen Wan West</text>
+</g>
+<g id="st-AUS" data-code="AUS" transform="translate(1213 1577)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">柯士甸</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Austin</text>
+</g>
+<g id="st-ETS" data-code="ETS" transform="translate(1559 1610)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">尖東</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">East TST</text>
+</g>
+<g id="st-TKW" data-code="TKW" transform="translate(1856 1379)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">土瓜灣</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">To Kwa Wan</text>
+</g>
+<g id="st-SUW" data-code="SUW" transform="translate(2054 1280)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">宋皇臺</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Sung Wong Toi</text>
+</g>
+<g id="st-KAT" data-code="KAT" transform="translate(2186 1198)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">啟德</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Kai Tak</text>
+</g>
+<g id="st-HIK" data-code="HIK" transform="translate(1988 1033)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">顯徑</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Hin Keng</text>
+</g>
+<g id="st-CKT" data-code="CKT" transform="translate(1889 864)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">車公廟</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Che Kung T.</text>
+</g>
+<g id="st-STW" data-code="STW" transform="translate(2087 782)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">沙田圍</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Sha Tin Wai</text>
+</g>
+<g id="st-CIO" data-code="CIO" transform="translate(2285 699)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">第一城</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">City One</text>
+</g>
+<g id="st-SHM" data-code="SHM" transform="translate(2483 633)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">石門</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Shek Mun</text>
+</g>
+<g id="st-TSH" data-code="TSH" transform="translate(2681 567)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">大水坑</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#ffffff" opacity="0.92">Tai Shui Hang</text>
+</g>
+<g id="st-HEO" data-code="HEO" transform="translate(2854 501)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">恆安</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Heng On</text>
+</g>
+<g id="st-MOS" data-code="MOS" transform="translate(3019 452)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">馬鞍山</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Ma On Shan</text>
+</g>
+<g id="st-WKS" data-code="WKS" transform="translate(3217 402)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#9C2E00" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#ffffff">烏溪沙</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#ffffff" opacity="0.92">Wu Kai Sha</text>
+</g>
+<g id="st-OCP" data-code="OCP" transform="translate(1510 1986)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#CBD300" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" font-weight="700" fill="#071018">海洋公園</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#071018" opacity="0.92">Ocean Park</text>
+</g>
+<g id="st-WCH" data-code="WCH" transform="translate(1361 2122)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#CBD300" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#071018">黃竹坑</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#071018" opacity="0.92">Wong Chuk Hang</text>
+</g>
+<g id="st-LET" data-code="LET" transform="translate(1147 2188)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#CBD300" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="17" font-weight="700" fill="#071018">利東</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="13" fill="#071018" opacity="0.92">Lei Tung</text>
+</g>
+<g id="st-SOH" data-code="SOH" transform="translate(932 2188)">
+  <rect width="92" height="56" rx="10" ry="10" fill="#CBD300" stroke="#1e293b" stroke-width="1.2"/>
+  <text x="46" y="24" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" font-weight="700" fill="#071018">海怡半島</text>
+  <text x="46" y="44" text-anchor="middle" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="11" fill="#071018" opacity="0.92">South Horizons</text>
+</g></g>
+  <g id="legend"><g transform="translate(3093 36)">
+  <rect width="28" height="12" rx="3" fill="#E60012"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">荃灣綫</text>
+</g>
+<g transform="translate(3093 64)">
+  <rect width="28" height="12" rx="3" fill="#0075C2"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">港島綫</text>
+</g>
+<g transform="translate(3093 92)">
+  <rect width="28" height="12" rx="3" fill="#00A040"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">觀塘綫</text>
+</g>
+<g transform="translate(3093 120)">
+  <rect width="28" height="12" rx="3" fill="#7E3C93"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">將軍澳綫</text>
+</g>
+<g transform="translate(3093 148)">
+  <rect width="28" height="12" rx="3" fill="#9C2E00"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">屯馬綫</text>
+</g>
+<g transform="translate(3293 36)">
+  <rect width="28" height="12" rx="3" fill="#F3982D"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">東涌綫</text>
+</g>
+<g transform="translate(3293 64)">
+  <rect width="28" height="12" rx="3" fill="#00888E"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">機場快綫</text>
+</g>
+<g transform="translate(3293 92)">
+  <rect width="28" height="12" rx="3" fill="#5EB7E8"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">東鐵綫</text>
+</g>
+<g transform="translate(3293 120)">
+  <rect width="28" height="12" rx="3" fill="#CBD300"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">南港島綫</text>
+</g>
+<g transform="translate(3293 148)">
+  <rect width="28" height="12" rx="3" fill="#EB6EA5"/>
+  <text x="36" y="11" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="15" fill="#334155">迪士尼綫</text>
+</g></g>
+  <text x="48" y="2364" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="36" font-weight="800" fill="#0f172a">HK LIVE</text>
+  <text x="48" y="2392" font-family="Noto Sans TC, Microsoft JhengHei, system-ui, sans-serif" font-size="16" fill="#475569">自製色塊示意路綫圖 · 非港鐵官方圖 · 僅供參考</text>
+</svg>

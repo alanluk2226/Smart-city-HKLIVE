@@ -1,17 +1,18 @@
 import { MTR_LINE_NAMES } from "@/lib/static/mtr-stations";
 
 export const MTR_LINE_COLORS: Record<string, string> = {
-  TWL: "#E2231A",
-  ISL: "#007DC5",
-  KTL: "#00AB4E",
-  TKL: "#7D499D",
-  TML: "#9A3820",
-  TCL: "#F7943E",
-  AEL: "#00888A",
-  EAL: "#53B7E8",
-  SIL: "#B6BD00",
-  DRL: "#F173AC",
-  HSR: "#A7A9AC",
+  /** Hex from official `public/mtr-system-map.svg` route strokes/fills. */
+  TWL: "#E60012",
+  ISL: "#0075C2",
+  KTL: "#00A040",
+  TKL: "#7E3C93",
+  TML: "#9C2E00",
+  TCL: "#F3982D",
+  AEL: "#00888E",
+  EAL: "#5EB7E8",
+  SIL: "#CBD300",
+  DRL: "#EB6EA5",
+  HSR: "#9C948B",
 };
 
 const MTR_LINE_COLOR_BY_NAME: Record<string, string> = Object.fromEntries(
@@ -50,9 +51,9 @@ export const MTR_SCHEMATIC: Record<string, StationPos> = {
   TSY: { x: 352, y: 632, label: "n" },
   LAK: { x: 428, y: 540, label: "n" },
   NAC: { x: 548, y: 708, label: "w" },
-  OLY: { x: 612, y: 792, label: "e" },
-  KOW: { x: 652, y: 888, label: "e" },
-  HOK: { x: 528, y: 988, label: "w" },
+  OLY: { x: 548, y: 800, label: "e" },
+  KOW: { x: 548, y: 900, label: "e" },
+  HOK: { x: 548, y: 1000, label: "w" },
 
   // Tsuen Wan Line
   TSW: { x: 188, y: 300, label: "n" },
@@ -123,7 +124,7 @@ export const MTR_SCHEMATIC: Record<string, StationPos> = {
   TAW: { x: 980, y: 528, label: "w" },
   MKK: { x: 980, y: 700, label: "e" },
   HUH: { x: 980, y: 888, label: "e" },
-  EXC: { x: 880, y: 980, label: "e" },
+  EXC: { x: 900, y: 990, label: "e" },
 
   // Tuen Ma west → east
   TUM: { x: 72, y: 500, label: "w" },
@@ -133,8 +134,8 @@ export const MTR_SCHEMATIC: Record<string, StationPos> = {
   YUL: { x: 350, y: 250, label: "n" },
   KSR: { x: 430, y: 330, label: "n" },
   TWW: { x: 490, y: 430, label: "w" },
-  AUS: { x: 680, y: 888, label: "w" },
-  ETS: { x: 720, y: 920, label: "s" },
+  AUS: { x: 690, y: 900, label: "w" },
+  ETS: { x: 900, y: 920, label: "s" },
   TKW: { x: 1080, y: 780, label: "e" },
   SUW: { x: 1200, y: 720, label: "n" },
   KAT: { x: 1280, y: 670, label: "n" },
@@ -187,10 +188,13 @@ export const MTR_SCHEMATIC_LINES: Array<{ id: string; path: PathNode[] }> = [
       { x: 548, y: 430 },
       "MEF",
       "NAC",
-      { x: 548, y: 820 },
+      { x: 690, y: 850 },
       "AUS",
+      { x: 740, y: 900 },
+      { x: 740, y: 885 },
+      { x: 900, y: 885 },
       "ETS",
-      { x: 860, y: 920 },
+      { x: 900, y: 888 },
       "HUH",
       "HOM",
       "TKW",
@@ -215,12 +219,12 @@ export const MTR_SCHEMATIC_LINES: Array<{ id: string; path: PathNode[] }> = [
   },
   {
     id: "AEL",
-    path: ["AWE", "AIR", { x: 48, y: 792 }, { x: 180, y: 792 }, { x: 252, y: 720 }, "TSY", { x: 352, y: 720 }, { x: 500, y: 850 }, "KOW", "HOK"],
+    path: ["AWE", "AIR", { x: 48, y: 792 }, { x: 180, y: 792 }, { x: 252, y: 720 }, "TSY", { x: 352, y: 720 }, { x: 480, y: 848 }, { x: 480, y: 900 }, "KOW", "HOK"],
   },
   { id: "DRL", path: ["SUN", "DIS"] },
   {
     id: "EAL",
-    path: ["LOW", { x: 980, y: 48 }, "SHS", "FAN", "TWO", "TAP", "UNI", "FOT", "SHT", "TAW", "KOT", "MKK", "HUH", { x: 980, y: 960 }, "EXC", "ADM"],
+    path: ["LOW", { x: 980, y: 48 }, "SHS", "FAN", "TWO", "TAP", "UNI", "FOT", "SHT", "TAW", "KOT", "MKK", "HUH", { x: 980, y: 990 }, "EXC", "ADM"],
   },
   { id: "EAL2", path: ["SHS", { x: 850, y: 108 }, "LMC"] },
   { id: "EAL3", path: ["UNI", "RAC", "SHT"] },
@@ -232,6 +236,7 @@ export const MTR_SCHEMATIC_LINES: Array<{ id: string; path: PathNode[] }> = [
 
 export const MTR_WALK_LINKS: Array<[string, string]> = [
   ["HOK", "CEN"],
+  ["KOW", "AUS"],
   ["ETS", "TST"],
   ["AUS", "WEK"],
   ["KOW", "WEK"],
