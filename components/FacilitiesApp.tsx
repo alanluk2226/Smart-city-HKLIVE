@@ -281,7 +281,9 @@ export function FacilitiesApp() {
               <div className="text-xs text-lime">{active.type}</div>
               <h2 className="mt-0.5 text-lg leading-snug">{active.name}</h2>
               <p className="mt-1 text-sm text-muted">{active.address || "—"}</p>
-              <p className="mt-2 text-sm">開放：{active.hours || "—"}</p>
+              <p className="mt-2 whitespace-pre-line text-sm">
+                開放：{active.hours || "—"}
+              </p>
               <p className="mt-1 text-xs text-muted">
                 {active.district}
                 {active.distanceMeters != null ? ` · ${formatDistance(active.distanceMeters)}` : ""}

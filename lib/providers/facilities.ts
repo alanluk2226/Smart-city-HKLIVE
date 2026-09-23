@@ -44,6 +44,22 @@ export type FacilityPlace = Place & {
   courts?: string;
 };
 
+/** LCSD JSON sometimes embeds HTML (`<br />`) in opening hours — show as plain text. */
+function cleanOpenDataText(raw: string | undefined | null): string {
+  if (!raw) return "";
+  return raw
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p[^>]*>/gi, "\n")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export type FacilitySnapshot = {
   places: FacilityPlace[];
   facets: RegionFacet[];
@@ -104,7 +120,7 @@ function rowsFromPayload(payload: unknown): VenueRow[] {
 async function loadAllFacilities(lat?: number, lng?: number): Promise<FacilityPlace[]> {
   const lists = await Promise.all(
     SOURCES.map((src) =>
-      cached(`lcsd:v3:${src.type}`, TTL.facility, () => fetchJson<unknown>(src.url, 20_000)).then(
+      cached(`lcsd:v4:${src.type}`, TTL.facility, () => fetchJson<unknown>(src.url, 20_000)).then(
         (payload) => rowsFromPayload(payload).map((row) => ({ row, type: src.type })),
       ),
     ),
@@ -124,10 +140,10 @@ async function loadAllFacilities(lat?: number, lng?: number): Promise<FacilityPl
       distanceMeters:
         lat != null && lng != null ? haversineMeters(lat, lng, vlat, vlng) : undefined,
       district: row.District_cn ?? "",
-      address: row.Address_cn ?? "",
+      address: cleanOpenDataText(row.Address_cn),
       phone: row.Phone ?? "",
-      hours: row.Opening_hours_cn ?? "",
-      courts: row.Court_no_cn,
+      hours: cleanOpenDataText(row.Opening_hours_cn),
+      courts: row.Court_no_cn ? cleanOpenDataText(row.Court_no_cn) : undefined,
     });
   }
   return places;
