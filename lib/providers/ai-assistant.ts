@@ -142,13 +142,13 @@ ${lastTripLine}
 ${transcript}
 
 規則：
-- intent=route 只適用：由真實地理起點去真實地理終點（屋邨、醫院、商場、港鐵站、街道、地區等），想搭公共交通。
+- intent=route 適用：由真實地理起點去真實地理終點，或追問上一程點搭（含夜班／通宵／末班／N 線）。
 - from／to 必須係地名，絕對唔可以係抽象概念（Embedding、Transformer、Token、Model、知識、理論等）。
-- 科技／AI／LLM／程式／數學／閒聊／解釋概念／天氣閒談 → 一律 intent=chat。
+- 科技／AI／LLM／程式／數學／純閒聊／解釋概念 → 一律 intent=chat。
 - 英文句入面有 "to"（例如 send them to transformer）唔等於去邊度。
-- 有疑問時一定選 chat；唔好為咗答得似出行顧問而硬當 route。
+- 有疑問時偏 chat；唔好硬把科技問題當 route。
 - 只有真係問點去但又缺地名時先 askClarify=true。
-- 若有上一程，用戶只講「巴士呢／港鐵呢／混合呢／直達巴士」→ intent=route，from／to 沿用上一程。`;
+- 若有上一程，用戶講「巴士呢／港鐵呢／混合呢／有冇夜班車／通宵點返／末班」→ intent=route，from／to 沿用上一程。`;
 
   return geminiJson<IntentOut>(prompt, 8_000, INTENT_SCHEMA as unknown as Record<string, unknown>);
 }
@@ -220,12 +220,10 @@ async function freeChat(messages: AiAssistantChatTurn[]): Promise<AiAssistantRes
   const weatherLine = await weatherContextLine();
   const system = `你是 HK LIVE AI。用繁體中文（香港粵語書面語為主，用戶用英文可夾英文）自然回答，語氣同平常同 Gemini 傾偈一樣。
 
-重要（必須遵守）：
-- 呢個模式係普通對話，唔係出行規劃模式。
-- 禁止用「出行顧問」「知識路線」「港鐵直達法」「巴士特快線」「方案一／二／三」「預計車費／車程」等旅行框架去包裝任何非出行問題。
-- 用戶問科技、AI、LLM、Embedding、學習方法、閒聊等 → 直接答內容本身，唔好比喻成搭車。
+重要：
+- 普通對話為主；用戶問科技、AI、LLM、Embedding、學習方法、閒聊 → 直接答，唔好硬套搭車比喻。
+- 若用戶問夜班／通宵／點去邊度等交通問題 → 可以正常用路線知識回答，整理成清楚方案。
 - 唔好提熱帶氣旋／天氣，除非用戶問天氣或出門。
-- 唔好主動規劃去邊度；用戶叫你點去先至講路線。
 
 可選香港天氣（多數情況可忽略）：${weatherLine}`;
 
@@ -281,20 +279,20 @@ async function dashboardContextBlock() {
 
 function preferModeInstruction(preferMode: TripPreferMode) {
   if (preferMode === "bus") {
-    return "用戶偏向巴士：建議段落請優先推薦巴士方案，港鐵仍要列出。";
+    return "用戶偏向巴士／小巴：整理方案時可偏巴士，但仍可提其他合理去法。";
   }
   if (preferMode === "mtr") {
-    return "用戶偏向港鐵：建議段落請優先推薦港鐵方案，巴士仍要列出。";
+    return "用戶偏向港鐵：整理方案時可偏港鐵，但仍可提其他合理去法。";
   }
   if (preferMode === "mix") {
-    return "用戶想混合：若有第三方案可寫混合；前兩個仍要有港鐵同巴士。";
+    return "用戶想混合轉乘：可把混合方案排前。";
   }
-  return "按天氣／路況／新聞自行決定優先推薦邊個方案。";
+  return "按用戶問題同天氣／路況自行排序方案。";
 }
 
 function softGroundedHint(grounded: AiTripAdvice | null) {
   if (!grounded?.options.length) {
-    return "本站暫無精確計算，請用你對香港公共交通嘅知識規劃。";
+    return "本站暫無精確計算；請用你對香港交通嘅知識完整回答（含日班／夜班／通宵／末班如適用）。";
   }
   const lines = grounded.options
     .slice(0, 4)
@@ -303,11 +301,18 @@ function softGroundedHint(grounded: AiTripAdvice | null) {
         `- ${o.mode} ${o.title}｜約 ${o.minutes ?? "?"} 分｜約 $${o.fareHkd ?? "?"}｜${o.steps.slice(0, 3).join(" → ")}`,
     )
     .join("\n");
-  return `本站公開資料可選參考（可採用、可調整、可補充，唔係強制照抄）：\n${lines}`;
+  return `本站公開資料僅供參考（可採用、可忽略、可大幅補充）：\n${lines}`;
+}
+
+/** 「有冇夜班／通宵／末班」——沿用上一程起終點。 */
+function isNightOrLastServiceFollowUp(raw: string) {
+  return /夜班|通宵|夜車|夜巴|凌晨|半夜|N\s*\d|末班|尾班|最後一班|仲有無車|仲有冇車|仲開唔開/.test(
+    raw,
+  );
 }
 
 /**
- * A→B 路線由 Gemini 主導：至少港鐵 + 巴士；天氣／路況／新聞只影響「建議優先搭邊個」。
+ * A→B 由 Gemini 自由規劃；回覆只需整理成 2–3 個方案，唔再硬鎖港鐵+巴士。
  */
 async function geminiFreeRoute(
   from: string,
@@ -360,33 +365,36 @@ async function geminiFreeRoute(
 
   const dashboard = await dashboardContextBlock();
 
-  const system = `你是香港出行顧問（HK LIVE）。用香港粵語書面語（繁體），語氣像平常同 Gemini 傾偈。
+  const system = `你是香港出行顧問（HK LIVE）。用香港粵語書面語（繁體），語氣自然，像平常同 Gemini 傾偈。
 
-任務：為用戶規劃由 A 去 B 嘅公共交通。路線同去法由你決定（可含步行接駁、小巴、渡輪等），唔受本站資料鎖死。
+你有充分自由：用你對香港公共交通嘅知識回答用戶。唔好因為本站資料唔齊就拒絕、含糊或叫用戶「自己查 App」就完。
 
-Dashboard 即時背景（只用嚟決定「建議優先搭邊個」，唔好虛構即時到站分鐘）：
+可答範圍包括（不限）：
+- 日班／繁忙時間去法
+- 夜班、通宵巴士（N 線）、通宵小巴、末班／尾班車、凌晨點返
+- 港鐵、巴士、小巴、渡輪、電車、機場 A／E／N 線、混合轉乘、步行接駁
+- 「有冇夜班車」「點樣通宵返」等追問：直接用路線知識答，並列出具體編號同大概營運時段（用「約／一般」）
+
+Dashboard 即時背景（可參考嚟排序或提醒，唔好虛構即時到站分鐘）：
 ${dashboard}
 
-用戶偏好：${preferModeInstruction(preferMode)}
+用戶偏好提示：${preferModeInstruction(preferMode)}
 
 ${softGroundedHint(grounded)}
 
-輸出結構（必須遵守）：
-1. 開頭「建議」：2–4 句，根據上面天氣／路況／新聞，講而家優先推薦邊個方案同原因（例如落雨／酷熱偏港鐵；路面暢通又想平可偏巴士；有相關封路／港鐵故障就避嗰邊）。
-2. 方案一：港鐵（或主要用港鐵）。寫清楚綫路、轉車、約略時間同車費（用「約」）。
-3. 方案二：巴士／小巴（可直達或合理轉乘）。寫完整編號（含字母）＋方向＋上落站、約略時間同車費。
-4. 方案三（可選）：若有明顯更快或更方便嘅去法（例如混合、直達專線、渡輪等）先寫；冇就唔好硬砌。
-5. 至少要有方案一（港鐵）同方案二（巴士）；總共 2 或 3 個方案。
-6. 結尾一句：估計僅供參考，請以營運商同現場為準。
-
-注意：時間／車費用「約」；唔好聲稱可控制交通燈或報即時到站分鐘。`;
+回覆整理（重點係整合清楚，唔係限制你可用邊種交通）：
+1. 開頭 1–3 句：直接回應用戶問題（例如有冇夜班、而家偏邊個方案、天氣／路況點影響）。
+2. 整理成 **2 或 3 個方案**（方案一／二／三）。每個寫清：交通工具、路線編號（完整含字母）、方向／上落、約略時間同車費（用「約」）。
+3. 若用戶問夜班／通宵／末班：方案應圍繞呢啲（例如 N 線、通宵小巴、末班港鐵+接駁）；唔好只回「請查 App」；若真係無可靠夜班，都要講清楚日間替代同大概收車時間。
+4. 一般日間 A→B：可用港鐵、巴士、混合等任何合理組合，唔強制一定要港鐵+巴士各一。
+5. 結尾一句：估計僅供參考，請以營運商同現場為準。`;
 
   const userText = [
     `由「${trip.from}」去「${trip.to}」。`,
     userHint && userHint !== `${from}去${to}` && userHint !== `${from}到${to}`
       ? `用戶原話／補充：${userHint}`
       : "",
-    "請按上面格式回答：建議 + 港鐵方案 + 巴士方案（+ 可選第三方案）。",
+    "請自由規劃，並整理成 2–3 個清楚方案回覆。",
   ]
     .filter(Boolean)
     .join("\n");
@@ -494,6 +502,14 @@ export async function runAssistant(input: {
   const modeFollow = parseModeFollowUp(userText, input.lastTrip);
   if (modeFollow) {
     return routeAdvice(modeFollow.from, modeFollow.to, userText, modeFollow.preferMode);
+  }
+
+  if (
+    input.lastTrip?.from &&
+    input.lastTrip.to &&
+    isNightOrLastServiceFollowUp(userText)
+  ) {
+    return routeAdvice(input.lastTrip.from, input.lastTrip.to, userText);
   }
 
   // 規則只認明確短地名「A 去 B」；長英文句入面嘅 "to" 唔會再誤觸

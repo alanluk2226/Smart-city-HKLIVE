@@ -98,9 +98,10 @@ export const MTR_SCHEMATIC: Record<string, StationPos> = {
   WTS: { x: 1220, y: 620, label: "n" },
   DIH: { x: 1340, y: 620, label: "n" },
   CHT: { x: 1470, y: 620, label: "n" },
-  LAT: { x: 1575, y: 680, label: "e" },
-  KOB: { x: 1655, y: 750, label: "e" },
-  NTW: { x: 1710, y: 810, label: "e" },
+  KOB: { x: 1575, y: 680, label: "e" },
+  NTK: { x: 1655, y: 750, label: "e" },
+  KWT: { x: 1710, y: 810, label: "e" },
+  LAT: { x: 1710, y: 860, label: "e" },
   YAT: { x: 1710, y: 900, label: "w" },
   TIK: { x: 1820, y: 900, label: "n" },
 
@@ -167,7 +168,7 @@ export const MTR_SCHEMATIC_LINES: Array<{ id: string; path: PathNode[] }> = [
   },
   {
     id: "KTL",
-    path: ["WHA", "HOM", "YMT", "MOK", "PRE", "SKM", "KOT", "LOF", "WTS", "DIH", "CHT", "LAT", "KOB", "NTW", "YAT", "TIK"],
+    path: ["WHA", "HOM", "YMT", "MOK", "PRE", "SKM", "KOT", "LOF", "WTS", "DIH", "CHT", "KOB", "NTK", "KWT", "LAT", "YAT", "TIK"],
   },
   {
     id: "TKL",
