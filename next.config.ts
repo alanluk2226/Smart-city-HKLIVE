@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_BUILD_ID: appBuildId,
   },
+  serverExternalPackages: ["onnxruntime-node", "onnxruntime-web"],
   transpilePackages: ["leaflet.gridlayer.googlemutant"],
   async headers() {
     return [
