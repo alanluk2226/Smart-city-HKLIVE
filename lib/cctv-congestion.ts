@@ -51,6 +51,8 @@ export type CongestionEstimate = {
   debug: DetectionDebug;
   /** True when too few boxes were drawn to treat the percentage as a firm reading. */
   lowSample?: boolean;
+  /** True when the percentage comes from this still alone, before a second snapshot. */
+  preliminary?: boolean;
 };
 
 type Blob = {
@@ -86,13 +88,22 @@ export const DEFAULT_ROAD_ROI: RoiPoint[] = [
  */
 export const CAMERA_ROAD_ROI: Record<string, RoiPoint[]> = {
   K107F: [
-    { x: 0.1, y: 0.42 },
-    { x: 0.2, y: 0.28 },
-    { x: 0.48, y: 0.25 },
-    { x: 0.62, y: 0.32 },
-    { x: 0.7, y: 0.52 },
-    { x: 0.58, y: 0.86 },
-    { x: 0.06, y: 0.86 },
+    { x: 0.05, y: 0.46 },
+    { x: 0.14, y: 0.28 },
+    { x: 0.34, y: 0.22 },
+    { x: 0.55, y: 0.24 },
+    { x: 0.66, y: 0.4 },
+    { x: 0.62, y: 0.7 },
+    { x: 0.5, y: 0.88 },
+    { x: 0.03, y: 0.88 },
+  ],
+  // Looks along the carriageway, so the road fills the frame. The default
+  // band was cutting off the nearest and farthest vehicles the model had found.
+  AID01111: [
+    { x: -0.02, y: -0.02 },
+    { x: 1.02, y: -0.02 },
+    { x: 1.02, y: 1.02 },
+    { x: -0.02, y: 1.02 },
   ],
 };
 
@@ -104,7 +115,13 @@ export type DetectCrop = { x: number; y: number; w: number; h: number };
  * distant queue is not a handful of pixels. Full-frame detection still runs.
  */
 export const CAMERA_DETECT_CROPS: Record<string, DetectCrop[]> = {
-  K107F: [{ x: 0.14, y: 0.22, w: 0.5, h: 0.36 }],
+  // Three overlapping windows down the approach. One wide crop still leaves
+  // the middle of the queue only a few pixels tall.
+  K107F: [
+    { x: 0.16, y: 0.2, w: 0.34, h: 0.26 },
+    { x: 0.06, y: 0.36, w: 0.4, h: 0.26 },
+    { x: 0.04, y: 0.52, w: 0.46, h: 0.3 },
+  ],
 };
 
 export function detectCropsFor(cameraKey?: string): DetectCrop[] {
@@ -1097,6 +1114,66 @@ function boxSummary(cause: JamCause, count: number, lowSample: boolean) {
             ? "車輛位置郁得明顯，暫時未似塞車。"
             : "車輛位置未夠穩，未能判斷係燈位定意外。";
   return lowSample ? `偵測樣本少，估算僅供參考。${body}` : body;
+}
+
+/**
+ * First look from the vehicles in this still. Movement is unknown until the
+ * next snapshot, so the score follows how full the road looks.
+ */
+export function estimateCurrentVehicles(
+  boxes: VehicleBox[],
+  counts?: { candidates: number; afterSize: number },
+  engine: DetectionDebug["engine"] = "yolo",
+): CongestionEstimate {
+  const count = boxes.length;
+  const lowSample = count > 0 && count < MIN_SAMPLE_VEHICLES;
+  const density = clamp(count / QUEUE_VEHICLE_COUNT, 0, 1);
+  let probability = count === 0 ? 0.08 : roundProb(0.1 + 0.72 * density);
+  if (lowSample) {
+    const trust = count / MIN_SAMPLE_VEHICLES;
+    probability = roundProb(probability * trust + 0.28 * (1 - trust));
+  }
+  const aligned =
+    count >= 4 &&
+    queueShape(
+      boxes.map((box) => ({
+        cx: (box.x + box.w / 2) * 160,
+        cy: (box.y + box.h / 2) * 90,
+        minX: box.x * 160,
+        minY: box.y * 90,
+        maxX: (box.x + box.w) * 160,
+        maxY: (box.y + box.h) * 90,
+      })),
+    ).alignment >= 0.62;
+  const summary =
+    count === 0
+      ? "呢張快拍未見車輛，暫時似暢通。下一張會再對比。"
+      : count >= MIN_SAMPLE_VEHICLES && aligned
+        ? "依呢張快拍，車輛排成一條龍，睇落似塞。下一張會再對比係咪停低。"
+        : count >= MIN_SAMPLE_VEHICLES
+          ? "依呢張快拍車輛幾多，睇落有機會塞。下一張會再對比。"
+          : "依呢張快拍車輛唔多，暫時未似塞車。下一張會再對比。偵測樣本少，估算僅供參考。";
+  return {
+    status: "ready",
+    level: count === 0 ? "clear" : levelFrom(probability, "unknown"),
+    cause: "unknown",
+    probability,
+    lowSample,
+    preliminary: true,
+    summary,
+    boxes,
+    debug: {
+      candidates: counts?.candidates ?? count,
+      afterSize: counts?.afterSize ?? count,
+      drawn: count,
+      vehicleCount: count,
+      stoppedCount: 0,
+      stoppedRatio: null,
+      meanShiftPx: null,
+      flowRatio: null,
+      engine,
+    },
+  };
 }
 
 /** Jam score from detector boxes. A high IoU means the same vehicle is still there. */

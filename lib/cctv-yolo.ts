@@ -19,10 +19,10 @@ export const VEHICLE_DETECTOR = {
    * On a 320×240 tunnel approach the queued cars often score 0.10–0.18, under a 0.30 cutoff.
    */
   scoreMin: 0.1,
-  /** Width and height as a fraction of the full frame. 0.012 was cutting cars a few pixels wide. */
-  minBoxFraction: 0.006,
+  /** Width and height as a fraction of the full frame. Zoomed tiles make far cars smaller than 0.006. */
+  minBoxFraction: 0.004,
   maxBoxFraction: 0.85,
-  maxBoxes: 40,
+  maxBoxes: 48,
   /** Overlap above this merges the full-frame pass with a road-crop pass. */
   mergeIou: 0.45,
 } as const;

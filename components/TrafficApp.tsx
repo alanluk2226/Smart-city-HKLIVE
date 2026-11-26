@@ -9,6 +9,7 @@ import { NearbyMapDynamic } from "@/components/NearbyMapDynamic";
 import {
   compareSnapshots,
   compareVehicleBoxes,
+  estimateCurrentVehicles,
   grayFromRgba,
   isPlaceholderFrame,
   MIN_SAMPLE_VEHICLES,
@@ -215,26 +216,9 @@ export function TrafficApp() {
       const unchanged = Boolean(prevGray && meanAbsDiff(prevGray, gray) < 2.2);
       const prior = readyRef.current.get(key);
       if (!prevBoxes || !prevGray || (unchanged && !prior)) {
-        setEstimate({
-          key,
-          status: "need_previous",
-          level: "unknown",
-          cause: "unknown",
-          probability: null,
-          boxes: yoloBoxes,
-          lowSample: yoloBoxes.length > 0 && yoloBoxes.length < MIN_SAMPLE_VEHICLES,
-          debug: {
-            ...emptyDebug(),
-            candidates: yoloCounts.candidates,
-            afterSize: yoloCounts.afterSize,
-            drawn: yoloBoxes.length,
-            vehicleCount: yoloBoxes.length,
-            engine: "yolo",
-          },
-          summary: yoloBoxes.length
-            ? sampleSummary("已用車輛模型框出車輛。下一張快拍會計塞車機率。", yoloBoxes.length)
-            : "模型未見車輛。下一張快拍再計。",
-        });
+        const first = { ...estimateCurrentVehicles(yoloBoxes, yoloCounts, "yolo"), key };
+        if (first.probability != null) readyRef.current.set(key, first);
+        setEstimate(first);
         return;
       }
       if (unchanged && prior) {
@@ -538,7 +522,8 @@ function CongestionOverlay({
   const cause = estimate.cause;
   const causeClass =
     cause === "incident" ? "text-rose" : cause === "signal" ? "text-amber" : cause === "flowing" ? "text-lime" : "text-white";
-  const percent = estimate.probability != null ? `${Math.round(estimate.probability * 100)}%` : "—";
+  const target = estimate.probability != null ? Math.round(estimate.probability * 100) : null;
+  const shown = useCountUp(target, `${estimate.key}:${target ?? "none"}`);
 
   return (
     <div className="pointer-events-none absolute inset-0">
@@ -551,8 +536,8 @@ function CongestionOverlay({
       ))}
       <div className="absolute left-2 top-2 max-w-[min(100%-1rem,18rem)] rounded-lg bg-black/75 px-2.5 py-1.5 text-white shadow-lg">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-base font-semibold">{percent}</span>
-          <span className={`text-sm font-medium ${causeClass}`}>{CAUSE_LABEL[cause]}</span>
+          <span className="font-mono text-base font-semibold tabular-nums">{target == null ? "—" : `${shown}%`}</span>
+          <span className={`text-sm font-medium ${causeClass}`}>{estimate.preliminary ? "依呢張畫面" : CAUSE_LABEL[cause]}</span>
           {estimate.lowSample && estimate.probability != null ? (
             <span className="text-[11px] font-medium text-amber">樣本少</span>
           ) : null}
@@ -572,6 +557,31 @@ function CongestionOverlay({
   );
 }
 
+function useCountUp(target: number | null, replayKey: string) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (target == null) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || target === 0) {
+      setValue(target);
+      return;
+    }
+    const start = performance.now();
+    const duration = 1000;
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - progress) ** 3;
+      setValue(Math.round(target * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    setValue(0);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, replayKey]);
+  return value;
+}
+
 function emptyDebug(): DetectionDebug {
   return {
     candidates: 0,
@@ -583,11 +593,6 @@ function emptyDebug(): DetectionDebug {
     meanShiftPx: null,
     flowRatio: null,
   };
-}
-
-function sampleSummary(summary: string, count: number) {
-  if (count <= 0 || count >= MIN_SAMPLE_VEHICLES) return summary;
-  return `偵測樣本少，估算僅供參考。${summary}`;
 }
 
 function meanAbsDiff(prev: Uint8Array, curr: Uint8Array) {
@@ -614,8 +619,8 @@ function placeBoxes(frame: FrameBox, boxes: VehicleBox[]) {
     }))
     .filter(
       (box) =>
-        box.width >= 8 &&
-        box.height >= 8 &&
+        box.width >= 2 &&
+        box.height >= 2 &&
         box.left < cw &&
         box.top < ch &&
         box.left + box.width > 0 &&
