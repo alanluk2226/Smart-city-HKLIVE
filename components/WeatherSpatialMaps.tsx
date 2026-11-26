@@ -20,36 +20,78 @@ function formatUpdatedAt(iso: string | null) {
 }
 
 function useLayerFrames(layer: WeatherMapLayer, playing: boolean) {
-  const [frame, setFrame] = useState(layer.frames.length - 1);
-  const canPlay = layer.frames.length > 1;
+  const urls = layer.frames.length ? layer.frames : [layer.imageUrl];
+  const urlsKey = urls.join("|");
+  const [ready, setReady] = useState<string[]>([]);
+  const [frame, setFrame] = useState(0);
+  const [visible, setVisible] = useState("");
 
   useEffect(() => {
-    setFrame(layer.frames.length - 1);
-  }, [layer.frames]);
+    let cancelled = false;
+    const loaded: string[] = [];
+    let pending = urls.length;
+    const publish = () => {
+      if (cancelled) return;
+      setReady([...loaded]);
+      setFrame(Math.max(0, loaded.length - 1));
+    };
+    for (const url of urls) {
+      const img = new Image();
+      img.onload = () => {
+        loaded.push(url);
+        pending -= 1;
+        publish();
+      };
+      img.onerror = () => {
+        pending -= 1;
+        if (pending === 0) publish();
+      };
+      img.src = url;
+    }
+    return () => {
+      cancelled = true;
+    };
+    // urlsKey is the frame list. `urls` is derived from it on this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlsKey]);
+
+  const canPlay = ready.length > 1;
 
   useEffect(() => {
     if (!playing || !canPlay) return;
     const id = window.setInterval(() => {
-      setFrame((i) => (i + 1) % layer.frames.length);
+      setFrame((i) => (i + 1) % ready.length);
     }, FRAME_MS);
     return () => clearInterval(id);
-  }, [playing, canPlay, layer.frames.length]);
+  }, [playing, canPlay, ready.length]);
 
-  const src = `${layer.frames[Math.max(0, frame)] ?? layer.imageUrl}`;
-  return { src, canPlay };
+  const next = ready[frame] ?? ready[ready.length - 1] ?? "";
+
+  useEffect(() => {
+    if (!next) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) setVisible(next);
+    };
+    img.src = next;
+    return () => {
+      cancelled = true;
+    };
+  }, [next]);
+
+  return { src: visible, canPlay };
 }
 
 function MapLightbox({
   layer,
   playing,
   onTogglePlay,
-  bust,
   onClose,
 }: {
   layer: WeatherMapLayer;
   playing: boolean;
   onTogglePlay?: () => void;
-  bust: number;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -122,12 +164,16 @@ function MapLightbox({
         </div>
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3 sm:px-4 sm:pb-4">
           <div className="overflow-hidden rounded-xl border border-line bg-black/40">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`${src}&t=${bust}`}
-              alt={layer.title}
-              className="mx-auto max-h-[78vh] w-full object-contain"
-            />
+            {src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={src}
+                alt={layer.title}
+                className="mx-auto max-h-[78vh] w-full object-contain"
+              />
+            ) : (
+              <div className="flex h-48 items-center justify-center text-sm text-muted">載入影像…</div>
+            )}
           </div>
           <p className="mt-2 text-center text-[11px] text-muted">
             按背景、關閉或 Esc 離開放大檢視
@@ -143,13 +189,11 @@ function MapPanel({
   playing,
   onTogglePlay,
   onExpand,
-  bust,
 }: {
   layer: WeatherMapLayer;
   playing: boolean;
   onTogglePlay?: () => void;
   onExpand: () => void;
-  bust: number;
 }) {
   const { src, canPlay } = useLayerFrames(layer, playing);
   const updated = formatUpdatedAt(layer.updatedAt);
@@ -187,12 +231,16 @@ function MapPanel({
         className="group relative overflow-hidden rounded-xl border border-line bg-elev/40 text-left transition hover:border-teal/40"
         aria-label={`放大檢視${layer.title}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={`${src}&t=${bust}`}
-          alt={layer.title}
-          className="mx-auto max-h-[22rem] w-full object-contain lg:max-h-[26rem]"
-        />
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={layer.title}
+            className="mx-auto max-h-[22rem] w-full object-contain lg:max-h-[26rem]"
+          />
+        ) : (
+          <div className="flex h-48 items-center justify-center text-sm text-muted">載入影像…</div>
+        )}
         <span className="pointer-events-none absolute right-2 bottom-2 rounded-md bg-black/55 px-2 py-1 text-[10px] text-white opacity-90">
           放大
         </span>
@@ -213,7 +261,6 @@ export function WeatherSpatialMaps() {
   /** Default on: rain motion is the point of the radar loop; user can pause. */
   const [playingRadar, setPlayingRadar] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [bust, setBust] = useState(0);
   const [expanded, setExpanded] = useState<Tab | null>(null);
 
   useEffect(() => {
@@ -235,7 +282,6 @@ export function WeatherSpatialMaps() {
           if (cancelled) return;
           setData(snap);
           setError("");
-          setBust((n) => n + 1);
         })
         .catch((e: Error) => {
           if (!cancelled) setError(e.message || "無法載入天氣圖層");
@@ -326,7 +372,6 @@ export function WeatherSpatialMaps() {
               : undefined
           }
           onExpand={() => setExpanded(tab)}
-          bust={bust}
         />
       </div>
 
@@ -339,13 +384,11 @@ export function WeatherSpatialMaps() {
             reduceMotion ? undefined : () => setPlayingRadar((v) => !v)
           }
           onExpand={() => setExpanded("radar")}
-          bust={bust}
         />
         <MapPanel
           layer={data.wind}
           playing={false}
           onExpand={() => setExpanded("wind")}
-          bust={bust}
         />
       </div>
 
@@ -358,7 +401,6 @@ export function WeatherSpatialMaps() {
               ? () => setPlayingRadar((v) => !v)
               : undefined
           }
-          bust={bust}
           onClose={() => setExpanded(null)}
         />
       ) : null}

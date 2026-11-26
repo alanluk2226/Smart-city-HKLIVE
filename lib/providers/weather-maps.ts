@@ -8,6 +8,8 @@ const WIND_BASE = "https://www.hko.gov.hk/wxinfo/ts/";
 
 /** 64 km range — best local spatial awareness for Hong Kong */
 const RADAR_RANGE_KEY = "range2";
+/** Drop radar files older than this so a stuck list cannot keep last month's pictures. */
+const MAX_RADAR_AGE_MS = 6 * 60 * 60 * 1000;
 const RADAR_FILE_RE = /^rad_[0-9a-z_]+\/[0-9a-z_]+\.jpe?g$/i;
 const WIND_FILE_RE = /^windchk_\d{4}\.png$/i;
 
@@ -63,7 +65,10 @@ function radarUpdatedAt(file: string): string | null {
 }
 
 export async function getWeatherMaps(): Promise<WeatherMapsSnapshot> {
-  return cached("weather:maps:v1", TTL.weather, async () => {
+  return cached(
+    "weather:maps:v2",
+    TTL.weather,
+    async () => {
     const [radarJson, windJson] = await Promise.all([
       fetchJson<RadarJson>(RADAR_JSON, 12_000),
       fetchJson<WindJson>(WIND_JSON, 12_000),
@@ -73,10 +78,14 @@ export async function getWeatherMaps(): Promise<WeatherMapsSnapshot> {
     const radarFiles = radarEntries
       .map(parseRadarPicture)
       .filter((f): f is string => Boolean(f));
-    if (!radarFiles.length) throw new Error("未能取得降雨雷達圖");
+    const freshRadar = radarFiles.filter((file) => {
+      const at = radarUpdatedAt(file);
+      return at != null && Date.now() - new Date(at).getTime() < MAX_RADAR_AGE_MS;
+    });
+    if (!freshRadar.length) throw new Error("天文台雷達圖未有近數小時的影像");
 
-    const radarLatest = radarFiles[radarFiles.length - 1]!;
-    const radarLoop = radarFiles.slice(-10);
+    const radarLatest = freshRadar[freshRadar.length - 1]!;
+    const radarLoop = freshRadar.slice(-10);
     const radarFrames = radarLoop.map(
       (file) => `/api/weather/maps/image?kind=radar&file=${encodeURIComponent(file)}`,
     );
@@ -106,7 +115,9 @@ export async function getWeatherMaps(): Promise<WeatherMapsSnapshot> {
       },
       fetchedAt: new Date().toISOString(),
     };
-  });
+  },
+    { memoryOnly: true },
+  );
 }
 
 export async function getWeatherMapImage(

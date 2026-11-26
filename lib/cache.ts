@@ -12,6 +12,7 @@ export async function cached<T>(
   key: string,
   ttlMs: number,
   loader: () => Promise<T>,
+  options?: { memoryOnly?: boolean },
 ): Promise<T> {
   const now = Date.now();
   const hit = store.get(key) as Entry<T> | undefined;
@@ -21,13 +22,13 @@ export async function cached<T>(
   if (pending) return pending as Promise<T>;
 
   const task = (async () => {
-    const value =
-      ttlMs >= DATA_CACHE_MIN_TTL_MS
-        ? await unstable_cache(loader, [key], {
-            revalidate: Math.max(1, Math.ceil(ttlMs / 1000)),
-            tags: [key],
-          })()
-        : await loader();
+    const persist = !options?.memoryOnly && ttlMs >= DATA_CACHE_MIN_TTL_MS;
+    const value = persist
+      ? await unstable_cache(loader, [key], {
+          revalidate: Math.max(1, Math.ceil(ttlMs / 1000)),
+          tags: [key],
+        })()
+      : await loader();
     store.set(key, { value, expires: Date.now() + ttlMs });
     return value;
   })().finally(() => {
